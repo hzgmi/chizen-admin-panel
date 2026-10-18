@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>محادثات CHIZEN — الإدارة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+  body{background:#0a0515;color:#f5e6ff;height:100vh;display:flex;overflow:hidden}
+  .sidebar{width:340px;background:#150826;border-left:1px solid #3a1f5a;display:flex;flex-direction:column}
+  .sidebar-header{padding:16px;border-bottom:1px solid #3a1f5a}
+  .sidebar-header h2{font-size:16px;font-weight:900;margin-bottom:10px}
+  .search-box{width:100%;padding:8px 12px;background:#071747;border:1px solid #3a1f5a;border-radius:8px;color:#f5e6ff;font-family:'Tajawal',sans-serif;font-size:12px;outline:none}
+  .filters{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+  .filter-btn{padding:4px 10px;background:#071747;border:1px solid #3a1f5a;border-radius:12px;color:#b8c5ee;font-size:10px;font-weight:700;cursor:pointer;font-family:'Tajawal',sans-serif}
+  .filter-btn.active{background:linear-gradient(135deg,#ff27c9,#8d24ff);color:white;border-color:transparent}
+  .chat-list{flex:1;overflow-y:auto}
+  .chat-item{padding:14px 16px;border-bottom:1px solid #2a1345;cursor:pointer;transition:background .2s}
+  .chat-item:hover,.chat-item.active{background:#1f0d35;border-right:3px solid #ff27c9}
+  .chat-item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px}
+  .chat-item-name{font-size:14px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chat-item-time{font-size:9px;color:#6b7ba8;flex-shrink:0}
+  .chat-item-preview{font-size:11px;color:#8b7aa8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chat-item-count{font-size:9px;background:rgba(255,39,201,.2);color:#ff27c9;padding:1px 6px;border-radius:8px;font-weight:900}
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .main-header{padding:16px 20px;border-bottom:1px solid #3a1f5a;background:#150826;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .main-header-info{flex:1;min-width:0}
+  .main-header-name{font-size:15px;font-weight:900}
+  .main-header-sub{font-size:11px;color:#8b7aa8;margin-top:2px}
+  .main-header-actions{display:flex;gap:6px}
+  .action-btn{padding:8px 12px;background:#071747;border:1px solid #3a1f5a;border-radius:8px;color:#f5e6ff;font-family:'Tajawal',sans-serif;font-size:11px;font-weight:700;cursor:pointer}
+  .action-btn.danger{background:rgba(255,77,109,.15);border-color:rgba(255,77,109,.4);color:#ff4d6d}
+  .messages{flex:1;overflow-y:auto;padding:20px;background:#0a0515;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:70%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .msg.user{align-self:flex-start;background:linear-gradient(135deg,#ff356f,#a72bff);color:white}
+  .msg.assistant{align-self:flex-end;background:#1f0d35;border:1px solid #3a1f5a}
+  .msg.admin{align-self:flex-end;background:linear-gradient(135deg,rgba(0,212,160,.2),rgba(0,223,255,.15));border:1px solid rgba(0,212,160,.4);color:#00d4a0}
+  .msg.image img{max-width:200px;border-radius:10px;cursor:pointer;display:block}
+  .msg-time{font-size:9px;opacity:.6;margin-top:4px;display:block}
+  .input-area{padding:12px 16px;border-top:1px solid #3a1f5a;display:flex;gap:8px;background:#150826}
+  .input{flex:1;padding:10px 14px;background:#071747;border:1px solid #3a1f5a;border-radius:20px;color:white;font-family:'Tajawal',sans-serif;outline:none;font-size:13px}
+  .send-btn{padding:0 20px;background:linear-gradient(135deg,#ff27c9,#8d24ff);border:none;border-radius:20px;color:white;font-family:'Tajawal',sans-serif;font-weight:900;cursor:pointer}
+  .empty-state{flex:1;display:flex;align-items:center;justify-content:center;color:#8b7aa8;text-align:center;padding:40px;font-size:14px}
+  .stats-panel{width:280px;background:#150826;border-right:1px solid #3a1f5a;padding:20px;overflow-y:auto}
+  .stat-block{background:#071747;border:1px solid #3a1f5a;border-radius:12px;padding:14px;margin-bottom:10px}
+  .stat-label{font-size:10px;color:#8b7aa8;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+  .stat-value{font-size:22px;font-weight:900;background:linear-gradient(135deg,#ff8b45,#ff27c9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:4px}
+  @media(max-width:900px){.stats-panel{display:none}.sidebar{width:280px}}
+  @media(max-width:600px){.sidebar{width:100%;position:absolute;top:0;bottom:0;z-index:10;transform:translateX(100%);transition:transform .3s}.sidebar.open{transform:translateX(0)}.main{width:100%}}
+</style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h2>💬 المحادثات</h2>
+    <input type="text" class="search-box" id="search-input" placeholder="ابحث بالاسم أو البريد..." oninput="Admin.filterChats()">
+    <div class="filters">
+      <button class="filter-btn active" onclick="Admin.setFilter('all',this)">الكل</button>
+      <button class="filter-btn" onclick="Admin.setFilter('today',this)">اليوم</button>
+      <button class="filter-btn" onclick="Admin.setFilter('week',this)">أسبوع</button>
+      <button class="filter-btn" onclick="Admin.setFilter('month',this)">شهر</button>
+    </div>
+  </div>
+  <div class="chat-list" id="chat-list"></div>
+</div>
+
+<div class="main">
+  <div class="main-header" id="main-header">
+    <div class="main-header-info"><div class="main-header-name">اختر محادثة</div></div>
+  </div>
+  <div class="messages" id="messages"><div class="empty-state">لم تحدد محادثة بعد</div></div>
+  <div class="input-area" id="input-area" style="display:none">
+    <input type="text" class="input" id="admin-reply" placeholder="اكتب ردك..." onkeydown="if(event.key==='Enter')Admin.sendReply()">
+    <button class="send-btn" onclick="Admin.sendReply()">إرسال</button>
+  </div>
+</div>
+
+<div class="stats-panel">
+  <div class="stat-block"><div class="stat-label">إجمالي المحادثات</div><div class="stat-value" id="stat-total">0</div></div>
+  <div class="stat-block"><div class="stat-label">محادثات اليوم</div><div class="stat-value" id="stat-today">0</div></div>
+  <div class="stat-block"><div class="stat-label">رسائل غير مقروءة</div><div class="stat-value" id="stat-unread">0</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../client/firebase-config.js"></script>
+
+<script>
+const Admin = {
+  db: null, currentUid: null, unsub: null, allChats: [], filter: 'all', searchTerm: '',
+
+  async init() {
+    if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+    this.db = firebase.firestore();
+    firebase.auth().onAuthStateChanged(async (user) => {
+      if (!user) { document.body.innerHTML = '<p style="padding:40px;">سجل الدخول من لوحة الأدمن أولاً</p>'; return; }
+      const adminDoc = await this.db.collection('admins').doc(user.uid).get();
+      if (!adminDoc.exists) { document.body.innerHTML = '<p style="padding:40px;">ليس لديك صلاحية</p>'; return; }
+      this.loadChats();
+    });
+  },
+
+  async loadChats() {
+    const snap = await this.db.collection('chats').orderBy('lastMessageAt', 'desc').limit(200).get();
+    this.allChats = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      this.allChats.push({
+        uid: doc.id, name: d.userName || 'مستخدم', email: d.userEmail || '',
+        lastMessage: d.lastMessage || '', lastMessageAt: d.lastMessageAt,
+        totalMessages: d.totalMessages || 0
+      });
+    });
+    this.renderChats();
+    this.updateStats();
+  },
+
+  renderChats() {
+    const list = document.getElementById('chat-list');
+    const filtered = this.allChats.filter(c => {
+      if (this.searchTerm && !(c.name.toLowerCase().includes(this.searchTerm) || c.email.toLowerCase().includes(this.searchTerm))) return false;
+      if (this.filter !== 'all' && c.lastMessageAt) {
+        const ms = Date.now() - c.lastMessageAt.seconds * 1000;
+        if (this.filter === 'today' && ms > 86400000) return false;
+        if (this.filter === 'week' && ms > 604800000) return false;
+        if (this.filter === 'month' && ms > 2592000000) return false;
+      }
+      return true;
+    });
+    if (!filtered.length) { list.innerHTML = '<div style="padding:20px;color:#8b7aa8;text-align:center;">لا محادثات</div>'; return; }
+    list.innerHTML = filtered.map(c => {
+      const time = c.lastMessageAt ? new Date(c.lastMessageAt.seconds * 1000).toLocaleString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : '';
+      return `<div class="chat-item" data-uid="${c.uid}" onclick="Admin.openChat('${c.uid}')">
+        <div class="chat-item-head">
+          <div class="chat-item-name">${c.name.replace(/</g,'&lt;')}</div>
+          <div class="chat-item-time">${time}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+          <div class="chat-item-preview">${(c.lastMessage||'').replace(/</g,'&lt;')}</div>
+          ${c.totalMessages ? `<span class="chat-item-count">${c.totalMessages}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  filterChats() { this.searchTerm = document.getElementById('search-input').value.toLowerCase(); this.renderChats(); },
+  setFilter(f, el) { this.filter = f; document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); this.renderChats(); },
+
+  updateStats() {
+    document.getElementById('stat-total').textContent = this.allChats.length;
+    const today = this.allChats.filter(c => c.lastMessageAt && (Date.now() - c.lastMessageAt.seconds*1000) < 86400000).length;
+    document.getElementById('stat-today').textContent = today;
+    document.getElementById('stat-unread').textContent = '0';
+  },
+
+  async openChat(uid) {
+    document.querySelectorAll('.chat-item').forEach(e => e.classList.remove('active'));
+    document.querySelector(`[data-uid="${uid}"]`)?.classList.add('active');
+    this.currentUid = uid;
+    const chat = this.allChats.find(c => c.uid === uid);
+    document.getElementById('main-header').innerHTML = `
+      <div class="main-header-info">
+        <div class="main-header-name">${(chat?.name||'مستخدم').replace(/</g,'&lt;')}</div>
+        <div class="main-header-sub">${(chat?.email||'').replace(/</g,'&lt;')}</div>
+      </div>
+      <div class="main-header-actions">
+        <button class="action-btn" onclick="Admin.exportChat()">📥 تصدير</button>
+        <button class="action-btn danger" onclick="Admin.deleteChat()">🗑️ حذف</button>
+      </div>`;
+    document.getElementById('input-area').style.display = 'flex';
+    if (this.unsub) this.unsub();
+    this.unsub = this.db.collection('chats').doc(uid).collection('messages').orderBy('timestamp','asc')
+      .onSnapshot(snap => {
+        const c = document.getElementById('messages');
+        if (snap.empty) { c.innerHTML = '<div class="empty-state">لا رسائل</div>'; return; }
+        c.innerHTML = snap.docs.map(doc => {
+          const d = doc.data();
+          const time = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : '';
+          const role = d.role === 'user' ? 'user' : (d.role === 'admin' ? 'admin' : 'assistant');
+          if (d.type === 'image') {
+            return `<div class="msg ${role} image"><img src="${d.imageUrl}" onclick="window.open('${d.imageUrl}','_blank')">${d.text ? '<div>'+d.text.replace(/</g,'&lt;')+'</div>' : ''}<span class="msg-time">${time}</span></div>`;
+          }
+          return `<div class="msg ${role}">${(d.text||'').replace(/</g,'&lt;')}<span class="msg-time">${time}</span></div>`;
+        }).join('');
+        c.scrollTop = c.scrollHeight;
+      });
+  },
+
+  async sendReply() {
+    const input = document.getElementById('admin-reply');
+    const text = input.value.trim();
+    if (!text || !this.currentUid) return;
+    input.value = '';
+    await this.db.collection('chats').doc(this.currentUid).collection('messages').add({
+      role: 'admin', type: 'text', text: text,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      fromAdmin: true
+    });
+    await this.db.collection('chats').doc(this.currentUid).set({
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastMessage: text.slice(0, 100)
+    }, { merge: true });
+  },
+
+  async deleteChat() {
+    if (!this.currentUid || !confirm('حذف المحادثة نهائياً؟')) return;
+    const msgs = await this.db.collection('chats').doc(this.currentUid).collection('messages').get();
+    const batch = this.db.batch();
+    msgs.forEach(d => batch.delete(d.ref));
+    batch.delete(this.db.collection('chats').doc(this.currentUid));
+    await batch.commit();
+    alert('تم الحذف');
+    location.reload();
+  },
+
+  async exportChat() {
+    if (!this.currentUid) return;
+    const snap = await this.db.collection('chats').doc(this.currentUid).collection('messages').orderBy('timestamp','asc').get();
+    let csv = 'Role,Text,Time\n';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const time = d.timestamp ? new Date(d.timestamp.seconds*1000).toISOString() : '';
+      csv += `"${d.role}","${(d.text||'').replace(/"/g,'""')}","${time}"\n`;
+    });
+    const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'chat-' + this.currentUid + '.csv';
+    a.click();
+  }
+};
+Admin.init();
+</script>
+</body>
+</html>
