@@ -196,3 +196,111 @@ setTimeout(function() {
     };
   }
 }, 100);
+
+/* ═══ نظام إدارة العمال (Staff Management) ═══ */
+setTimeout(function() {
+  if (!window.A) return;
+
+  // 1. إضافة التبويب
+  var tabs = document.querySelector('.tbs');
+  if (tabs && !document.querySelector('.tb[onclick*="staff"]')) {
+    var btn = document.createElement('button');
+    btn.className = 'tb';
+    btn.setAttribute('onclick', "A.tab('staff',this)");
+    btn.innerHTML = '👷 العمال';
+    tabs.appendChild(btn);
+  }
+
+  // 2. إضافة الشاشة
+  var ct = document.getElementById('ct');
+  if (ct && !document.getElementById('sc-staff')) {
+    var div = document.createElement('div');
+    div.id = 'sc-staff';
+    div.className = 'sc';
+    div.innerHTML = '<button class="btn bp bb" style="margin-bottom:10px;" onclick="A.staffForm()">+ إضافة عامل جديد</button><div id="staff-list"></div>';
+    ct.appendChild(div);
+  }
+
+  // 3. دالة تحميل وعرض العمال
+  A.loadStaff = async function() {
+    var list = document.getElementById('staff-list');
+    if(!list) return;
+    list.innerHTML = '<div class="sp"></div>';
+    try {
+      var snap = await FB.db.collection('staff').get();
+      var html = '';
+      if (snap.empty) {
+        html = '<div class="emp">لا يوجد عمال حالياً</div>';
+      } else {
+        snap.forEach(function(doc) {
+          var s = doc.data();
+          var st = s.blocked ? '<span class="bst bx2">محجوب</span>' : '<span class="bst bc2">نشط</span>';
+          var catName = s.category || 'كل الأقسام';
+          if (A.cats) { A.cats.forEach(function(c){ if(c.key === s.category) catName = c.name; }); }
+          html += '<div class="rw"><div class="rt" style="background:var(--cd2);">👤</div><div class="ri"><div class="rti">' + esc(s.email) + '</div><div class="rs">القسم: ' + esc(catName) + ' • ' + st + '</div></div><div class="ra"><button class="btn ' + (s.blocked ? 'bs' : 'bd') + ' bsm" onclick="A.toggleStaff(\'' + doc.id + '\', ' + !s.blocked + ')">' + (s.blocked ? 'تفعيل' : 'حجب') + '</button><button class="btn bd bsm" onclick="A.deleteStaff(\'' + doc.id + '\')">🗑️</button></div></div>';
+        });
+      }
+      list.innerHTML = html;
+    } catch(e) {
+      list.innerHTML = '<div class="emp" style="color:red;">خطأ في التحميل: ' + e.message + '</div>';
+    }
+  };
+
+  // 4. نموذج إضافة عامل
+  A.staffForm = function() {
+    var catOpts = '<option value="all">كل الأقسام (مشرف عام)</option>';
+    if (A.cats) A.cats.forEach(function(c){ catOpts += '<option value="' + c.key + '">' + c.name + '</option>'; });
+    var html = '<div class="fl"><label class="fll">البريد الإلكتروني</label><input class="fi" id="st-email" type="email" placeholder="worker@example.com" style="text-align:left;direction:ltr;"></div>' +
+               '<div class="fl"><label class="fll">كلمة المرور</label><input class="fi" id="st-pass" type="text" placeholder="6 أحرف على الأقل" style="text-align:left;direction:ltr;"></div>' +
+               '<div class="fl"><label class="fll">القسم المسموح</label><select class="fi" id="st-cat">' + catOpts + '</select></div>' +
+               '<div class="ib">⚠️ تأكد من البريد والباسورد، يمكنك تسليمه للعامل ليدخل به.</div>';
+    A.modal('إضافة عامل جديد', html, '<button class="btn bg2" onclick="A.cm()">إلغاء</button><button class="btn bp" onclick="A.saveStaff()">إنشاء الحساب</button>');
+  };
+
+  // 5. حفظ العامل (باستخدام تطبيق Firebase ثانوي)
+  A.saveStaff = async function() {
+    var email = document.getElementById('st-email').value.trim();
+    var pass = document.getElementById('st-pass').value.trim();
+    var cat = document.getElementById('st-cat').value;
+    if(!email || pass.length < 6) { A.toast('أدخل بريداً صحيحاً وكلمة مرور 6 أحرف', 'err'); return; }
+
+    A.toast('⏳ جاري إنشاء الحساب...', 'suc');
+    try {
+      // نستخدم تطبيقاً ثانوياً لكي لا يتم تسجيل خروجك أنت
+      var secApp;
+      try { secApp = firebase.app('Secondary'); } catch(e) { secApp = firebase.initializeApp(window.FIREBASE_CONFIG, 'Secondary'); }
+      
+      var userCred = await secApp.auth().createUserWithEmailAndPassword(email, pass);
+      var uid = userCred.user.uid;
+      
+      await FB.db.collection('staff').doc(uid).set({
+        email: email, category: cat, blocked: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      await secApp.auth().signOut(); // تسجيل خروج العامل من المتصفح
+      A.cm(); A.loadStaff(); A.toast('✓ تم إنشاء العامل بنجاح', 'suc');
+    } catch(e) {
+      A.toast('فشل: ' + e.message, 'err');
+    }
+  };
+
+  // 6. حجب / تفعيل
+  A.toggleStaff = async function(uid, blockStatus) {
+    try { await FB.db.collection('staff').doc(uid).update({ blocked: blockStatus }); A.loadStaff(); A.toast('✓ تم التحديث', 'suc'); } catch(e) { A.toast('فشل', 'err'); }
+  };
+
+  // 7. حذف من قاعدة البيانات (ملاحظة: الحساب يبقى في Auth)
+  A.deleteStaff = function(uid) {
+    A.confirm('حذف العامل؟', 'لن يستطيع الدخول مرة أخرى', async function() {
+      try { await FB.db.collection('staff').doc(uid).delete(); A.loadStaff(); A.toast('تم الحذف', 'suc'); } catch(e) { A.toast('فشل', 'err'); }
+    });
+  };
+
+  // 8. ربط التبويب بالدالة
+  var origTab = A.tab;
+  A.tab = function(n, el) {
+    origTab.call(this, n, el);
+    if (n === 'staff') this.loadStaff();
+  };
+}, 2000);
