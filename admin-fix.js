@@ -169,3 +169,30 @@ setTimeout(function() {
       '<button class="gbtn sec" onclick="A.loginGoogle()">🔍 دخول بـ Google</button>';
   }
 }, 3000);
+
+/* ═══ تجاوز شاشة التحميل وإظهار الدخول فوراً ═══ */
+setTimeout(function() {
+  if (window.A) {
+    // 1. تغيير شكل شاشة الدخول لتشمل البريد وكلمة المرور
+    A.loginScreen = function() {
+      document.getElementById('gb').innerHTML =
+        '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>' +
+        '<div class="gi">🔐</div><div class="gtt">لوحة محمية</div>' +
+        '<div class="gd">سجّل دخول بحساب المسؤول</div>' +
+        '<input type="email" id="admin-email" class="fi" placeholder="البريد الإلكتروني" style="margin-bottom:10px;text-align:left;direction:ltr;">' +
+        '<input type="password" id="admin-pass" class="fi" placeholder="كلمة المرور" style="margin-bottom:15px;text-align:left;direction:ltr;">' +
+        '<button class="gbtn" onclick="window.FB.auth.signInWithEmailAndPassword(document.getElementById(\'admin-email\').value, document.getElementById(\'admin-pass\').value).catch(e=>alert(e.message))">🔓 دخول بالبريد</button>' +
+        '<button class="gbtn sec" onclick="A.loginGoogle()">🔍 دخول بـ Google</button>';
+    };
+
+    // 2. تجاوز شاشة التحميل وعرض الدخول مباشرة
+    A.init = function() {
+      this.loginScreen(); // إظهار الدخول فوراً
+      if (window.FB && FB.auth) {
+        FB.auth.onAuthStateChanged(function(u) {
+          if (u) A.checkAdmin(u); // إذا كان مسجل مسبقاً، ادخل للوحة
+        });
+      }
+    };
+  }
+}, 100);
