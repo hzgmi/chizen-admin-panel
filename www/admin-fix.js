@@ -1,8 +1,49 @@
+/* ═══ CHIZEN Admin Ultimate Fix ═══ */
 (function() {
-  function apply() {
-    if (!window.A) { setTimeout(apply, 200); return; }
-    
-    // ميزات الأدمن (PDF والسندات)
+  function init() {
+    if (!window.A) { setTimeout(init, 200); return; }
+
+    // 1. إصلاح نظام الدخول (بدون تعليق)
+    A.init = function() {
+      var self = this;
+      this.loginScreen();
+      if(window.FB && FB.auth) {
+        window.FB.auth.onAuthStateChanged(function(u) {
+          if(u) self.checkAdmin(u);
+        });
+      }
+    };
+
+    A.loginScreen = function() {
+      var gb = document.getElementById('gb');
+      if(!gb) return;
+      gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>' +
+        '<div class="gi">🔐</div><div class="gtt">لوحة محمية</div>' +
+        '<div class="gd">سجّل دخول بحساب المسؤول</div>' +
+        '<input type="email" id="admin-email" class="fi" placeholder="البريد الإلكتروني" style="margin-bottom:10px;text-align:left;direction:ltr;width:100%;padding:12px;background:#150826;border:1px solid #3A1F5A;border-radius:9px;color:#F5E6FF;font-family:Cairo;font-size:16px;">' +
+        '<input type="password" id="admin-pass" class="fi" placeholder="كلمة المرور" style="margin-bottom:15px;text-align:left;direction:ltr;width:100%;padding:12px;background:#150826;border:1px solid #3A1F5A;border-radius:9px;color:#F5E6FF;font-family:Cairo;font-size:16px;">' +
+        '<button class="gbtn" onclick="var e=document.getElementById(\'admin-email\').value; var p=document.getElementById(\'admin-pass\').value; window.FB.auth.signInWithEmailAndPassword(e,p).then(function(u){ A.checkAdmin(u.user); }).catch(function(err){ alert(err.message); })" style="width:100%;padding:15px;background:linear-gradient(135deg,#EC4899,#A855F7);border:none;border-radius:12px;color:#fff;font-family:Cairo;font-size:15px;font-weight:900;margin-bottom:10px;">🔓 دخول بالبريد</button>' +
+        '<button class="gbtn sec" onclick="A.loginGoogle()" style="width:100%;padding:15px;background:#2A1345;border:1px solid #3A1F5A;border-radius:12px;color:#F5E6FF;font-family:Cairo;font-size:15px;font-weight:900;">🔍 دخول بـ Google</button>';
+    };
+
+    A.checkAdmin = async function(u) {
+      var gb = document.getElementById('gb');
+      if(gb) gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="sp"></div><div class="gd">جاري التحقق من الصلاحيات...</div>';
+      try {
+        var doc = await window.FB.db.collection('admins').doc(u.uid).get();
+        if (doc.exists) {
+          this.access(u);
+        } else {
+          if(gb) gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="gi">🚫</div><div class="gtt" style="color:#EF4444;">غير مصرح</div><div class="gd">هذا الحساب ليس لديه صلاحيات المسؤول</div><div class="gu">'+(u.email||'')+'</div><button class="gbtn dgr" onclick="window.FB.auth.signOut().then(()=>location.reload())">تسجيل الخروج</button>';
+        }
+      } catch(e) {
+        if(gb) gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="gi">⚠️</div><div class="gtt">خطأ في الاتصال</div><div class="gd">'+e.message+'</div><button class="gbtn sec" onclick="location.reload()">إعادة المحاولة</button>';
+      }
+    };
+
+    A.init(); // تشغيل مباشر
+
+    // 2. ميزات PDF والسندات
     A._saveVerification = async function(order) {
       try {
         var safeId = String(order.id).replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -80,7 +121,7 @@
 
     A.genSupplyBlob = async function() { return null; };
 
-    // Staff Management
+    // 3. نظام العمال
     var tabs = document.querySelector('.tbs');
     if (tabs && !document.querySelector('.tb[onclick*="staff"]')) {
       var btn = document.createElement('button'); btn.className = 'tb'; btn.setAttribute('onclick', "A.tab('staff',this)"); btn.innerHTML = '👷 العمال'; tabs.appendChild(btn);
@@ -145,72 +186,8 @@
     var origTab = A.tab;
     A.tab = function(n, el) { origTab.call(this, n, el); if (n === 'staff') this.loadStaff(); };
 
-    console.log('✅ Clean Admin Fixes Applied');
+    console.log('✅ Ultimate Admin Fix Applied');
   }
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', function(){ setTimeout(apply, 500); }); } else { setTimeout(apply, 500); }
+  init();
 })();
 
-/* ═══ شاشة دخول نظيفة وبدون إعادة تحميل ═══ */
-setTimeout(function() {
-  if (window.A) {
-    A.loginScreen = function() {
-      var gb = document.getElementById('gb');
-      if(!gb) return;
-      gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>' +
-        '<div class="gi">🔐</div><div class="gtt">لوحة محمية</div>' +
-        '<div class="gd">سجّل دخول بحساب المسؤول</div>' +
-        '<input type="email" id="admin-email" class="fi" placeholder="البريد الإلكتروني" style="margin-bottom:10px;text-align:left;direction:ltr;width:100%;padding:12px;background:#150826;border:1px solid #3A1F5A;border-radius:9px;color:#F5E6FF;font-family:Cairo;font-size:16px;">' +
-        '<input type="password" id="admin-pass" class="fi" placeholder="كلمة المرور" style="margin-bottom:15px;text-align:left;direction:ltr;width:100%;padding:12px;background:#150826;border:1px solid #3A1F5A;border-radius:9px;color:#F5E6FF;font-family:Cairo;font-size:16px;">' +
-        '<button class="gbtn" onclick="var e=document.getElementById(\'admin-email\').value; var p=document.getElementById(\'admin-pass\').value; window.FB.auth.signInWithEmailAndPassword(e,p).then(function(u){ A.checkAdmin(u.user); }).catch(function(err){ alert(err.message); })" style="width:100%;padding:15px;background:linear-gradient(135deg,#EC4899,#A855F7);border:none;border-radius:12px;color:#fff;font-family:Cairo;font-size:15px;font-weight:900;margin-bottom:10px;">🔓 دخول بالبريد</button>' +
-        '<button class="gbtn sec" onclick="A.loginGoogle()" style="width:100%;padding:15px;background:#2A1345;border:1px solid #3A1F5A;border-radius:12px;color:#F5E6FF;font-family:Cairo;font-size:15px;font-weight:900;">🔍 دخول بـ Google</button>';
-    };
-
-    // إظهار شاشة الدخول فوراً
-    A.loginScreen();
-    
-    // فحص إذا كان المستخدم مسجل دخول مسبقاً
-    if(window.FB && FB.auth) {
-        FB.auth.onAuthStateChanged(function(u) {
-            if(u) A.checkAdmin(u);
-        });
-    }
-  }
-}, 500);
-
-/* ═══ DEBUG LOGIN ═══ */
-setTimeout(function() {
-  if (window.A) {
-    A.loginScreen = function() {
-      var gb = document.getElementById('gb');
-      if(!gb) return;
-      gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>' +
-        '<div class="gi">🔐</div><div class="gtt">لوحة محمية (تصحيح)</div>' +
-        '<div id="debug-msg" style="color:red;font-size:12px;margin-bottom:10px;"></div>' +
-        '<input type="email" id="admin-email" class="fi" placeholder="البريد الإلكتروني" style="margin-bottom:10px;text-align:left;direction:ltr;width:100%;padding:12px;background:#150826;border:1px solid #3A1F5A;border-radius:9px;color:#F5E6FF;font-family:Cairo;font-size:16px;">' +
-        '<input type="password" id="admin-pass" class="fi" placeholder="كلمة المرور" style="margin-bottom:15px;text-align:left;direction:ltr;width:100%;padding:12px;background:#150826;border:1px solid #3A1F5A;border-radius:9px;color:#F5E6FF;font-family:Cairo;font-size:16px;">' +
-        '<button class="gbtn" onclick="var e=document.getElementById(\'admin-email\').value; var p=document.getElementById(\'admin-pass\').value; var d=document.getElementById(\'debug-msg\'); d.innerText=\'جاري الدخول...\'; window.FB.auth.signInWithEmailAndPassword(e,p).then(function(u){ d.innerText=\'تم تسجيل الدخول! جاري فحص الصلاحيات...\'; A.checkAdmin(u.user); }).catch(function(err){ d.innerText=\'خطأ: \' + err.message; })" style="width:100%;padding:15px;background:linear-gradient(135deg,#EC4899,#A855F7);border:none;border-radius:12px;color:#fff;font-family:Cairo;font-size:15px;font-weight:900;margin-bottom:10px;">🔓 دخول بالبريد</button>' +
-        '<button class="gbtn sec" onclick="A.loginGoogle()" style="width:100%;padding:15px;background:#2A1345;border:1px solid #3A1F5A;border-radius:12px;color:#F5E6FF;font-family:Cairo;font-size:15px;font-weight:900;">🔍 دخول بـ Google</button>';
-    };
-
-    // إضافة تصحيح لدالة checkAdmin
-    var origCheck = A.checkAdmin;
-    A.checkAdmin = async function(u) {
-        var d = document.getElementById('debug-msg');
-        if(d) d.innerText = 'فحص الصلاحيات للحساب: ' + u.uid;
-        try {
-            var doc = await window.FB.db.collection('admins').doc(u.uid).get();
-            if (doc.exists) {
-                if(d) d.innerText = 'أنت أدمن! جاري فتح اللوحة...';
-                this.access(u);
-            } else {
-                if(d) d.innerText = 'هذا الحساب ليس مسؤولاً (غير موجود في admins).';
-                setTimeout(function(){ A.logout(); }, 2000);
-            }
-        } catch(e) {
-            if(d) d.innerText = 'خطأ في القواعد: ' + e.message;
-        }
-    };
-
-    A.loginScreen();
-  }
-}, 1000);
