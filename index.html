@@ -172,6 +172,16 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 }
 @media(max-width:380px){.sg3{grid-template-columns:1fr 1fr;}.sg3>div:last-child{grid-column:span 2;}}
 </style>
+
+<style>
+#ptr-indicator {
+  position: fixed; top: -50px; left: 0; right: 0; height: 50px;
+  display: flex; align-items: center; justify-content: center;
+  background: #1F0D35; color: #ff27c9; font-weight: bold; font-family: Tajawal, sans-serif;
+  transition: top 0.3s ease; z-index: 99999;
+}
+#ptr-indicator.active { top: 0; }
+</style>
 </head>
 <body>
 <noscript><div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0A0515;color:#fff;font-family:sans-serif;text-align:center;z-index:1;"><div><h2>⚠️ JavaScript مطلوب</h2><p>يرجى تفعيل JavaScript لعرض هذه الصفحة</p></div></div></noscript>
@@ -247,7 +257,7 @@ var A={
         FB.auth.onAuthStateChanged(function(u) {
           if(self._checked) return;
           self._checked = true;
-          if (u) self.access(u); else self.loginScreen();
+          if (u) { self.access(u); } else { self.loginScreen(); }
         });
       } catch(e) { console.error(e); this.loginScreen(); }
     }
@@ -1146,7 +1156,7 @@ var A={
         doc.text('ID: ' + o.id + ' | ' + o.name + ' | ' + o.total + ' YER | ' + o.status, 10, y);
         y += 10;
     });
-    doc.save('orders.pdf');
+    doc.save('orders.pdf'); window.open(doc.output('bloburl'), '_blank');
     this.toast('تم تحميل الـ PDF بنجاح', 'suc');
 },
   exportReceipt:function(){
@@ -1156,7 +1166,7 @@ var A={
     doc.text("CHIZEN - Receipt", 10, 10);
     doc.setFontSize(12);
     doc.text("Thank you for your order!", 10, 20);
-    doc.save('receipt.pdf');
+    doc.save('receipt.pdf'); window.open(doc.output('bloburl'), '_blank');
     this.toast('تم تحميل السند بنجاح', 'suc');
 },
   sendReceipt:function(){
@@ -1221,7 +1231,39 @@ window.forceLogin = function() {
     });
 };
 </script>
+
+<div id="ptr-indicator">🔄 جاري التحديث...</div>
+<script>
+let startY = 0;
+let pulling = false;
+document.addEventListener('touchstart', e => {
+  if (window.scrollY === 0) { startY = e.touches[0].pageY; pulling = true; }
+});
+document.addEventListener('touchmove', e => {
+  if (!pulling) return;
+  let currentY = e.touches[0].pageY;
+  if (currentY - startY > 100 && window.scrollY === 0) {
+    document.getElementById('ptr-indicator').classList.add('active');
+  }
+});
+document.addEventListener('touchend', e => {
+  if (!pulling) return;
+  pulling = false;
+  let ptr = document.getElementById('ptr-indicator');
+  if (ptr.classList.contains('active')) {
+    setTimeout(() => {
+      if (window.A && window.A.loadData) {
+        window.A.loadData().then(() => { if(window.A.renderAll) window.A.renderAll(); location.reload(); });
+      } else {
+        location.reload();
+      }
+      ptr.classList.remove('active');
+    }, 1000);
+  }
+});
+</script>
 </body>
+
 
 
 
