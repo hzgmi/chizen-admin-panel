@@ -175,120 +175,23 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 
 
 
-<style id="luxury-theme">
-/* ═══ خطوط وتجهيزات أساسية ═══ */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap');
-* { font-family: 'Cairo', sans-serif !important; }
 
-/* ═══ الخلفية العامة ═══ */
-body { 
-    background: radial-gradient(circle at top right, #1a0b2e, #0a0515, #000) !important; 
-    color: #e2e8f0 !important;
-}
 
-/* ═══ الكروت والصناديق (تأثير الزجاج) ═══ */
-.cd, .scd, .sc { 
-    background: rgba(30, 15, 50, 0.4) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
-    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
-}
-.cd:hover, .scd:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px 0 rgba(255, 39, 201, 0.1) !important;
-}
 
-/* ═══ الشريط العلوي والتبويبات ═══ */
-.tb { 
-    background: transparent !important;
-    color: #a0aec0 !important;
-    border-radius: 12px !important;
-    transition: all 0.3s ease !important;
-    padding: 10px 18px !important;
-    font-weight: 600 !important;
-}
-.tb.active, .tb:hover { 
-    background: linear-gradient(135deg, rgba(255,39,201,0.15), rgba(141,36,255,0.15)) !important;
-    color: #fff !important;
-    border: 1px solid rgba(255,39,201,0.3) !important;
-    box-shadow: 0 0 15px rgba(255,39,201,0.2) !important;
-}
 
-/* ═══ الأزرار ═══ */
-.btn, .gbtn { 
-    border-radius: 10px !important;
-    font-weight: 700 !important;
-    border: none !important;
-    transition: all 0.3s ease !important;
-    letter-spacing: 0.5px !important;
-}
-.bp, .gbtn { 
-    background: linear-gradient(135deg, #ff27c9, #8d24ff) !important;
-    color: #fff !important;
-    box-shadow: 0 4px 15px rgba(255, 39, 201, 0.4) !important;
-}
-.bp:hover, .gbtn:hover { 
-    box-shadow: 0 6px 20px rgba(255, 39, 201, 0.6) !important;
-    transform: scale(1.02);
-}
-.bd { background: rgba(239, 68, 68, 0.15) !important; color: #ef4444 !important; border: 1px solid rgba(239,68,68,0.3) !important; }
-.bd:hover { background: rgba(239, 68, 68, 0.3) !important; }
-.bg2 { background: rgba(255, 255, 255, 0.05) !important; color: #cbd5e1 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
-.bg2:hover { background: rgba(255, 255, 255, 0.1) !important; }
-
-/* ═══ حقول الإدخال ═══ */
-.fi, select.fi, textarea.fi { 
-    background: rgba(0, 0, 0, 0.3) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px !important;
-    color: #fff !important;
-    padding: 12px 15px !important;
-    transition: all 0.3s ease !important;
-}
-.fi:focus, select.fi:focus, textarea.fi:focus { 
-    border-color: #ff27c9 !important;
-    box-shadow: 0 0 10px rgba(255, 39, 201, 0.3) !important;
-    outline: none !important;
-}
-
-/* ═══ العناوين والنصوص ═══ */
-.ctl, .st2 { color: #fff !important; font-weight: 800 !important; letter-spacing: 1px; }
-.sl { color: #a0aec0 !important; font-size: 12px !important; }
-.sv { 
-    background: linear-gradient(to right, #fff, #a0aec0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 900 !important;
-}
-
-/* ═══ شريط التمرير (Scrollbar) ═══ */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255, 39, 201, 0.3); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 39, 201, 0.6); }
-
-/* ═══ النوافذ المنبثقة (Modals) ═══ */
-.cf .cfb, .mo, .md { 
-    background: rgba(20, 10, 35, 0.95) !important;
-    backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 20px !important;
-}
-</style>
-
-<style id="fix-blank-screen">
-/* إجبار الكروت تظهر بلون صلب بدل الشفافية المفرطة */
+<style id="safe-admin-theme">
+body { background: #0A0515 !important; color: #fff !important; }
 .cd, .scd { 
     background: #1F0D35 !important; 
-    border: 1px solid rgba(255,255,255,0.1) !important; 
+    border: 1px solid #333 !important; 
+    border-radius: 12px; padding: 15px; margin-bottom: 15px; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
-#ct { min-height: 80vh !important; display: block !important; padding-bottom: 50px; }
-.sc { display: none; }
 .sc.active { display: block !important; opacity: 1 !important; visibility: visible !important; }
+#ct { min-height: 100vh; padding-bottom: 100px; }
 .sv, .sl, .ctl { color: #fff !important; }
+.bp, .gbtn { background: #ff27c9 !important; color: #fff !important; border: none !important; }
+.fi { background: #0A0515 !important; color: #fff !important; border: 1px solid #444 !important; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -1422,48 +1325,38 @@ window.forceLogin = function() {
 
 
 
-<div id="admin-ptr" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:linear-gradient(90deg, #1F0D35, #0A0515); color:#ff27c9; font-weight:bold; z-index:999999; transition:top 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">🔄 جاري تحديث البيانات...</div>
+
+
+
+<div id="safe-ptr" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:#1F0D35; color:#ff27c9; font-weight:bold; z-index:99999; transition:top 0.3s ease; border-bottom: 2px solid #ff27c9;">🔄 جاري التحديث...</div>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let touchStartY = 0;
-    let isPulling = false;
-    // بنستهدف منطقة المحتوى أو الصفحة ككل
-    const container = document.getElementById('ct') || document.querySelector('.content') || document.body;
-
-    container.addEventListener('touchstart', function(e) {
-        // الشرط الأساسي: نتأكد إننا في أول الصفحة خالص (scrollTop = 0)
-        if (container.scrollTop === 0) {
-            touchStartY = e.touches[0].pageY;
-            isPulling = true;
-        } else {
-            isPulling = false;
-        }
-    }, { passive: true });
-
-    container.addEventListener('touchmove', function(e) {
-        if (!isPulling) return;
-        let currentY = e.touches[0].pageY;
-        
-        // لو سحبنا لتحت مسافة أكتر من 80 بكسل وإحنا لسه في الأول
-        if (currentY - touchStartY > 80 && container.scrollTop === 0) {
-            document.getElementById('admin-ptr').style.top = '0';
-        }
-    }, { passive: true });
-
-    container.addEventListener('touchend', function(e) {
-        if (!isPulling) return;
+let ptrStart = 0;
+let isPulling = false;
+window.addEventListener('touchstart', function(e) {
+    // لو إحنا في قمة الصفحة
+    if (window.scrollY <= 0) {
+        ptrStart = e.touches[0].pageY;
+        isPulling = true;
+    } else {
         isPulling = false;
-        let ptr = document.getElementById('admin-ptr');
-        
-        // لو الشريط ظهر، نعمل ريفريش
-        if (ptr && ptr.style.top === '0px') {
-            setTimeout(function() {
-                location.reload();
-            }, 800);
-        } else if (ptr) {
-            ptr.style.top = '-60px'; // إخفاء الشريط لو مسحبناش كفاية
-        }
-    });
+    }
+}, { passive: true });
+window.addEventListener('touchmove', function(e) {
+    if (!isPulling) return;
+    let currentY = e.touches[0].pageY;
+    if (currentY - ptrStart > 80 && window.scrollY <= 0) {
+        document.getElementById('safe-ptr').style.top = '0';
+    }
+}, { passive: true });
+window.addEventListener('touchend', function(e) {
+    if (!isPulling) return;
+    isPulling = false;
+    let ptr = document.getElementById('safe-ptr');
+    if (ptr && ptr.style.top === '0px') {
+        setTimeout(function() { location.reload(); }, 800);
+    } else if (ptr) {
+        ptr.style.top = '-60px';
+    }
 });
 </script>
 </body>
