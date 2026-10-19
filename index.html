@@ -412,15 +412,15 @@ var A={
   loadData:async function(){
     var s=this;
     await Promise.allSettled([
-      (async()=>{try{var p=await FB.getProducts();if(p)s.products=p;}catch(e){}})(),
-      (async()=>{try{var u=await FB.getAllUsers();if(u)s.users=u;}catch(e){}})(),
-      (async()=>{try{var o=await FB.getAllOrders();if(o)s.orders=o;}catch(e){}})(),
-      (async()=>{try{var c=await FB.getConfig('categories');if(c&&c.list)s.cats=c.list;}catch(e){}})(),
-      (async()=>{try{var p=await FB.getConfig('payments');if(p&&p.list)s.pays=p.list;}catch(e){}})(),
-      (async()=>{try{var sp=await FB.getConfig('suppliers');if(sp&&sp.list)s.sups=sp.list;}catch(e){}})(),
-      (async()=>{try{var sn=await FB.db.collection('admins').get();s.admins=[];sn.forEach(d=>s.admins.push({uid:d.id,data:d.data()}));}catch(e){}})(),
-      (async()=>{try{var c=await FB.getConfig('contact');if(c)localStorage.setItem('chizen_contact',JSON.stringify(c));}catch(e){}})(),
-      (async()=>{try{var sh=await FB.getConfig('shipping');if(sh)localStorage.setItem('chizen_shipping',JSON.stringify(sh));}catch(e){}})(),
+      (async()=>{try{var p=await FB.getProducts();if(p)s.products=p;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var u=await FB.getAllUsers();if(u)s.users=u;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var o=await FB.getAllOrders();if(o)s.orders=o;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var c=await FB.getConfig('categories');if(c&&c.list)s.cats=c.list;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var p=await FB.getConfig('payments');if(p&&p.list)s.pays=p.list;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var sp=await FB.getConfig('suppliers');if(sp&&sp.list)s.sups=sp.list;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var sn=await FB.db.collection('admins').get();s.admins=[];sn.forEach(d=>s.admins.push({uid:d.id,data:d.data()}));}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var c=await FB.getConfig('contact');if(c)localStorage.setItem('chizen_contact',JSON.stringify(c));}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var sh=await FB.getConfig('shipping');if(sh)localStorage.setItem('chizen_shipping',JSON.stringify(sh));}catch(e){ console.error('ERR:', e.message); }})(),
       (async()=>{try{var dl=await FB.getConfig('delivery_locations');if(dl&&dl.aden){s.deliveryLocs=dl;}else{s.deliveryLocs={aden:[{district:'المعلا',areas:['الشارع الرئيسي']}],yemen:[{gov:'صنعاء',station:'مكتب باصات الشام'}]};}}catch(e){s.deliveryLocs={aden:[],yemen:[]};}})()
     ]);
     if(!s.cats.length)s.cats=[{key:'home',name:'منزلية',icon:'🏠'},{key:'beauty',name:'تجميل',icon:'💄'},{key:'school',name:'مدرسية',icon:'📚'},{key:'clothes',name:'ملابس',icon:'👕'},{key:'electronics',name:'إلكترونيات',icon:'📱'},{key:'food',name:'طعام',icon:'🍔'},{key:'games',name:'ألعاب',icon:'🎮'},{key:'more',name:'المزيد',icon:'➕'}];
@@ -736,7 +736,7 @@ var A={
       try{
         if(targetUid!=='ALL'&&FB.addUserNotification)await FB.addUserNotification(targetUid,{title:titles[status],body:bodies[status],type:'order'});
         else if(FB.addNotification)await FB.addNotification({title:titles[status],body:bodies[status],type:'order'});
-      }catch(e){}
+      }catch(e){ console.error('ERR:', e.message); }
       await this.loadData();this.renderOrders();this.renderDash();this.cm();this.toast('✓','suc');
     }catch(e){this.toast('فشل','err');}
   },
@@ -1074,12 +1074,12 @@ var A={
   saveNewAdmin:function(){var uid=document.getElementById('ad-uid').value;if(!uid)return;this.cm();this.grantAdmin(uid);},
 
   renderSettings:function(){
-    var c={};try{c=JSON.parse(localStorage.getItem('chizen_contact')||'{}');}catch(e){}
+    var c={};try{c=JSON.parse(localStorage.getItem('chizen_contact')||'{}');}catch(e){ console.error('ERR:', e.message); }
     var g=function(id){return document.getElementById(id);};
     if(g('s-phone'))g('s-phone').value=c.phone||'';
     if(g('s-wa'))g('s-wa').value=c.whatsapp||'';
     if(g('s-email'))g('s-email').value=c.email||'';
-    var sh={};try{sh=JSON.parse(localStorage.getItem('chizen_shipping')||'{}');}catch(e){}
+    var sh={};try{sh=JSON.parse(localStorage.getItem('chizen_shipping')||'{}');}catch(e){ console.error('ERR:', e.message); }
     if(g('s-shipfee'))g('s-shipfee').value=sh.fee||'';
     if(g('s-free'))g('s-free').value=sh.freeAbove||'';
   },
@@ -1130,7 +1130,7 @@ var A={
   openApp:function(){window.open('../chizen.html','_blank');},
   logout:async function(){
     var self=this;
-    this.confirm('تسجيل الخروج؟','',async function(){try{if(FB.ready)await FB.logout();}catch(e){}location.reload();},'danger');
+    this.confirm('تسجيل الخروج؟','',async function(){try{if(FB.ready)await FB.logout();}catch(e){ console.error('ERR:', e.message); }location.reload();},'danger');
   },
 
   exportOrdersPDF:function(){this.toast('PDF — قيد التطوير','err');},
