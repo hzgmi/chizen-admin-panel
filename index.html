@@ -1153,5 +1153,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else {try{A.init();}catch(e){console.error(e);}}
 </script>
 <script src="admin-fix.js"></script>
+
+<script>
+// كود طوارئ: لو التطبيق علق في شاشة "جاري التحقق"، هيجبره يفتح الدخول
+setTimeout(function() {
+    var gb = document.getElementById('gb');
+    if (gb && gb.innerHTML.includes('جاري التحقق')) {
+        if (window.A && typeof window.A.loginScreen === 'function') {
+            window.A.loginScreen();
+        }
+    }
+}, 1500);
+</script>
 </body>
+
 </html>/
