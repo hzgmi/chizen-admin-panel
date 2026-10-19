@@ -627,7 +627,8 @@ var A={
     if(!price||price<=0){this.toast('سعر صحيح','err');return;}
     var feats=document.getElementById('f-feats').value.split('\n').map(s=>s.trim()).filter(s=>s);
     var stockV=document.getElementById('f-stock').value;
-    var data={name:name,brand:document.getElementById('f-brand').value,category:document.getElementById('f-cat').value,price:price,old:parseFloat(document.getElementById('f-old').value)||null,stock:stockV?parseInt(stockV):null,badge:document.getElementById('f-badge').value.trim(),rating:4.5,reviews:0,sold:0,img:document.getElementById('f-img').value.trim(),desc:document.getElementById('f-desc').value.trim(),features:feats,active:document.getElementById('f-active').checked,featured:document.getElementById('f-featured').checked};
+    var data={name:name,brand:document.getElementById('f-brand').value,category:document.getElementById('f-cat').value,price:price,old:parseFloat(document.getElementById('f-old').value)||null,stock:stockV?parseInt(stockV):null,badge:document.getElementById('f-badge').value.trim(),rating:4.5,reviews:0,sold:0,img:document.getElementById('f-img').value.trim(),
+         colors: document.getElementById('f-colors').value.split(',').map(s => s.trim()).filter(s => s !== ''),desc:document.getElementById('f-desc').value.trim(),features:feats,active:document.getElementById('f-active').checked,featured:document.getElementById('f-featured').checked};
     try{
       if(isEdit)await FB.updateProduct(id,data);else await FB.addProduct(data);
       this.toast(isEdit?'✓ تم':'✓ أُضيف','suc');
