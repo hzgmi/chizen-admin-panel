@@ -295,6 +295,7 @@ var A={
   checkAdmin: function(u) { this.access(u); },
 
   access: function(u){
+    document.getElementById('gs').style.display='none';
     
     document.getElementById('am').style.display='flex';
     var self=this;
