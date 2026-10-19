@@ -247,8 +247,7 @@ var A={
         FB.auth.onAuthStateChanged(function(u) {
           if(self._checked) return;
           self._checked = true;
-          if (u) self.checkAdmin(u);
-          else self.loginScreen();
+          if (u) self.access(u); else self.loginScreen();
         });
       } catch(e) { console.error(e); this.loginScreen(); }
     }
