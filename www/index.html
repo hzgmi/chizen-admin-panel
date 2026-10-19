@@ -1164,6 +1164,28 @@ setTimeout(function() {
     }
 }, 1500);
 </script>
+
+<script>
+// 🔥 كود تصفية نهائي: إلغاء شاشة التحقق وتخطيها
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        if (window.A) {
+            // تدمير دالة التحقق المسببة للتعليق
+            window.A.checkAdmin = function(u) { 
+                this.access(u); 
+            };
+            
+            // إجبار التطبيق على فتح شاشة الدخول أو اللوحة فوراً
+            if (window.FB && window.FB.auth && window.FB.auth.currentUser) {
+                window.A.access(window.FB.auth.currentUser);
+            } else {
+                window.A.loginScreen();
+            }
+        }
+    }, 500); // بعد نص ثانية من فتح التطبيق
+});
+</script>
 </body>
+
 
 </html>/
