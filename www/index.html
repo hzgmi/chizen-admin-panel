@@ -256,7 +256,7 @@ var A={
 
   loginScreen:function(){
     document.getElementById('gb').innerHTML=
-      '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>'+
+      '<div style="background:red; color:white; padding:10px; font-size:20px; font-weight:bold; text-align:center; margin-bottom:20px;">✅ تم تحديث الكود بنجاح ✅</div><div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>'+
       '<div class="gi">🔐</div><div class="gtt">لوحة محمية</div>'+
       '<div class="gd">سجّل دخول بحساب المسؤول</div>'+
       '<button class="gbtn" onclick="A.loginGoogle()">🔓 الدخول بحساب Google</button>'+
@@ -266,7 +266,7 @@ var A={
   gateMsg:function(i,t,d){
     var gb=document.getElementById('gb');
     if(!gb)return;
-    gb.innerHTML='<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="gi">'+i+'</div><div class="gtt">'+t+'</div><div class="gd">'+d+'</div><button class="gbtn sec" onclick="location.reload()">إعادة المحاولة</button>';
+    gb.innerHTML='<div style="background:red; color:white; padding:10px; font-size:20px; font-weight:bold; text-align:center; margin-bottom:20px;">✅ تم تحديث الكود بنجاح ✅</div><div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="gi">'+i+'</div><div class="gtt">'+t+'</div><div class="gd">'+d+'</div><button class="gbtn sec" onclick="location.reload()">إعادة المحاولة</button>';
   },
 
   loginGoogle:async function(){
@@ -282,7 +282,7 @@ var A={
   },
 
   checkAdmin: async function(u){
-    document.getElementById('gb').innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="sp"></div><div class="gd">جاري التحقق من الصلاحيات...</div>';
+    document.getElementById('gb').innerHTML = '<div style="background:red; color:white; padding:10px; font-size:20px; font-weight:bold; text-align:center; margin-bottom:20px;">✅ تم تحديث الكود بنجاح ✅</div><div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="sp"></div><div class="gd">جاري التحقق من الصلاحيات...</div>';
     try{
       var timeoutPromise = new Promise(function(_, reject) {
         setTimeout(function() { reject(new Error('انتهت مهلة الاتصال بالسيرفر.')); }, 10000);
@@ -291,7 +291,7 @@ var A={
       var d = await Promise.race([dbPromise, timeoutPromise]);
       if(!d.exists){
         document.getElementById('gb').innerHTML =
-          '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>'+
+          '<div style="background:red; color:white; padding:10px; font-size:20px; font-weight:bold; text-align:center; margin-bottom:20px;">✅ تم تحديث الكود بنجاح ✅</div><div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>'+
           '<div class="gi">🚫</div><div class="gtt" style="color:#EF4444;">غير مصرح</div>'+
           '<div class="gd">هذا الحساب ليس لديه صلاحيات المسؤول</div>'+
           '<div class="gu">'+esc(u.email||'')+'</div>'+
