@@ -173,15 +173,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 @media(max-width:380px){.sg3{grid-template-columns:1fr 1fr;}.sg3>div:last-child{grid-column:span 2;}}
 </style>
 
-<style>
-#ptr-indicator {
-  position: fixed; top: -50px; left: 0; right: 0; height: 50px;
-  display: flex; align-items: center; justify-content: center;
-  background: #1F0D35; color: #ff27c9; font-weight: bold; font-family: Tajawal, sans-serif;
-  transition: top 0.3s ease; z-index: 99999;
-}
-#ptr-indicator.active { top: 0; }
-</style>
+
 
 <style id="luxury-theme">
 /* ═══ خطوط وتجهيزات أساسية ═══ */
@@ -285,6 +277,18 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 20px !important;
 }
+</style>
+
+<style id="fix-blank-screen">
+/* إجبار الكروت تظهر بلون صلب بدل الشفافية المفرطة */
+.cd, .scd { 
+    background: #1F0D35 !important; 
+    border: 1px solid rgba(255,255,255,0.1) !important; 
+}
+#ct { min-height: 80vh !important; display: block !important; padding-bottom: 50px; }
+.sc { display: none; }
+.sc.active { display: block !important; opacity: 1 !important; visibility: visible !important; }
+.sv, .sl, .ctl { color: #fff !important; }
 </style>
 </head>
 <body>
@@ -1415,34 +1419,51 @@ window.forceLogin = function() {
 };
 </script>
 
-<div id="ptr-indicator">🔄 جاري التحديث...</div>
+
+
+
+<div id="admin-ptr" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:linear-gradient(90deg, #1F0D35, #0A0515); color:#ff27c9; font-weight:bold; z-index:999999; transition:top 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">🔄 جاري تحديث البيانات...</div>
 <script>
-let startY = 0;
-let pulling = false;
-document.addEventListener('touchstart', e => {
-  if (window.scrollY === 0) { startY = e.touches[0].pageY; pulling = true; }
-});
-document.addEventListener('touchmove', e => {
-  if (!pulling) return;
-  let currentY = e.touches[0].pageY;
-  if (currentY - startY > 100 && window.scrollY === 0) {
-    document.getElementById('ptr-indicator').classList.add('active');
-  }
-});
-document.addEventListener('touchend', e => {
-  if (!pulling) return;
-  pulling = false;
-  let ptr = document.getElementById('ptr-indicator');
-  if (ptr.classList.contains('active')) {
-    setTimeout(() => {
-      if (window.A && window.A.loadData) {
-        window.A.loadData().then(() => { if(window.A.renderAll) window.A.renderAll(); location.reload(); });
-      } else {
-        location.reload();
-      }
-      ptr.classList.remove('active');
-    }, 1000);
-  }
+document.addEventListener('DOMContentLoaded', function() {
+    let touchStartY = 0;
+    let isPulling = false;
+    // بنستهدف منطقة المحتوى أو الصفحة ككل
+    const container = document.getElementById('ct') || document.querySelector('.content') || document.body;
+
+    container.addEventListener('touchstart', function(e) {
+        // الشرط الأساسي: نتأكد إننا في أول الصفحة خالص (scrollTop = 0)
+        if (container.scrollTop === 0) {
+            touchStartY = e.touches[0].pageY;
+            isPulling = true;
+        } else {
+            isPulling = false;
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', function(e) {
+        if (!isPulling) return;
+        let currentY = e.touches[0].pageY;
+        
+        // لو سحبنا لتحت مسافة أكتر من 80 بكسل وإحنا لسه في الأول
+        if (currentY - touchStartY > 80 && container.scrollTop === 0) {
+            document.getElementById('admin-ptr').style.top = '0';
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchend', function(e) {
+        if (!isPulling) return;
+        isPulling = false;
+        let ptr = document.getElementById('admin-ptr');
+        
+        // لو الشريط ظهر، نعمل ريفريش
+        if (ptr && ptr.style.top === '0px') {
+            setTimeout(function() {
+                location.reload();
+            }, 800);
+        } else if (ptr) {
+            ptr.style.top = '-60px'; // إخفاء الشريط لو مسحبناش كفاية
+        }
+    });
 });
 </script>
 </body>
