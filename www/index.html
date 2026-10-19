@@ -280,27 +280,10 @@ var A={
     }
   },
 
-  checkAdmin: async function(u){
-    document.getElementById('gb').innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="sp"></div><div class="gd">جاري التحقق من الصلاحيات...</div>';
-    try{
-      var timeoutPromise = new Promise(function(_, reject) {
-        setTimeout(function() { reject(new Error('انتهت مهلة الاتصال بالسيرفر.')); }, 10000);
-      });
-      this.access(u); return; var dbPromise = FB.db.collection('admins').doc(u.uid).get();
-      var d = await Promise.race([dbPromise, timeoutPromise]);
-      if(!d.exists){
-        document.getElementById('gb').innerHTML =
-          '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>'+
-          '<div class="gi">🚫</div><div class="gtt" style="color:#EF4444;">غير مصرح</div>'+
-          '<div class="gd">هذا الحساب ليس لديه صلاحيات المسؤول</div>'+
-          '<div class="gu">'+esc(u.email||'')+'</div>'+
-          '<button class="gbtn dgr" onclick="A.logout()">تسجيل الخروج</button>';
-        return;
-      }
-      this.access(u);
-    } catch(e){ this.gateMsg('⚠️', 'خطأ في الاتصال', esc(e.message || 'تعذر الوصول لقاعدة البيانات')); }
+  checkAdmin: function(u){
+    this.access(u);
   },
-
+  
   access:function(u){
     document.getElementById('gs').style.display='none';
     document.getElementById('am').style.display='flex';
