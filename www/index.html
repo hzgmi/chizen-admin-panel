@@ -258,7 +258,7 @@ var A={
       '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>'+
       '<div class="gi">🔐</div><div class="gtt">لوحة محمية</div>'+
       '<div class="gd">سجّل دخول بحساب المسؤول</div>'+
-
+      '<button class="gbtn" onclick="forceLogin()">🔓 تسجيل الدخول للإدارة</button>'+
       '<button class="gbtn sec" onclick="location.reload()">🔄 إعادة</button>';
   },
 
@@ -826,7 +826,7 @@ var A={
       var bal=s.balance||0;
       var balL=bal>0?'<span style="color:var(--rd);font-weight:900;">'+bal.toLocaleString()+' مستحق</span>':bal<0?'<span style="color:var(--gn);font-weight:900;">'+Math.abs(bal).toLocaleString()+' دفعة</span>':'<span style="color:var(--mt);">مسدد ✓</span>';
       h+='<div class="cd"><div class="cti"><div class="ctl">'+esc(s.name)+'</div><div style="display:flex;gap:5px;"><button class="btn bs bsm" onclick="A.supplyOrder('+i+')" title="سند">📋</button><button class="btn bg2 bsm" onclick="A.supForm('+i+')">✏️</button><button class="btn bd bsm" onclick="A.deleteSup('+i+')">🗑️</button></div></div><div style="font-size:11px;color:var(--mt);line-height:1.8;"><div>📱 <span style="direction:ltr;">'+esc(s.phone||'—')+'</span></div><div>🗂️ '+(cats.length?cats.join(' · '):'—')+' · 🏷️ '+(s.products||[]).length+' منتج</div><div>💳 '+pay+' · 💰 '+balL+'</div></div></div>';
-    }.bind(this));
+    });
     c.innerHTML=h;
   },
 
