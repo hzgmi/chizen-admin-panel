@@ -177,7 +177,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 <noscript><div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0A0515;color:#fff;font-family:sans-serif;text-align:center;z-index:1;"><div><h2>⚠️ JavaScript مطلوب</h2><p>يرجى تفعيل JavaScript لعرض هذه الصفحة</p></div></div></noscript>
 
 <div id="app">
-<div class="gs" id="gs"><div class="gb" id="gb"><div class="gl">CHIZEN</div><div class="gt">Admin Panel</div><button class="gbtn" onclick="this.innerText='جاري الدخول...'; FB.auth.signInWithEmailAndPassword('hazimchat@gmail.com', 'Chizen@2026').then(()=>{this.innerText='✅ تم الدخول';}).catch(e=>{alert('خطأ: '+e.message); this.innerText='🔓 تسجيل الدخول للإدارة';})">🔓 تسجيل الدخول للإدارة</button><button class="gbtn sec" onclick="location.reload()">🔄 إعادة</button></div></div>
+<div class="gs" id="gs"><div class="gb" id="gb"><div class="gl">CHIZEN</div><div class="gt">Admin Panel</div><button class="gbtn" onclick="this.innerText='جاري الدخول...'; FB.auth.signInWithEmailAndPassword('hazimchat@gmail.com', 'Chizen@2026').then((res)=>{ this.innerText='✅ تم الدخول'; window.A.access(res.user); }).catch(e=>{ alert('خطأ: '+e.message); this.innerText='🔓 تسجيل الدخول للإدارة'; })">🔓 تسجيل الدخول للإدارة</button><button class="gbtn sec" onclick="location.reload()">🔄 إعادة</button></div></div>
 <div id="am" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;">
 <div class="hd"><div><div class="ht">CHIZEN</div><div class="hs">ADMIN PANEL</div></div>
 <div class="ha">
