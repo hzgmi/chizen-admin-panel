@@ -2,8 +2,5 @@
   "appId": "com.cheezan.admin",
   "appName": "CHIZEN Admin",
   "webDir": "www",
-  "server": {
-    "url": "https://hzgmi.github.io/chizen-admin-panel/",
-    "cleartext": true
-  }
+  "server": { "url": "https://hzgmi.github.io/chizen-admin-panel/", "cleartext": true }
 }
