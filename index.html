@@ -187,21 +187,9 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 
 
 
-    <style id="fix-visibility">
-        .cd, .scd, .sc { display: block !important; opacity: 1 !important; visibility: visible !important; background: #1F0D35 !important; }
-        .sc.active { display: block !important; }
-        #ct { min-height: 80vh; display: block !important; }
-    </style>
     
-<style id="ptr-ultimate-css">
-#ptr-ultimate {
-    position: fixed; top: -60px; left: 0; right: 0; height: 60px;
-    display: flex; justify-content: center; align-items: center;
-    background: #ff27c9; color: #fff; font-weight: bold; font-family: Tajawal, sans-serif;
-    z-index: 9999999; transition: top 0.3s ease; border-bottom: 2px solid #fff;
-}
-#ptr-ultimate.active { top: 0; }
-</style>
+    
+
 </head>
 <body>
 
@@ -1358,47 +1346,58 @@ window.forceLogin = function() {
 
 
 
-<div id="ptr-ultimate">🔄 جاري التحديث...</div>
+
+
+
+<div id="bulletproof-ptr" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:#ff27c9; color:#fff; font-weight:bold; font-family:Tajawal, sans-serif; z-index:9999999; transition:top 0.3s ease; pointer-events:none;">🔄 جاري التحديث...</div>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const ptr = document.getElementById('ptr-ultimate');
-    // الصندوق اللي فيه المحتوى (التابات)
-    const container = document.getElementById('ct');
+document.addEventListener('touchstart', function(e) {
+    let el = e.target;
+    let isScrolled = false;
     
-    if (!container) return;
-
-    let startY = 0;
-    let isPulling = false;
-
-    container.addEventListener('touchstart', function(e) {
-        // لو الصندوق ده هو اللي في القمة (scrollTop === 0)
-        if (container.scrollTop <= 0) {
-            startY = e.touches[0].pageY;
-            isPulling = true;
-        } else {
-            isPulling = false;
+    // بنلف على كل الآباء عشان نشوف هل فيه أي عنصر (زي #ct أو #am) معمول عليه سكرول
+    while (el && el !== document.body) {
+        if (el.scrollTop > 0) { 
+            isScrolled = true; 
+            break; 
         }
-    }, { passive: true });
+        el = el.parentElement;
+    }
+    // بنشيك كمان على الصفحة نفسها
+    if (window.scrollY > 0 || document.documentElement.scrollTop > 0) {
+        isScrolled = true;
+    }
+    
+    // لو مفيش أي حاجة معمول عليها سكرول (يعني إحنا في الأول خالص)
+    if (!isScrolled) {
+        window._ptrStartY = e.touches[0].pageY;
+        window._ptrPulling = true;
+    } else {
+        window._ptrPulling = false; // لو نازل لتحت، ممنوع السحب
+    }
+}, { passive: true });
 
-    container.addEventListener('touchmove', function(e) {
-        if (!isPulling) return;
-        
-        let currentY = e.touches[0].pageY;
-        if (currentY - startY > 80 && container.scrollTop <= 0) {
-            ptr.classList.add('active');
-        } else {
-            ptr.classList.remove('active');
-        }
-    }, { passive: true });
+document.addEventListener('touchmove', function(e) {
+    if (!window._ptrPulling) return;
+    let currentY = e.touches[0].pageY;
+    let ptr = document.getElementById('bulletproof-ptr');
+    
+    // لو سحب لتحت مسافة كويسة
+    if (currentY - window._ptrStartY > 80) {
+        ptr.style.top = '0';
+    } else {
+        ptr.style.top = '-60px';
+    }
+}, { passive: true });
 
-    container.addEventListener('touchend', function(e) {
-        if (!isPulling) return;
-        isPulling = false;
-        
-        if (ptr.classList.contains('active')) {
-            setTimeout(function() { location.reload(); }, 500);
-        }
-    });
+document.addEventListener('touchend', function(e) {
+    if (!window._ptrPulling) return;
+    window._ptrPulling = false;
+    let ptr = document.getElementById('bulletproof-ptr');
+    
+    if (ptr.style.top === '0px') {
+        setTimeout(function() { location.reload(); }, 500);
+    }
 });
 </script>
 </body>
