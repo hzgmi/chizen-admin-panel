@@ -181,38 +181,33 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 
 
 
-<style id="precise-admin-css">
-/* إصلاح الشاشة الفاضية: كروت بلون صلب */
-.cd, .scd { 
-    background: #1F0D35 !important; 
-    border: 1px solid rgba(255,255,255,0.08) !important; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
-    border-radius: 12px !important;
-}
-.sc.active { display: block !important; opacity: 1 !important; visibility: visible !important; }
-#ct { min-height: 80vh; display: block !important; }
-.sv, .sl, .ctl { color: #fff !important; }
 
-/* سحب احترافي */
-#ptr-precise {
+
+
+
+<style id="final-clean-css">
+/* إجبار الكروت على الظهور */
+.cd, .scd, .sc { 
+    background: #1F0D35 !important; 
+    display: block !important; 
+    opacity: 1 !important; 
+    visibility: visible !important; 
+    border: 1px solid rgba(255,255,255,0.1) !important;
+}
+#ct { display: block !important; min-height: 80vh; }
+
+/* ستايل السحب */
+#final-ptr {
     position: fixed; top: -60px; left: 0; right: 0; height: 60px;
     display: flex; justify-content: center; align-items: center;
-    background: #1F0D35; color: #ff27c9; font-weight: bold; font-family: Tajawal, sans-serif;
-    z-index: 99999; transition: top 0.3s ease; border-bottom: 2px solid #ff27c9;
+    background: #ff27c9; color: #fff; font-weight: bold; font-family: Tajawal, sans-serif;
+    z-index: 9999999; transition: top 0.3s ease;
 }
-#ptr-precise.active { top: 0; }
-</style>
-
-<style id="force-display-css">
-.cd, .scd, .sc { background: #1F0D35 !important; display: block !important; opacity: 1 !important; visibility: visible !important; }
-.sc.active { display: block !important; }
-#ct { min-height: 100vh !important; display: block !important; padding-bottom: 50px; }
+#final-ptr.active { top: 0; }
 </style>
 </head>
 <body>
-<div id="version-badge" style="background: red; color: white; text-align: center; padding: 15px; font-size: 20px; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 9999999; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-✅ تم تحديث كود الأدمن V3.0 بنجاح ✅
-</div>
+
 
 <noscript><div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0A0515;color:#fff;font-family:sans-serif;text-align:center;z-index:1;"><div><h2>⚠️ JavaScript مطلوب</h2><p>يرجى تفعيل JavaScript لعرض هذه الصفحة</p></div></div></noscript>
 
@@ -1356,15 +1351,21 @@ window.forceLogin = function() {
 
 
 
-<div id="ptr-final" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:#ff27c9; color:#fff; font-weight:bold; z-index:999999; transition:top 0.3s ease;">🔄 تحديث...</div>
+
+
+</script>
+
+<div id="final-ptr">🔄 جاري تحديث البيانات...</div>
 <script>
-(function() {
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('ct') || document.getElementById('am') || document.body;
+    const ptr = document.getElementById('final-ptr');
     let startY = 0;
     let isPulling = false;
-    
-    document.addEventListener('touchstart', function(e) {
-        // نتأكد إن إحنا في أول الصفحة تماماً
-        if (window.scrollY === 0 && document.documentElement.scrollTop === 0) {
+
+    container.addEventListener('touchstart', function(e) {
+        // نتأكد إن صندوق المحتوى نفسه في القمة (مش الصفحة كلها)
+        if (container.scrollTop === 0) {
             startY = e.touches[0].pageY;
             isPulling = true;
         } else {
@@ -1372,28 +1373,28 @@ window.forceLogin = function() {
         }
     }, { passive: true });
 
-    document.addEventListener('touchmove', function(e) {
+    container.addEventListener('touchmove', function(e) {
         if (!isPulling) return;
         let currentY = e.touches[0].pageY;
-        if (currentY - startY > 80) {
-            // لو لسه في الأول، نظهر الشريط
-            if (window.scrollY === 0 && document.documentElement.scrollTop === 0) {
-                document.getElementById('ptr-final').style.top = '0';
-            }
+        let distance = currentY - startY;
+
+        if (distance > 80 && container.scrollTop === 0) {
+            ptr.classList.add('active');
         }
     }, { passive: true });
 
-    document.addEventListener('touchend', function(e) {
+    container.addEventListener('touchend', function(e) {
         if (!isPulling) return;
         isPulling = false;
-        let ptr = document.getElementById('ptr-final');
-        if (ptr.style.top === '0px') {
-            setTimeout(function() { location.reload(); }, 500);
+        if (ptr.classList.contains('active')) {
+            setTimeout(function() {
+                location.reload();
+            }, 500);
         } else {
-            ptr.style.top = '-60px'; // إخفاء لو مسحبناش كفاية
+            ptr.classList.remove('active');
         }
     });
-})();
+});
 </script>
 </body>
 
