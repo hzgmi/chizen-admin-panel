@@ -185,33 +185,24 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 
 
 
-<style id="final-clean-css">
-/* إجبار الكروت على الظهور */
-.cd, .scd, .sc { 
-    background: #1F0D35 !important; 
-    display: block !important; 
-    opacity: 1 !important; 
-    visibility: visible !important; 
-    border: 1px solid rgba(255,255,255,0.1) !important;
-}
-#ct { display: block !important; min-height: 80vh; }
 
-/* ستايل السحب */
-#final-ptr {
-    position: fixed; top: -60px; left: 0; right: 0; height: 60px;
-    display: flex; justify-content: center; align-items: center;
-    background: #ff27c9; color: #fff; font-weight: bold; font-family: Tajawal, sans-serif;
-    z-index: 9999999; transition: top 0.3s ease;
-}
-#final-ptr.active { top: 0; }
-</style>
 
     <style id="fix-visibility">
         .cd, .scd, .sc { display: block !important; opacity: 1 !important; visibility: visible !important; background: #1F0D35 !important; }
         .sc.active { display: block !important; }
         #ct { min-height: 80vh; display: block !important; }
     </style>
-    </head>
+    
+<style id="ptr-ultimate-css">
+#ptr-ultimate {
+    position: fixed; top: -60px; left: 0; right: 0; height: 60px;
+    display: flex; justify-content: center; align-items: center;
+    background: #ff27c9; color: #fff; font-weight: bold; font-family: Tajawal, sans-serif;
+    z-index: 9999999; transition: top 0.3s ease; border-bottom: 2px solid #fff;
+}
+#ptr-ultimate.active { top: 0; }
+</style>
+</head>
 <body>
 
 
@@ -1364,55 +1355,47 @@ window.forceLogin = function() {
 
 
 
-<div id="admin-ptr-final" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:#ff27c9; color:#fff; font-weight:bold; font-family:Tajawal, sans-serif; z-index:9999999; transition:top 0.3s ease; border-bottom:2px solid #fff;">🔄 جاري التحديث...</div>
+
+
+
+<div id="ptr-ultimate">🔄 جاري التحديث...</div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const ptr = document.getElementById('admin-ptr-final');
+    const ptr = document.getElementById('ptr-ultimate');
+    // الصندوق اللي فيه المحتوى (التابات)
+    const container = document.getElementById('ct');
+    
+    if (!container) return;
+
     let startY = 0;
     let isPulling = false;
 
-    document.addEventListener('touchstart', function(e) {
-        // بنشوف العنصر اللي بيتعمل عليه اللمس، ونطلع منه لأعلى عشان نلاقي الحاوية اللي بتعمل سكرول
-        let el = e.target;
-        let scrollable = null;
-        while (el && el !== document.body && el !== document.documentElement) {
-            let style = window.getComputedStyle(el);
-            if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                scrollable = el;
-                break;
-            }
-            el = el.parentElement;
-        }
-        
-        // لو مفيش حاوية معينة، يعني الصفحة كلها هي اللي بتسكرول
-        let scrollTop = scrollable ? scrollable.scrollTop : (window.scrollY || document.documentElement.scrollTop);
-
-        if (scrollTop <= 0) {
+    container.addEventListener('touchstart', function(e) {
+        // لو الصندوق ده هو اللي في القمة (scrollTop === 0)
+        if (container.scrollTop <= 0) {
             startY = e.touches[0].pageY;
             isPulling = true;
         } else {
-            isPulling = false; // لو نازل لتحت ممنوع السحب
+            isPulling = false;
         }
     }, { passive: true });
 
-    document.addEventListener('touchmove', function(e) {
+    container.addEventListener('touchmove', function(e) {
         if (!isPulling) return;
         
         let currentY = e.touches[0].pageY;
-        let distance = currentY - startY;
-        
-        if (distance > 80) {
-            ptr.style.top = '0';
+        if (currentY - startY > 80 && container.scrollTop <= 0) {
+            ptr.classList.add('active');
         } else {
-            ptr.style.top = '-60px';
+            ptr.classList.remove('active');
         }
     }, { passive: true });
 
-    document.addEventListener('touchend', function(e) {
+    container.addEventListener('touchend', function(e) {
         if (!isPulling) return;
         isPulling = false;
         
-        if (ptr.style.top === '0px') {
+        if (ptr.classList.contains('active')) {
             setTimeout(function() { location.reload(); }, 500);
         }
     });
