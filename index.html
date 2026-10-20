@@ -202,6 +202,12 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 }
 #ptr-precise.active { top: 0; }
 </style>
+
+<style id="force-display-css">
+.cd, .scd, .sc { background: #1F0D35 !important; display: block !important; opacity: 1 !important; visibility: visible !important; }
+.sc.active { display: block !important; }
+#ct { min-height: 100vh !important; display: block !important; padding-bottom: 50px; }
+</style>
 </head>
 <body>
 <div id="version-badge" style="background: red; color: white; text-align: center; padding: 15px; font-size: 20px; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 9999999; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
@@ -1347,50 +1353,47 @@ window.forceLogin = function() {
 
 
 
-<div id="ptr-precise">🔄 جاري تحديث البيانات...</div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    let touchStart = 0;
-    let pulling = false;
 
+
+
+<div id="ptr-final" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:#ff27c9; color:#fff; font-weight:bold; z-index:999999; transition:top 0.3s ease;">🔄 تحديث...</div>
+<script>
+(function() {
+    let startY = 0;
+    let isPulling = false;
+    
     document.addEventListener('touchstart', function(e) {
-        // شرط دقيق: لازم يكون في أعلى الصفحة (scrollTop === 0)
-        let isAtTop = window.scrollY === 0 && document.documentElement.scrollTop === 0 && document.body.scrollTop === 0;
-        
-        if (isAtTop) {
-            touchStart = e.touches[0].pageY;
-            pulling = true;
+        // نتأكد إن إحنا في أول الصفحة تماماً
+        if (window.scrollY === 0 && document.documentElement.scrollTop === 0) {
+            startY = e.touches[0].pageY;
+            isPulling = true;
         } else {
-            pulling = false;
+            isPulling = false;
         }
     }, { passive: true });
 
     document.addEventListener('touchmove', function(e) {
-        if (!pulling) return;
+        if (!isPulling) return;
         let currentY = e.touches[0].pageY;
-        let distance = currentY - touchStart;
-
-        // لو سحب لتحت مسافة كويسة وإحنا لسه فوق
-        if (distance > 80) {
-            let isAtTop = window.scrollY === 0 && document.documentElement.scrollTop === 0 && document.body.scrollTop === 0;
-            if (isAtTop) {
-                document.getElementById('ptr-precise').classList.add('active');
+        if (currentY - startY > 80) {
+            // لو لسه في الأول، نظهر الشريط
+            if (window.scrollY === 0 && document.documentElement.scrollTop === 0) {
+                document.getElementById('ptr-final').style.top = '0';
             }
         }
     }, { passive: true });
 
     document.addEventListener('touchend', function(e) {
-        if (!pulling) return;
-        pulling = false;
-        
-        let ptr = document.getElementById('ptr-precise');
-        if (ptr.classList.contains('active')) {
-            setTimeout(function() {
-                location.reload();
-            }, 600);
+        if (!isPulling) return;
+        isPulling = false;
+        let ptr = document.getElementById('ptr-final');
+        if (ptr.style.top === '0px') {
+            setTimeout(function() { location.reload(); }, 500);
+        } else {
+            ptr.style.top = '-60px'; // إخفاء لو مسحبناش كفاية
         }
     });
-});
+})();
 </script>
 </body>
 
