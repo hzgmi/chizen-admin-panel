@@ -173,17 +173,41 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 @media(max-width:380px){.sg3{grid-template-columns:1fr 1fr;}.sg3>div:last-child{grid-column:span 2;}}
 </style>
 
-<style>
-#ptr-indicator {
-  position: fixed; top: -50px; left: 0; right: 0; height: 50px;
-  display: flex; align-items: center; justify-content: center;
-  background: #1F0D35; color: #ff27c9; font-weight: bold; font-family: Tajawal, sans-serif;
-  transition: top 0.3s ease; z-index: 99999;
+
+
+
+
+
+
+
+
+<style id="precise-admin-css">
+/* إصلاح الشاشة الفاضية: كروت بلون صلب */
+.cd, .scd { 
+    background: #1F0D35 !important; 
+    border: 1px solid rgba(255,255,255,0.08) !important; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+    border-radius: 12px !important;
 }
-#ptr-indicator.active { top: 0; }
+.sc.active { display: block !important; opacity: 1 !important; visibility: visible !important; }
+#ct { min-height: 80vh; display: block !important; }
+.sv, .sl, .ctl { color: #fff !important; }
+
+/* سحب احترافي */
+#ptr-precise {
+    position: fixed; top: -60px; left: 0; right: 0; height: 60px;
+    display: flex; justify-content: center; align-items: center;
+    background: #1F0D35; color: #ff27c9; font-weight: bold; font-family: Tajawal, sans-serif;
+    z-index: 99999; transition: top 0.3s ease; border-bottom: 2px solid #ff27c9;
+}
+#ptr-precise.active { top: 0; }
 </style>
 </head>
 <body>
+<div id="version-badge" style="background: red; color: white; text-align: center; padding: 15px; font-size: 20px; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 9999999; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+✅ تم تحديث كود الأدمن V3.0 بنجاح ✅
+</div>
+
 <noscript><div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0A0515;color:#fff;font-family:sans-serif;text-align:center;z-index:1;"><div><h2>⚠️ JavaScript مطلوب</h2><p>يرجى تفعيل JavaScript لعرض هذه الصفحة</p></div></div></noscript>
 
 <div id="app">
@@ -198,6 +222,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 <button class="tb active" onclick="A.tab('dash',this)">📊 الرئيسية</button>
 <button class="tb" onclick="A.tab('reports',this)">📈 تقارير</button>
 <button class="tb" onclick="A.tab('products',this)">📦 المنتجات</button>
+         <button class="tb" onclick="A.tab('brands',this)">🏷️ الماركات</button>
 <button class="tb" onclick="A.tab('cats',this)">🗂️ الأقسام</button>
 <button class="tb" onclick="A.tab('pays',this)">💳 الدفع</button>
 <button class="tb" onclick="A.tab('orders',this)">🛒 الطلبات</button>
@@ -404,7 +429,17 @@ var A={
         '<button class="btn bp bb" style="margin-bottom:10px;" onclick="A.addAdminForm()">+ إضافة مسؤول</button>'+
         '<div id="adm-list"></div>'+
       '</div>'+
-      '<div class="sc" id="sc-settings">'+
+      '<div class="sc" id="sc-brands">
+            <div class="cd">
+                <div class="cti"><div class="ctl">🏷️ إدارة الماركات</div></div>
+                <div style="display:flex;gap:5px;margin-bottom:15px;">
+                    <input type="text" id="new-brand-input" class="fi" placeholder="اسم الماركة الجديدة..." style="flex:1;">
+                    <button class="btn bp" onclick="A.addBrand()">إضافة</button>
+                </div>
+                <div id="brands-list"></div>
+            </div>
+        </div>
+        <div class="sc" id="sc-settings">'+
         '<div class="cd"><div class="cti"><div class="ctl">📞 التواصل</div></div>'+
           '<div class="fl"><label class="fll">الهاتف</label><input class="fi" id="s-phone" type="tel"></div>'+
           '<div class="fl"><label class="fll">واتساب</label><input class="fi" id="s-wa" type="tel"></div>'+
@@ -562,7 +597,24 @@ var A={
 
   setProdFilter:function(k,el){this.prodFilter=k;document.querySelectorAll('#p-chips .cp').forEach(c=>c.classList.remove('active'));el.classList.add('active');this.renderProducts();},
 
-  productForm:function(id){
+  
+    loadBrandsIntoSelect: async function(currentBrand) {
+        var sel = document.getElementById('f-brand');
+        if(!sel) return;
+        var config = await FB.getConfig('brands');
+        var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
+        
+        sel.innerHTML = '<option value="">بدون ماركة</option>';
+        brands.forEach(function(b){
+            var opt = document.createElement('option');
+            opt.value = b;
+            opt.textContent = b;
+            if(b === currentBrand) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    },
+    
+    productForm:function(id){
     var p=null;
     if(id)this.products.forEach(pr=>{if(String(pr.id)===String(id))p=pr;});
     var isEdit=!!p;
@@ -572,7 +624,7 @@ var A={
     var feats=Array.isArray(p.features)?p.features.join('\n'):(p.features||'');
     var html=
       '<div class="fl"><label class="fll">الاسم</label><input class="fi" id="f-name" value="'+esc(p.name||'')+'"></div>'+
-      '<div class="fr"><div class="fl"><label class="fll">الماركة</label><input class="fi" id="f-brand" value="'+esc(p.brand||'')+'"></div><div class="fl"><label class="fll">القسم</label><select class="fi" id="f-cat">'+catOpts+'</select></div></div>'+
+      '<div class="fr"><div class="fl"><label class="fll">الماركة</label><select class="fi" id="f-brand"><option value="">بدون ماركة</option></select></div><div class="fl"><label class="fll">القسم</label><select class="fi" id="f-cat">'+catOpts+'</select></div></div>'+
       '<div class="fr3"><div class="fl"><label class="fll">السعر</label><input class="fi" type="number" id="f-price" value="'+esc(p.price||'')+'"></div><div class="fl"><label class="fll">القديم</label><input class="fi" type="number" id="f-old" value="'+esc(p.old||'')+'"></div><div class="fl"><label class="fll">المخزون</label><input class="fi" type="number" id="f-stock" value="'+esc(typeof p.stock==='number'?p.stock:'')+'"></div></div>'+
       '<div class="fl"><label class="fll">شارة</label><input class="fi" id="f-badge" value="'+esc(p.badge||'')+'" placeholder="-30%"></div>'+
       '<div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="f-img" value="'+esc(p.img||'')+'" oninput="A.prevImg(this.value)"><div class="ipt'+(p.img?' hi':'')+'" id="f-prev"><span>معاينة</span><img id="f-img-el" src="'+esc(p.img||'')+'"></div></div>'+
@@ -599,7 +651,8 @@ var A={
     if(!price||price<=0){this.toast('سعر صحيح','err');return;}
     var feats=document.getElementById('f-feats').value.split('\n').map(s=>s.trim()).filter(s=>s);
     var stockV=document.getElementById('f-stock').value;
-    var data={name:name,brand:document.getElementById('f-brand').value.trim(),category:document.getElementById('f-cat').value,price:price,old:parseFloat(document.getElementById('f-old').value)||null,stock:stockV?parseInt(stockV):null,badge:document.getElementById('f-badge').value.trim(),rating:4.5,reviews:0,sold:0,img:document.getElementById('f-img').value.trim(),desc:document.getElementById('f-desc').value.trim(),features:feats,active:document.getElementById('f-active').checked,featured:document.getElementById('f-featured').checked};
+    var data={name:name,brand:document.getElementById('f-brand').value,category:document.getElementById('f-cat').value,price:price,old:parseFloat(document.getElementById('f-old').value)||null,stock:stockV?parseInt(stockV):null,badge:document.getElementById('f-badge').value.trim(),rating:4.5,reviews:0,sold:0,img:document.getElementById('f-img').value.trim(),
+         colors: document.getElementById('f-colors').value.split(',').map(s => s.trim()).filter(s => s !== ''),desc:document.getElementById('f-desc').value.trim(),features:feats,active:document.getElementById('f-active').checked,featured:document.getElementById('f-featured').checked};
     try{
       if(isEdit)await FB.updateProduct(id,data);else await FB.addProduct(data);
       this.toast(isEdit?'✓ تم':'✓ أُضيف','suc');
@@ -1083,7 +1136,57 @@ var A={
 
   saveNewAdmin:function(){var uid=document.getElementById('ad-uid').value;if(!uid)return;this.cm();this.grantAdmin(uid);},
 
-  renderSettings:function(){
+  
+    renderBrands: async function() {
+        var c = document.getElementById('brands-list');
+        if(!c) return;
+        c.innerHTML = '<div style="text-align:center;color:#aaa;">جاري التحميل...</div>';
+        var config = await FB.getConfig('brands');
+        var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
+        
+        if(brands.length === 0) {
+            c.innerHTML = '<div class="emp">لا توجد ماركات</div>';
+            return;
+        }
+        
+        var h = '';
+        brands.forEach(function(b, i) {
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #333;">';
+            h += '<span style="color:#fff;font-weight:bold;">' + esc(b) + '</span>';
+            h += '<button class="btn bd bsm" onclick="A.deleteBrand(' + i + ')">حذف 🗑️</button>';
+            h += '</div>';
+        });
+        c.innerHTML = h;
+    },
+
+    addBrand: async function() {
+        var input = document.getElementById('new-brand-input');
+        var val = input.value.trim();
+        if(!val) return this.toast('اكتب اسم الماركة', 'err');
+        
+        var config = await FB.getConfig('brands');
+        var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
+        
+        if(brands.includes(val)) return this.toast('الماركة موجودة بالفعل', 'err');
+        
+        brands.push(val);
+        await FB.setConfig('brands', { list: brands });
+        input.value = '';
+        this.renderBrands();
+        this.toast('تمت إضافة الماركة', 'suc');
+    },
+
+    deleteBrand: async function(index) {
+        if(!confirm('هل أنت متأكد من حذف هذه الماركة؟')) return;
+        var config = await FB.getConfig('brands');
+        var brands = (config && config.list) ? config.list : [];
+        brands.splice(index, 1);
+        await FB.setConfig('brands', { list: brands });
+        this.renderBrands();
+        this.toast('تم حذف الماركة', 'suc');
+    },
+
+    renderSettings:function(){
     var c={};try{c=JSON.parse(localStorage.getItem('chizen_contact')||'{}');}catch(e){ console.error('ERR:', e.message); }
     var g=function(id){return document.getElementById(id);};
     if(g('s-phone'))g('s-phone').value=c.phone||'';
@@ -1232,34 +1335,61 @@ window.forceLogin = function() {
 };
 </script>
 
-<div id="ptr-indicator">🔄 جاري التحديث...</div>
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="ptr-precise">🔄 جاري تحديث البيانات...</div>
 <script>
-let startY = 0;
-let pulling = false;
-document.addEventListener('touchstart', e => {
-  if (window.scrollY === 0) { startY = e.touches[0].pageY; pulling = true; }
-});
-document.addEventListener('touchmove', e => {
-  if (!pulling) return;
-  let currentY = e.touches[0].pageY;
-  if (currentY - startY > 100 && window.scrollY === 0) {
-    document.getElementById('ptr-indicator').classList.add('active');
-  }
-});
-document.addEventListener('touchend', e => {
-  if (!pulling) return;
-  pulling = false;
-  let ptr = document.getElementById('ptr-indicator');
-  if (ptr.classList.contains('active')) {
-    setTimeout(() => {
-      if (window.A && window.A.loadData) {
-        window.A.loadData().then(() => { if(window.A.renderAll) window.A.renderAll(); location.reload(); });
-      } else {
-        location.reload();
-      }
-      ptr.classList.remove('active');
-    }, 1000);
-  }
+document.addEventListener('DOMContentLoaded', function() {
+    let touchStart = 0;
+    let pulling = false;
+
+    document.addEventListener('touchstart', function(e) {
+        // شرط دقيق: لازم يكون في أعلى الصفحة (scrollTop === 0)
+        let isAtTop = window.scrollY === 0 && document.documentElement.scrollTop === 0 && document.body.scrollTop === 0;
+        
+        if (isAtTop) {
+            touchStart = e.touches[0].pageY;
+            pulling = true;
+        } else {
+            pulling = false;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function(e) {
+        if (!pulling) return;
+        let currentY = e.touches[0].pageY;
+        let distance = currentY - touchStart;
+
+        // لو سحب لتحت مسافة كويسة وإحنا لسه فوق
+        if (distance > 80) {
+            let isAtTop = window.scrollY === 0 && document.documentElement.scrollTop === 0 && document.body.scrollTop === 0;
+            if (isAtTop) {
+                document.getElementById('ptr-precise').classList.add('active');
+            }
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function(e) {
+        if (!pulling) return;
+        pulling = false;
+        
+        let ptr = document.getElementById('ptr-precise');
+        if (ptr.classList.contains('active')) {
+            setTimeout(function() {
+                location.reload();
+            }, 600);
+        }
+    });
 });
 </script>
 </body>
