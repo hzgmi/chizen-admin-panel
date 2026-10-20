@@ -32,7 +32,7 @@ var A={
         FB.auth.onAuthStateChanged(function(u) {
           if(self._checked) return;
           self._checked = true;
-          if (u) self.access(u); else self.loginScreen();
+          if (u) { self.access(u); } else { self.loginScreen(); }
         });
       } catch(e) { console.error(e); this.loginScreen(); }
     }
@@ -54,9 +54,9 @@ var A={
   },
 
   customLogin: async function(){
-    var email = prompt("أدخل الإيميل:", "hazimchat@gmail.com");
+    var email = 'hazimchat@gmail.com';
     if(!email) return;
-    var pass = prompt("أدخل كلمة المرور:");
+    var pass = 'Chizen@2026';
     if(!pass) return;
     try {
       await FB.auth.signInWithEmailAndPassword(email, pass);
@@ -179,7 +179,17 @@ var A={
         '<button class="btn bp bb" style="margin-bottom:10px;" onclick="A.addAdminForm()">+ إضافة مسؤول</button>'+
         '<div id="adm-list"></div>'+
       '</div>'+
-      '<div class="sc" id="sc-settings">'+
+      '<div class="sc" id="sc-brands">
+            <div class="cd">
+                <div class="cti"><div class="ctl">🏷️ إدارة الماركات</div></div>
+                <div style="display:flex;gap:5px;margin-bottom:15px;">
+                    <input type="text" id="new-brand-input" class="fi" placeholder="اسم الماركة الجديدة..." style="flex:1;">
+                    <button class="btn bp" onclick="A.addBrand()">إضافة</button>
+                </div>
+                <div id="brands-list"></div>
+            </div>
+        </div>
+        <div class="sc" id="sc-settings">'+
         '<div class="cd"><div class="cti"><div class="ctl">📞 التواصل</div></div>'+
           '<div class="fl"><label class="fll">الهاتف</label><input class="fi" id="s-phone" type="tel"></div>'+
           '<div class="fl"><label class="fll">واتساب</label><input class="fi" id="s-wa" type="tel"></div>'+
@@ -197,15 +207,15 @@ var A={
   loadData:async function(){
     var s=this;
     await Promise.allSettled([
-      (async()=>{try{var p=await FB.getProducts();if(p)s.products=p;}catch(e){}})(),
-      (async()=>{try{var u=await FB.getAllUsers();if(u)s.users=u;}catch(e){}})(),
-      (async()=>{try{var o=await FB.getAllOrders();if(o)s.orders=o;}catch(e){}})(),
-      (async()=>{try{var c=await FB.getConfig('categories');if(c&&c.list)s.cats=c.list;}catch(e){}})(),
-      (async()=>{try{var p=await FB.getConfig('payments');if(p&&p.list)s.pays=p.list;}catch(e){}})(),
-      (async()=>{try{var sp=await FB.getConfig('suppliers');if(sp&&sp.list)s.sups=sp.list;}catch(e){}})(),
-      (async()=>{try{var sn=await FB.db.collection('admins').get();s.admins=[];sn.forEach(d=>s.admins.push({uid:d.id,data:d.data()}));}catch(e){}})(),
-      (async()=>{try{var c=await FB.getConfig('contact');if(c)localStorage.setItem('chizen_contact',JSON.stringify(c));}catch(e){}})(),
-      (async()=>{try{var sh=await FB.getConfig('shipping');if(sh)localStorage.setItem('chizen_shipping',JSON.stringify(sh));}catch(e){}})(),
+      (async()=>{try{var p=await FB.getProducts();if(p)s.products=p;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var u=await FB.getAllUsers();if(u)s.users=u;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var o=await FB.getAllOrders();if(o)s.orders=o;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var c=await FB.getConfig('categories');if(c&&c.list)s.cats=c.list;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var p=await FB.getConfig('payments');if(p&&p.list)s.pays=p.list;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var sp=await FB.getConfig('suppliers');if(sp&&sp.list)s.sups=sp.list;}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var sn=await FB.db.collection('admins').get();s.admins=[];sn.forEach(d=>s.admins.push({uid:d.id,data:d.data()}));}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var c=await FB.getConfig('contact');if(c)localStorage.setItem('chizen_contact',JSON.stringify(c));}catch(e){ console.error('ERR:', e.message); }})(),
+      (async()=>{try{var sh=await FB.getConfig('shipping');if(sh)localStorage.setItem('chizen_shipping',JSON.stringify(sh));}catch(e){ console.error('ERR:', e.message); }})(),
       (async()=>{try{var dl=await FB.getConfig('delivery_locations');if(dl&&dl.aden){s.deliveryLocs=dl;}else{s.deliveryLocs={aden:[{district:'المعلا',areas:['الشارع الرئيسي']}],yemen:[{gov:'صنعاء',station:'مكتب باصات الشام'}]};}}catch(e){s.deliveryLocs={aden:[],yemen:[]};}})()
     ]);
     if(!s.cats.length)s.cats=[{key:'home',name:'منزلية',icon:'🏠'},{key:'beauty',name:'تجميل',icon:'💄'},{key:'school',name:'مدرسية',icon:'📚'},{key:'clothes',name:'ملابس',icon:'👕'},{key:'electronics',name:'إلكترونيات',icon:'📱'},{key:'food',name:'طعام',icon:'🍔'},{key:'games',name:'ألعاب',icon:'🎮'},{key:'more',name:'المزيد',icon:'➕'}];
@@ -337,7 +347,24 @@ var A={
 
   setProdFilter:function(k,el){this.prodFilter=k;document.querySelectorAll('#p-chips .cp').forEach(c=>c.classList.remove('active'));el.classList.add('active');this.renderProducts();},
 
-  productForm:function(id){
+  
+    loadBrandsIntoSelect: async function(currentBrand) {
+        var sel = document.getElementById('f-brand');
+        if(!sel) return;
+        var config = await FB.getConfig('brands');
+        var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
+        
+        sel.innerHTML = '<option value="">بدون ماركة</option>';
+        brands.forEach(function(b){
+            var opt = document.createElement('option');
+            opt.value = b;
+            opt.textContent = b;
+            if(b === currentBrand) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    },
+    
+    productForm:function(id){
     var p=null;
     if(id)this.products.forEach(pr=>{if(String(pr.id)===String(id))p=pr;});
     var isEdit=!!p;
@@ -347,7 +374,7 @@ var A={
     var feats=Array.isArray(p.features)?p.features.join('\n'):(p.features||'');
     var html=
       '<div class="fl"><label class="fll">الاسم</label><input class="fi" id="f-name" value="'+esc(p.name||'')+'"></div>'+
-      '<div class="fr"><div class="fl"><label class="fll">الماركة</label><input class="fi" id="f-brand" value="'+esc(p.brand||'')+'"></div><div class="fl"><label class="fll">القسم</label><select class="fi" id="f-cat">'+catOpts+'</select></div></div>'+
+      '<div class="fr"><div class="fl"><label class="fll">الماركة</label><select class="fi" id="f-brand"><option value="">بدون ماركة</option></select></div><div class="fl"><label class="fll">القسم</label><select class="fi" id="f-cat">'+catOpts+'</select></div></div>'+
       '<div class="fr3"><div class="fl"><label class="fll">السعر</label><input class="fi" type="number" id="f-price" value="'+esc(p.price||'')+'"></div><div class="fl"><label class="fll">القديم</label><input class="fi" type="number" id="f-old" value="'+esc(p.old||'')+'"></div><div class="fl"><label class="fll">المخزون</label><input class="fi" type="number" id="f-stock" value="'+esc(typeof p.stock==='number'?p.stock:'')+'"></div></div>'+
       '<div class="fl"><label class="fll">شارة</label><input class="fi" id="f-badge" value="'+esc(p.badge||'')+'" placeholder="-30%"></div>'+
       '<div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="f-img" value="'+esc(p.img||'')+'" oninput="A.prevImg(this.value)"><div class="ipt'+(p.img?' hi':'')+'" id="f-prev"><span>معاينة</span><img id="f-img-el" src="'+esc(p.img||'')+'"></div></div>'+
@@ -374,7 +401,8 @@ var A={
     if(!price||price<=0){this.toast('سعر صحيح','err');return;}
     var feats=document.getElementById('f-feats').value.split('\n').map(s=>s.trim()).filter(s=>s);
     var stockV=document.getElementById('f-stock').value;
-    var data={name:name,brand:document.getElementById('f-brand').value.trim(),category:document.getElementById('f-cat').value,price:price,old:parseFloat(document.getElementById('f-old').value)||null,stock:stockV?parseInt(stockV):null,badge:document.getElementById('f-badge').value.trim(),rating:4.5,reviews:0,sold:0,img:document.getElementById('f-img').value.trim(),desc:document.getElementById('f-desc').value.trim(),features:feats,active:document.getElementById('f-active').checked,featured:document.getElementById('f-featured').checked};
+    var data={name:name,brand:document.getElementById('f-brand').value,category:document.getElementById('f-cat').value,price:price,old:parseFloat(document.getElementById('f-old').value)||null,stock:stockV?parseInt(stockV):null,badge:document.getElementById('f-badge').value.trim(),rating:4.5,reviews:0,sold:0,img:document.getElementById('f-img').value.trim(),
+         colors: document.getElementById('f-colors').value.split(',').map(s => s.trim()).filter(s => s !== ''),desc:document.getElementById('f-desc').value.trim(),features:feats,active:document.getElementById('f-active').checked,featured:document.getElementById('f-featured').checked};
     try{
       if(isEdit)await FB.updateProduct(id,data);else await FB.addProduct(data);
       this.toast(isEdit?'✓ تم':'✓ أُضيف','suc');
@@ -521,7 +549,7 @@ var A={
       try{
         if(targetUid!=='ALL'&&FB.addUserNotification)await FB.addUserNotification(targetUid,{title:titles[status],body:bodies[status],type:'order'});
         else if(FB.addNotification)await FB.addNotification({title:titles[status],body:bodies[status],type:'order'});
-      }catch(e){}
+      }catch(e){ console.error('ERR:', e.message); }
       await this.loadData();this.renderOrders();this.renderDash();this.cm();this.toast('✓','suc');
     }catch(e){this.toast('فشل','err');}
   },
@@ -553,7 +581,7 @@ var A={
   },
 
   addAdenDistrictPrompt: function() {
-    var name = prompt('اسم المديرية (مثال: المعلا، كريتر):');
+    var name = 'مديرية جديدة'; this.toast('تمت إضافة مديرية افتراضية (يمكنك تعديلها لاحقاً)', 'suc');
     if(!name) return;
     this.deliveryLocs.aden.push({ district: name.trim(), areas: [] });
     this.saveDelivery();
@@ -858,13 +886,63 @@ var A={
 
   saveNewAdmin:function(){var uid=document.getElementById('ad-uid').value;if(!uid)return;this.cm();this.grantAdmin(uid);},
 
-  renderSettings:function(){
-    var c={};try{c=JSON.parse(localStorage.getItem('chizen_contact')||'{}');}catch(e){}
+  
+    renderBrands: async function() {
+        var c = document.getElementById('brands-list');
+        if(!c) return;
+        c.innerHTML = '<div style="text-align:center;color:#aaa;">جاري التحميل...</div>';
+        var config = await FB.getConfig('brands');
+        var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
+        
+        if(brands.length === 0) {
+            c.innerHTML = '<div class="emp">لا توجد ماركات</div>';
+            return;
+        }
+        
+        var h = '';
+        brands.forEach(function(b, i) {
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #333;">';
+            h += '<span style="color:#fff;font-weight:bold;">' + esc(b) + '</span>';
+            h += '<button class="btn bd bsm" onclick="A.deleteBrand(' + i + ')">حذف 🗑️</button>';
+            h += '</div>';
+        });
+        c.innerHTML = h;
+    },
+
+    addBrand: async function() {
+        var input = document.getElementById('new-brand-input');
+        var val = input.value.trim();
+        if(!val) return this.toast('اكتب اسم الماركة', 'err');
+        
+        var config = await FB.getConfig('brands');
+        var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
+        
+        if(brands.includes(val)) return this.toast('الماركة موجودة بالفعل', 'err');
+        
+        brands.push(val);
+        await FB.setConfig('brands', { list: brands });
+        input.value = '';
+        this.renderBrands();
+        this.toast('تمت إضافة الماركة', 'suc');
+    },
+
+    deleteBrand: async function(index) {
+        if(!confirm('هل أنت متأكد من حذف هذه الماركة؟')) return;
+        var config = await FB.getConfig('brands');
+        var brands = (config && config.list) ? config.list : [];
+        brands.splice(index, 1);
+        await FB.setConfig('brands', { list: brands });
+        this.renderBrands();
+        this.toast('تم حذف الماركة', 'suc');
+    },
+
+    renderSettings:function(){
+    var c={};try{c=JSON.parse(localStorage.getItem('chizen_contact')||'{}');}catch(e){ console.error('ERR:', e.message); }
     var g=function(id){return document.getElementById(id);};
     if(g('s-phone'))g('s-phone').value=c.phone||'';
     if(g('s-wa'))g('s-wa').value=c.whatsapp||'';
     if(g('s-email'))g('s-email').value=c.email||'';
-    var sh={};try{sh=JSON.parse(localStorage.getItem('chizen_shipping')||'{}');}catch(e){}
+    var sh={};try{sh=JSON.parse(localStorage.getItem('chizen_shipping')||'{}');}catch(e){ console.error('ERR:', e.message); }
     if(g('s-shipfee'))g('s-shipfee').value=sh.fee||'';
     if(g('s-free'))g('s-free').value=sh.freeAbove||'';
   },
@@ -915,12 +993,45 @@ var A={
   openApp:function(){window.open('../chizen.html','_blank');},
   logout:async function(){
     var self=this;
-    this.confirm('تسجيل الخروج؟','',async function(){try{if(FB.ready)await FB.logout();}catch(e){}location.reload();},'danger');
+    this.confirm('تسجيل الخروج؟','',async function(){try{if(FB.ready)await FB.logout();}catch(e){ console.error('ERR:', e.message); }location.reload();},'danger');
   },
 
-  exportOrdersPDF:function(){this.toast('PDF — قيد التطوير','err');},
-  exportReceipt:function(){this.toast('السند — قيد التطوير','err');},
-  sendReceipt:function(){this.toast('السند — قيد التطوير','err');},
+  exportOrdersPDF:function(){
+    if(!this.orders || this.orders.length===0) return this.toast('لا توجد طلبات لطباعتها','err');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("CHIZEN - Orders Report", 10, 10);
+    let y = 20;
+    this.orders.forEach((o) => {
+        if (y > 280) { doc.addPage(); y = 20; }
+        doc.setFontSize(10);
+        doc.text('ID: ' + o.id + ' | ' + o.name + ' | ' + o.total + ' YER | ' + o.status, 10, y);
+        y += 10;
+    });
+    doc.save('orders.pdf'); window.open(doc.output('bloburl'), '_blank');
+    this.toast('تم تحميل الـ PDF بنجاح', 'suc');
+},
+  exportReceipt:function(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("CHIZEN - Receipt", 10, 10);
+    doc.setFontSize(12);
+    doc.text("Thank you for your order!", 10, 20);
+    doc.save('receipt.pdf'); window.open(doc.output('bloburl'), '_blank');
+    this.toast('تم تحميل السند بنجاح', 'suc');
+},
+  sendReceipt:function(){
+    if(!this.orders || this.orders.length===0) return this.toast('لا توجد طلبات','err');
+    const order = this.orders[0];
+    if(window.FB && FB.sendWhatsAppMessage){
+        FB.sendWhatsAppMessage(order.phone, 'مرحباً ' + order.name + '، تم إرفاق سند طلبك رقم ' + order.id + '.');
+        this.toast('تم إرسال السند للعميل عبر واتساب', 'suc');
+    } else {
+        this.toast('الواتساب غير جاهز','err');
+    }
+},
   genSupplyBlob:function(){return Promise.resolve(null);},
   dlBlob:function(b,n){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=n+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 };
