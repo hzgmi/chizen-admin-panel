@@ -180,6 +180,28 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 
 
 
+
+<style id="precise-admin-css">
+/* إصلاح الشاشة الفاضية: كروت بلون صلب */
+.cd, .scd { 
+    background: #1F0D35 !important; 
+    border: 1px solid rgba(255,255,255,0.08) !important; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+    border-radius: 12px !important;
+}
+.sc.active { display: block !important; opacity: 1 !important; visibility: visible !important; }
+#ct { min-height: 80vh; display: block !important; }
+.sv, .sl, .ctl { color: #fff !important; }
+
+/* سحب احترافي */
+#ptr-precise {
+    position: fixed; top: -60px; left: 0; right: 0; height: 60px;
+    display: flex; justify-content: center; align-items: center;
+    background: #1F0D35; color: #ff27c9; font-weight: bold; font-family: Tajawal, sans-serif;
+    z-index: 99999; transition: top 0.3s ease; border-bottom: 2px solid #ff27c9;
+}
+#ptr-precise.active { top: 0; }
+</style>
 </head>
 <body>
 <noscript><div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0A0515;color:#fff;font-family:sans-serif;text-align:center;z-index:1;"><div><h2>⚠️ JavaScript مطلوب</h2><p>يرجى تفعيل JavaScript لعرض هذه الصفحة</p></div></div></noscript>
@@ -1318,41 +1340,52 @@ window.forceLogin = function() {
 
 
 
-<div id="safe-ptr" style="position:fixed; top:-50px; left:0; right:0; height:50px; display:flex; justify-content:center; align-items:center; background:#1F0D35; color:#ff27c9; font-weight:bold; z-index:99999; transition:top 0.2s ease; border-bottom: 2px solid #ff27c9;">🔄 جاري التحديث...</div>
+
+
+
+<div id="ptr-precise">🔄 جاري تحديث البيانات...</div>
 <script>
-let safeStartY = 0;
-let safeIsPulling = false;
-document.addEventListener('touchstart', function(e) {
-    // يعمل فقط لو إحنا في أعلى الصفحة (مفيش سكرول)
-    if (window.scrollY <= 0 && document.documentElement.scrollTop <= 0) {
-        safeStartY = e.touches[0].pageY;
-        safeIsPulling = true;
-    } else {
-        safeIsPulling = false;
-    }
-}, { passive: true });
+document.addEventListener('DOMContentLoaded', function() {
+    let touchStart = 0;
+    let pulling = false;
 
-document.addEventListener('touchmove', function(e) {
-    if (!safeIsPulling) return;
-    let currentY = e.touches[0].pageY;
-    // لو سحبنا لتحت 80 بكسل
-    if (currentY - safeStartY > 80) {
-        if (window.scrollY <= 0) {
-            document.getElementById('safe-ptr').style.top = '0';
+    document.addEventListener('touchstart', function(e) {
+        // شرط دقيق: لازم يكون في أعلى الصفحة (scrollTop === 0)
+        let isAtTop = window.scrollY === 0 && document.documentElement.scrollTop === 0 && document.body.scrollTop === 0;
+        
+        if (isAtTop) {
+            touchStart = e.touches[0].pageY;
+            pulling = true;
+        } else {
+            pulling = false;
         }
-    }
-}, { passive: true });
+    }, { passive: true });
 
-document.addEventListener('touchend', function(e) {
-    if (!safeIsPulling) return;
-    safeIsPulling = false;
-    let ptr = document.getElementById('safe-ptr');
-    // لو ظهر الشريط، نعمل تحديث
-    if (ptr && ptr.style.top === '0px') {
-        setTimeout(function() { location.reload(); }, 500);
-    } else if (ptr) {
-        ptr.style.top = '-50px'; // إخفاء لو مسحبناش كفاية
-    }
+    document.addEventListener('touchmove', function(e) {
+        if (!pulling) return;
+        let currentY = e.touches[0].pageY;
+        let distance = currentY - touchStart;
+
+        // لو سحب لتحت مسافة كويسة وإحنا لسه فوق
+        if (distance > 80) {
+            let isAtTop = window.scrollY === 0 && document.documentElement.scrollTop === 0 && document.body.scrollTop === 0;
+            if (isAtTop) {
+                document.getElementById('ptr-precise').classList.add('active');
+            }
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function(e) {
+        if (!pulling) return;
+        pulling = false;
+        
+        let ptr = document.getElementById('ptr-precise');
+        if (ptr.classList.contains('active')) {
+            setTimeout(function() {
+                location.reload();
+            }, 600);
+        }
+    });
 });
 </script>
 </body>
