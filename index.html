@@ -179,20 +179,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 
 
 
-<style id="safe-admin-theme">
-body { background: #0A0515 !important; color: #fff !important; }
-.cd, .scd { 
-    background: #1F0D35 !important; 
-    border: 1px solid #333 !important; 
-    border-radius: 12px; padding: 15px; margin-bottom: 15px; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-}
-.sc.active { display: block !important; opacity: 1 !important; visibility: visible !important; }
-#ct { min-height: 100vh; padding-bottom: 100px; }
-.sv, .sl, .ctl { color: #fff !important; }
-.bp, .gbtn { background: #ff27c9 !important; color: #fff !important; border: none !important; }
-.fi { background: #0A0515 !important; color: #fff !important; border: 1px solid #444 !important; border-radius: 8px; }
-</style>
+
 </head>
 <body>
 <noscript><div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0A0515;color:#fff;font-family:sans-serif;text-align:center;z-index:1;"><div><h2>⚠️ JavaScript مطلوب</h2><p>يرجى تفعيل JavaScript لعرض هذه الصفحة</p></div></div></noscript>
@@ -1328,34 +1315,43 @@ window.forceLogin = function() {
 
 
 
-<div id="safe-ptr" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:#1F0D35; color:#ff27c9; font-weight:bold; z-index:99999; transition:top 0.3s ease; border-bottom: 2px solid #ff27c9;">🔄 جاري التحديث...</div>
+
+
+
+<div id="safe-ptr" style="position:fixed; top:-50px; left:0; right:0; height:50px; display:flex; justify-content:center; align-items:center; background:#1F0D35; color:#ff27c9; font-weight:bold; z-index:99999; transition:top 0.2s ease; border-bottom: 2px solid #ff27c9;">🔄 جاري التحديث...</div>
 <script>
-let ptrStart = 0;
-let isPulling = false;
-window.addEventListener('touchstart', function(e) {
-    // لو إحنا في قمة الصفحة
-    if (window.scrollY <= 0) {
-        ptrStart = e.touches[0].pageY;
-        isPulling = true;
+let safeStartY = 0;
+let safeIsPulling = false;
+document.addEventListener('touchstart', function(e) {
+    // يعمل فقط لو إحنا في أعلى الصفحة (مفيش سكرول)
+    if (window.scrollY <= 0 && document.documentElement.scrollTop <= 0) {
+        safeStartY = e.touches[0].pageY;
+        safeIsPulling = true;
     } else {
-        isPulling = false;
+        safeIsPulling = false;
     }
 }, { passive: true });
-window.addEventListener('touchmove', function(e) {
-    if (!isPulling) return;
+
+document.addEventListener('touchmove', function(e) {
+    if (!safeIsPulling) return;
     let currentY = e.touches[0].pageY;
-    if (currentY - ptrStart > 80 && window.scrollY <= 0) {
-        document.getElementById('safe-ptr').style.top = '0';
+    // لو سحبنا لتحت 80 بكسل
+    if (currentY - safeStartY > 80) {
+        if (window.scrollY <= 0) {
+            document.getElementById('safe-ptr').style.top = '0';
+        }
     }
 }, { passive: true });
-window.addEventListener('touchend', function(e) {
-    if (!isPulling) return;
-    isPulling = false;
+
+document.addEventListener('touchend', function(e) {
+    if (!safeIsPulling) return;
+    safeIsPulling = false;
     let ptr = document.getElementById('safe-ptr');
+    // لو ظهر الشريط، نعمل تحديث
     if (ptr && ptr.style.top === '0px') {
-        setTimeout(function() { location.reload(); }, 800);
+        setTimeout(function() { location.reload(); }, 500);
     } else if (ptr) {
-        ptr.style.top = '-60px';
+        ptr.style.top = '-50px'; // إخفاء لو مسحبناش كفاية
     }
 });
 </script>
