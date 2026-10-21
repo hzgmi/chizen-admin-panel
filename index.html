@@ -1123,12 +1123,14 @@ var A={
   saveNewAdmin:function(){var uid=document.getElementById('ad-uid').value;if(!uid)return;this.cm();this.grantAdmin(uid);},
 
   
-    renderBrands: async function() {
+    renderBrands: function() {
         var c = document.getElementById('brands-list');
-        if(!c) return;
-        c.innerHTML = '<div style="text-align:center;color:#aaa;">جاري التحميل...</div>';
-        var config = await FB.getConfig('brands');
-        var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
+        if (!c) return;
+        c.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">جاري تحميل الماركات...</div>';
+        
+        FB.db.collection('config').doc('brands').onSnapshot(function(doc) {
+            var config = doc.exists ? doc.data() : null;
+            var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
         
         if(brands.length === 0) {
             c.innerHTML = '<div class="emp">لا توجد ماركات</div>';
