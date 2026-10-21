@@ -212,7 +212,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 <button class="tb" onclick="A.tab('cats',this)">🗂️ الأقسام</button>
 <button class="tb" onclick="A.tab('pays',this)">💳 الدفع</button>
 <button class="tb" onclick="A.tab('orders',this)">🛒 الطلبات</button>
-<button class="tb" onclick="A.tab('flights',this)">✈️ حجوزات الطيران</button>
+<button class="tb" onclick="A.tab('flights',this)">✈️ الحجوزات</button>
 <button class="tb" onclick="A.tab('sups',this)">🏢 الموردين</button>
 <button class="tb" onclick="A.tab('balances',this)">💰 الديون</button>
 <button class="tb" onclick="A.tab('delivery',this)">📍 التوصيل</button>
@@ -729,40 +729,62 @@ var A={
     if (!c) return;
     var q = (document.getElementById('f-search') ? document.getElementById('f-search').value : '').toLowerCase();
     
-    // فلترة الطلبات التي نوعها حجز طيران
-    var flights = (this.orders || []).filter(function(o) {
-        if (o.type !== 'flight_booking') return false;
+    var bookings = (this.orders || []).filter(function(o) {
+        if (o.type !== 'flight_booking' && o.type !== 'hotel_booking' && o.type !== 'bus_booking' && o.type !== 'hajj_booking') return false;
         if (!q) return true;
         var cust = o.customer || {};
         var det = o.details || {};
         return (cust.name && cust.name.toLowerCase().includes(q)) || 
                (cust.phone && cust.phone.includes(q)) || 
                (det.to && det.to.toLowerCase().includes(q)) || 
-               (det.from && det.from.toLowerCase().includes(q));
+               (det.from && det.from.toLowerCase().includes(q)) ||
+               (det.city && det.city.toLowerCase().includes(q));
     });
 
-    if (flights.length === 0) {
-        c.innerHTML = '<div class="emp">لا توجد حجوزات طيران مطابقة</div>';
+    if (bookings.length === 0) {
+        c.innerHTML = '<div class="emp">لا توجد حجوزات مطابقة</div>';
         return;
     }
 
-    c.innerHTML = flights.map(function(o) {
+    c.innerHTML = bookings.map(function(o) {
         var d = o.details || {};
         var cust = o.customer || {};
         var dateStr = (o.createdAt && o.createdAt.toDate) ? o.createdAt.toDate().toLocaleString('ar-EG') : '';
         var waNumber = (cust.phone || '').replace(/[^0-9]/g, '');
         
+        var typeLabel = '✈️ حجز طيران';
+        var detailsHtml = '';
+        
+        if (o.type === 'flight_booking') {
+            detailsHtml = '<div>شركة الطيران: <b style="color:#fff;">'+(d.airline==='yemenia'?'اليمنية':d.airline==='qutaibi'?'طيران عدن':'أخرى')+'</b></div>'+
+                          '<div>🛫 من: <b style="color:#fff;">'+esc(d.from || '')+'</b> 🛬 إلى: <b style="color:#fff;">'+esc(d.to || '')+'</b></div>'+
+                          '<div>📅 التاريخ: <b style="color:#fff;">'+esc(d.date || '')+'</b> | الدرجة: <b style="color:#fff;">'+(d.flightClass==='business'?'VIP':'اقتصادية')+'</b></div>'+
+                          '<div>👥 المسافرين: <b style="color:#fff;">'+esc(d.pax || '1')+'</b> | 🪪 الجواز: <b style="color:#fff;">'+esc(d.passport || '')+'</b></div>';
+        } else if (o.type === 'hotel_booking') {
+            typeLabel = '🏨 حجز فندق';
+            detailsHtml = '<div>🏙️ المدينة: <b style="color:#fff;">'+esc(d.city || '')+'</b> | 🏨 الفندق: <b style="color:#fff;">'+esc(d.hotelName || '-')+'</b></div>'+
+                          '<div>📥 الدخول: <b style="color:#fff;">'+esc(d.checkin || '')+'</b> | 📤 الخروج: <b style="color:#fff;">'+esc(d.checkout || '')+'</b></div>'+
+                          '<div>🛏️ الغرف: <b style="color:#fff;">'+esc(d.rooms || '1')+'</b> | 👥 الضيوف: <b style="color:#fff;">'+esc(d.guests || '1')+'</b></div>';
+        } else if (o.type === 'bus_booking') {
+            typeLabel = '🚌 حجز باص';
+            detailsHtml = '<div>🛫 من: <b style="color:#fff;">'+esc(d.from || 'عدن')+'</b> 🛬 إلى: <b style="color:#fff;">'+esc(d.to || '')+'</b></div>'+
+                          '<div>📅 التاريخ: <b style="color:#fff;">'+esc(d.date || '')+'</b> | ⏰ الوقت: <b style="color:#fff;">'+esc(d.time || '')+'</b></div>'+
+                          '<div>💺 المقاعد: <b style="color:#fff;">'+esc(d.pax || '1')+'</b></div>';
+        } else if (o.type === 'hajj_booking') {
+            typeLabel = '🕋 حج وعمرة';
+            detailsHtml = '<div>🕋 النوع: <b style="color:#fff;">'+(d.hajjType==='hajj'?'حج':'عمرة')+'</b></div>'+
+                          '<div>📅 التاريخ التقريبي: <b style="color:#fff;">'+esc(d.date || '')+'</b></div>'+
+                          '<div>👥 الأشخاص: <b style="color:#fff;">'+esc(d.pax || '1')+'</b> | 🪪 الجواز: <b style="color:#fff;">'+esc(d.passport || '')+'</b></div>';
+        }
+
         return '<div class="cd" style="margin-bottom:15px; border-right:4px solid #ff27c9;">'+
-            '<div class="cti"><div class="ctl">✈️ حجز طيران</div>'+
+            '<div class="cti"><div class="ctl">'+typeLabel+'</div>'+
             '<div style="font-size:12px;color:#888;">'+ dateStr +'</div></div>'+
             '<div style="padding:10px 0; font-size:14px; line-height:1.8; color:#ccc;">'+
-                '<div>🛫 من: <b style="color:#fff;">'+ esc(d.from || '') +'</b></div>'+
-                '<div>🛬 إلى: <b style="color:#fff;">'+ esc(d.to || '') +'</b></div>'+
-                '<div>📅 التاريخ: <b style="color:#fff;">'+ esc(d.date || '') +'</b></div>'+
-                '<div>👥 عدد المسافرين: <b style="color:#fff;">'+ esc(d.pax || '1') +'</b></div>'+
+                detailsHtml +
                 '<div style="margin-top:10px; padding-top:10px; border-top:1px solid #333;">'+
-                    '👤 العميل: <b>'+ esc(cust.name || '') +'</b><br>'+
-                    '📱 الجوال: <span style="direction:ltr;display:inline-block;">'+ esc(cust.phone || '') +'</span>'+
+                    '👤 العميل: <b style="color:#fff;">'+ esc(cust.name || '') +'</b><br>'+
+                    '📱 الجوال: <span style="direction:ltr;display:inline-block;color:#fff;">'+ esc(cust.phone || '') +'</span>'+
                 '</div>'+
             '</div>'+
             '<div style="display:flex; gap:10px; margin-top:10px;">'+
@@ -1243,6 +1265,8 @@ var A={
             var d = doc.data();
             if(g('s-serv-flight')) g('s-serv-flight').checked = d.flights !== false;
             if(g('s-serv-hotel')) g('s-serv-hotel').checked = d.hotels !== false;
+            if(g('s-serv-bus')) g('s-serv-bus').checked = d.buses !== false;
+            if(g('s-serv-hajj')) g('s-serv-hajj').checked = d.hajj !== false;
         } else {
             if(g('s-serv-flight')) g('s-serv-flight').checked = true;
             if(g('s-serv-hotel')) g('s-serv-hotel').checked = true;
@@ -1254,7 +1278,9 @@ var A={
   saveServices: async function(){
     var data = {
       flights: document.getElementById('s-serv-flight').checked,
-      hotels: document.getElementById('s-serv-hotel').checked
+      hotels: document.getElementById('s-serv-hotel').checked,
+      buses: document.getElementById('s-serv-bus').checked,
+      hajj: document.getElementById('s-serv-hajj').checked
     };
     try {
       await FB.setConfig('services', data);
