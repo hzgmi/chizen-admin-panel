@@ -1,35 +1,27 @@
-/* ═══ CHIZEN Admin Ultimate Bypass ═══ */
+/* ═══ صائد الأخطاء الشامل ═══ */
+window.onerror = function(msg, url, line, col, error) {
+  var el = document.getElementById('gb');
+  if(el) {
+    el.innerHTML += '<div style="background:red;color:white;padding:10px;margin-top:10px;font-size:12px;text-align:left;direction:ltr;">Error: ' + msg + '<br>Line: ' + line + '</div>';
+  } else {
+    alert('Error: ' + msg);
+  }
+};
+
+window.addEventListener('unhandledrejection', function(event) {
+  var el = document.getElementById('gb');
+  var msg = event.reason ? (event.reason.message || event.reason) : 'Unknown Promise Error';
+  if(el) {
+    el.innerHTML += '<div style="background:darkred;color:white;padding:10px;margin-top:10px;font-size:12px;text-align:left;direction:ltr;">Promise Error: ' + msg + '</div>';
+  } else {
+    alert('Promise Error: ' + msg);
+  }
+});
+
 (function() {
   function init() {
     if (!window.A || !window.FB) { setTimeout(init, 200); return; }
 
-    // تدمير دالة الفحص القديمة وفرض الدخول المباشر
-    A.checkAdmin = function(u) {
-      var gb = document.getElementById('gb');
-      
-      // إذا كان البريد هو بريدك، افتح اللوحة فوراً بدون أي فحص
-      if (u.email === 'hazimchat@gmail.com') {
-        if(gb) gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="sp"></div><div class="gd">مرحباً بك، جاري فتح اللوحة...</div>';
-        
-        // إخفاء شاشة الدخول وإظهار اللوحة
-        document.getElementById('gs').style.display = 'none';
-        document.getElementById('am').style.display = 'flex';
-        
-        // بناء الأقسام وتحميل البيانات
-        try {
-          A.buildSections();
-          A.loadData().then(function(){ A.renderAll(); }).catch(function(e){ console.warn(e); });
-          A.toast('مرحباً بك ' + (u.displayName || 'المدير'), 'suc');
-        } catch(e) {
-          alert('خطأ في فتح اللوحة: ' + e.message);
-        }
-      } else {
-        // إذا كان بريداً آخر، ارفضه
-        if(gb) gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="gi">🚫</div><div class="gtt" style="color:#EF4444;">غير مصرح</div><div class="gd">هذا الحساب ليس لديه صلاحيات المسؤول</div><button class="gbtn dgr" onclick="window.FB.auth.signOut().then(()=>location.reload())">تسجيل الخروج</button>';
-      }
-    };
-
-    // تدمير دالة البدء القديمة وفرض شاشة الدخول الجديدة
     A.init = function() {
       this.loginScreen();
       window.FB.auth.onAuthStateChanged(function(u) {
@@ -37,7 +29,6 @@
       });
     };
 
-    // شاشة الدخول الجديدة
     A.loginScreen = function() {
       var gb = document.getElementById('gb');
       if(!gb) return;
@@ -50,9 +41,25 @@
         '<button class="gbtn sec" onclick="A.loginGoogle()" style="width:100%;padding:15px;background:#2A1345;border:1px solid #3A1F5A;border-radius:12px;color:#F5E6FF;font-family:Cairo;font-size:15px;font-weight:900;">🔍 دخول بـ Google</button>';
     };
 
-    // تشغيل النظام الجديد فوراً
+    A.checkAdmin = function(u) {
+      var gb = document.getElementById('gb');
+      if(gb) gb.innerHTML = '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div><div class="sp"></div><div class="gd">جاري التحقق...</div>';
+      
+      window.FB.db.collection('admins').doc(u.uid).get().then(function(doc) {
+        if (doc.exists) {
+          document.getElementById('gs').style.display = 'none';
+          document.getElementById('am').style.display = 'flex';
+          A.buildSections();
+          A.loadData().then(function(){ A.renderAll(); });
+        } else {
+          if(gb) gb.innerHTML += '<div style="background:red;color:white;padding:10px;margin-top:10px;">أنت لست أدمن في قاعدة البيانات!</div>';
+        }
+      }).catch(function(error) {
+        if(gb) gb.innerHTML += '<div style="background:red;color:white;padding:10px;margin-top:10px;text-align:left;direction:ltr;">Firebase Error: ' + error.message + '</div>';
+      });
+    };
+
     A.init();
-    console.log('✅ Ultimate Bypass Active');
   }
   init();
 })();
