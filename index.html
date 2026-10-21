@@ -171,6 +171,54 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 .ib{font-size:10px;padding:10px;}
 }
 @media(max-width:380px){.sg3{grid-template-columns:1fr 1fr;}.sg3>div:last-child{grid-column:span 2;}}
+
+/* ═══ PREMIUM MIDNIGHT & GOLD THEME (ADMIN) ═══ */
+:root {
+  --bg: #0a0a0f !important;
+  --nav: rgba(20, 20, 25, 0.95) !important;
+  --bd: rgba(200, 170, 110, 0.2) !important;
+  --cr: #f5f5f7 !important;
+  --mt: #8e8e93 !important;
+  --pl: #dfbd69 !important;
+  --pk: #c3a26f !important;
+  --gn: #00d4a0 !important;
+  --rd: #ff4d6d !important;
+  --grad: linear-gradient(135deg, #dfbd69, #926c15) !important;
+  --grad2: linear-gradient(135deg, #c3a26f, #83612b) !important;
+}
+
+body, #app { background: var(--bg) !important; color: var(--cr) !important; }
+
+/* الهيدر والتبويبات */
+.hd { background: rgba(10, 10, 15, 0.95) !important; border-bottom: 1px solid var(--bd) !important; backdrop-filter: blur(10px); }
+.ht { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900 !important; }
+.tb { color: var(--mt) !important; border-bottom: 2px solid transparent !important; }
+.tb.active { color: var(--pl) !important; border-bottom-color: var(--pl) !important; }
+.hb { background: rgba(255,255,255,0.05) !important; border: 1px solid var(--bd) !important; color: var(--pl) !important; }
+.hb svg { stroke: var(--pl) !important; }
+
+/* البطاقات (Cards) */
+.cd, .sc, .fl { background: rgba(20, 20, 25, 0.6) !important; border: 1px solid var(--bd) !important; border-radius: 16px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
+.ctl, .stl, .sh2 .st2 { color: var(--pl) !important; font-weight: 900 !important; }
+
+/* الأزرار */
+.btn.bp, .btn.bg2 { background: var(--grad) !important; color: #0a0a0f !important; font-weight: 900 !important; border: none !important; box-shadow: 0 4px 15px rgba(223, 189, 105, 0.3) !important; }
+.btn.bd { background: rgba(255, 77, 109, 0.15) !important; color: var(--rd) !important; border: 1px solid rgba(255, 77, 109, 0.3) !important; }
+.btn.bs { background: rgba(0, 212, 160, 0.15) !important; color: var(--gn) !important; border: 1px solid rgba(0, 212, 160, 0.3) !important; }
+
+/* الحقول والمدخلات */
+.fi, .si, select, textarea { background: rgba(0,0,0,0.5) !important; border: 1px solid var(--bd) !important; color: var(--cr) !important; border-radius: 10px !important; }
+.fi:focus, .si:focus { border-color: var(--pl) !important; outline: none !important; }
+.fll { color: var(--pl) !important; font-weight: 700 !important; }
+
+/* شاشة تسجيل الدخول */
+.gl { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.gbtn { background: var(--grad) !important; color: #0a0a0f !important; font-weight: 900 !important; border: none !important; }
+.gbtn.sec { background: rgba(255,255,255,0.05) !important; color: var(--pl) !important; border: 1px solid var(--bd) !important; }
+
+/* إخفاء أي ألوان وردية قديمة */
+[style*="#ff27c9"] { border-color: var(--bd) !important; }
+
 </style>
 
 
