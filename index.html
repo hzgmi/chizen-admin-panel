@@ -1355,59 +1355,58 @@ window.forceLogin = function() {
 
 
 
-<div id="direction-ptr" style="position:fixed; top:-60px; left:0; right:0; height:60px; display:flex; justify-content:center; align-items:center; background:#ff27c9; color:#fff; font-weight:bold; font-family:Tajawal, sans-serif; z-index:9999999; transition:top 0.3s ease; pointer-events:none;">🔄 جاري التحديث...</div>
+
+<div id="custom-ptr" style="position:fixed; top:-80px; left:0; right:0; height:80px; display:flex; justify-content:center; align-items:center; z-index:9999999; transition:top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events:none;">
+  <div style="width:45px; height:45px; border:4px solid rgba(255,39,201,0.15); border-top:4px solid #ff27c9; border-radius:50%; box-shadow: 0 4px 15px rgba(255,39,201,0.5); animation: ptr-spin 0.8s linear infinite;"></div>
+</div>
+<style>
+  @keyframes ptr-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const ptr = document.getElementById('direction-ptr');
+    const ptr = document.getElementById('custom-ptr');
+    const header = document.querySelector('.hd');
     let startY = 0;
     let isPulling = false;
 
-    document.addEventListener('touchstart', function(e) {
-        // بنسجل مكان اللمسة الأولى
+    if (!header) {
+        console.warn('Header .hd not found, PTR disabled.');
+        return;
+    }
+
+    // تفعيل السحب فقط من الشريط العلوي
+    header.addEventListener('touchstart', function(e) {
         startY = e.touches[0].pageY;
-        
-        // بنشوف هل الصفحة أو أي عنصر رئيسي معمول عليه سكرول
-        let hasScrolled = false;
-        let el = e.target;
-        while (el && el !== document.body) {
-            if (el.scrollTop > 0) { hasScrolled = true; break; }
-            el = el.parentElement;
-        }
-        
-        // لو مفيش أي حاجة معمول عليها سكرول (إحنا في القمة)
-        if (!hasScrolled && window.scrollY <= 0) {
-            isPulling = true;
-        } else {
-            isPulling = false;
-        }
+        isPulling = true;
     }, { passive: true });
 
-    document.addEventListener('touchmove', function(e) {
+    header.addEventListener('touchmove', function(e) {
         if (!isPulling) return;
-        
         let currentY = e.touches[0].pageY;
-        let deltaY = currentY - startY; // موجب يعني بنسحب لتحت، سالب يعني بنطلع لفوق
+        let deltaY = currentY - startY;
 
-        // لو بنسحب لتحت (Delta موجب) ومسافة كويسة
-        if (deltaY > 80) {
-            ptr.style.top = '0';
-        } 
-        // لو بنسحب لفوق (Delta سالب) نخفي الشريط
-        else if (deltaY < 0) {
-            ptr.style.top = '-60px';
+        if (deltaY > 70) {
+            ptr.style.top = '15px'; // يظهر المؤشر عند السحب لأسفل
+        } else if (deltaY < 20) {
+            ptr.style.top = '-80px'; // يختفي عند الرفع
         }
     }, { passive: true });
 
-    document.addEventListener('touchend', function(e) {
+    header.addEventListener('touchend', function(e) {
         if (!isPulling) return;
         isPulling = false;
-        
-        if (ptr.style.top === '0px') {
-            setTimeout(function() { location.reload(); }, 500);
+
+        if (ptr.style.top === '15px') {
+            ptr.style.top = '-80px';
+            setTimeout(function() { location.reload(); }, 300);
         }
     });
 });
 </script>
+
 </body>
 
 
