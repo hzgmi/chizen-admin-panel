@@ -793,7 +793,6 @@ var A={
         '</div>';
     }).join('');
   },
-
   renderOrders:function(){
     var q=(document.getElementById('o-search').value||'').toLowerCase().trim();
     var list=this.orders.slice();
@@ -1267,6 +1266,8 @@ var A={
             if(g('s-serv-hotel')) g('s-serv-hotel').checked = d.hotels !== false;
             if(g('s-serv-bus')) g('s-serv-bus').checked = d.buses !== false;
             if(g('s-serv-hajj')) g('s-serv-hajj').checked = d.hajj !== false;
+            if(g('s-serv-bus')) g('s-serv-bus').checked = d.buses !== false;
+            if(g('s-serv-hajj')) g('s-serv-hajj').checked = d.hajj !== false;
         } else {
             if(g('s-serv-flight')) g('s-serv-flight').checked = true;
             if(g('s-serv-hotel')) g('s-serv-hotel').checked = true;
@@ -1279,6 +1280,8 @@ var A={
     var data = {
       flights: document.getElementById('s-serv-flight').checked,
       hotels: document.getElementById('s-serv-hotel').checked,
+      buses: document.getElementById('s-serv-bus').checked,
+      hajj: document.getElementById('s-serv-hajj').checked,
       buses: document.getElementById('s-serv-bus').checked,
       hajj: document.getElementById('s-serv-hajj').checked
     };
