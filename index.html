@@ -508,7 +508,7 @@ var A={
     var ro=this.orders.slice().sort((a,b)=>(b.createdAt&&b.createdAt.seconds||0)-(a.createdAt&&a.createdAt.seconds||0)).slice(0,3);
     var rh='';
     if(!ro.length)rh='<div class="emp">لا توجد طلبات</div>';
-    ro.forEach(o=>{rh+='<div class="rw" onclick="A.orderDetails(\''+esc(o.id)+'\')" style="margin-bottom:6px;"><div class="rt">🛒</div><div class="ri"><div class="rti">#'+esc((o.id||'').substring(0,14))+'</div><div class="rs">'+esc(o.name||'')+' • '+esc(o.total)+' ر.س</div></div><span class="bst b'+(o.status||'pending').substring(0,1)+'2">'+(o.status==='pending'?'قيد المعالجة':o.status==='shipped'?'في الطريق':o.status==='completed'?'مكتمل':'ملغي')+'</span></div>';});
+    ro.forEach(o=>{rh+='<div class="rw" onclick="A.orderDetails(\''+esc(o.id)+'\')" style="margin-bottom:6px;"><div class="rt">🛒</div><div class="ri"><div class="rti">#'+esc((o.id||'').substring(0,14))+'</div><div class="rs">'+(esc(o.name||'') + (o.receiptUrl ? ' <a href="'+o.receiptUrl+'" target="_blank" style="color:#00d4a0;font-size:12px;text-decoration:none;margin-right:5px;">[🧾 الإيصال]</a>' : ''))+' • '+esc(o.total)+' ر.س</div></div><span class="bst b'+(o.status||'pending').substring(0,1)+'2">'+(o.status==='pending'?'قيد المعالجة':o.status==='shipped'?'في الطريق':o.status==='completed'?'مكتمل':'ملغي')+'</span></div>';});
     if(g('recent-orders'))g('recent-orders').innerHTML=rh;
     this.renderCreditReminders();
   },
@@ -807,7 +807,7 @@ var A={
       var noteI=o.adminNote?' <span class="bdg bgn">📝</span>':'';
       var st={pending:'قيد المعالجة',shipped:'في الطريق',completed:'مكتمل',cancelled:'ملغي'}[o.status||'pending'];
       var sc={pending:'bp2',shipped:'bs2',completed:'bc2',cancelled:'bx2'}[o.status||'pending'];
-      h+='<div class="cd" style="cursor:pointer;margin-bottom:10px;" onclick="A.orderDetails(\''+esc(o.id)+'\')"><div class="cti"><div class="ctl">#'+esc((o.id||'').substring(0,14))+noteI+'</div><span class="bst '+sc+'">'+st+'</span></div><div style="font-size:11px;color:var(--mt);line-height:1.8;"><div>👤 '+esc(o.name||'')+' • 📱 '+esc(o.phone||'')+'</div><div>📍 '+esc(o.pickup||'')+'</div><div>📦 '+ic+' منتج • <b style="color:var(--pk);">'+esc(o.total)+' ر.س</b></div></div></div>';
+      h+='<div class="cd" style="cursor:pointer;margin-bottom:10px;" onclick="A.orderDetails(\''+esc(o.id)+'\')"><div class="cti"><div class="ctl">#'+esc((o.id||'').substring(0,14))+noteI+'</div><span class="bst '+sc+'">'+st+'</span></div><div style="font-size:11px;color:var(--mt);line-height:1.8;"><div>👤 '+(esc(o.name||'') + (o.receiptUrl ? ' <a href="'+o.receiptUrl+'" target="_blank" style="color:#00d4a0;font-size:12px;text-decoration:none;margin-right:5px;">[🧾 الإيصال]</a>' : ''))+' • 📱 '+esc(o.phone||'')+'</div><div>📍 '+esc(o.pickup||'')+'</div><div>📦 '+ic+' منتج • <b style="color:var(--pk);">'+esc(o.total)+' ر.س</b></div></div></div>';
     });
     c.innerHTML=h;
   },
