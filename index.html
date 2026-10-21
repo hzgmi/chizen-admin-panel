@@ -212,6 +212,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 <button class="tb" onclick="A.tab('cats',this)">🗂️ الأقسام</button>
 <button class="tb" onclick="A.tab('pays',this)">💳 الدفع</button>
 <button class="tb" onclick="A.tab('orders',this)">🛒 الطلبات</button>
+<button class="tb" onclick="A.tab('flights',this)">✈️ حجوزات الطيران</button>
 <button class="tb" onclick="A.tab('sups',this)">🏢 الموردين</button>
 <button class="tb" onclick="A.tab('balances',this)">💰 الديون</button>
 <button class="tb" onclick="A.tab('delivery',this)">📍 التوصيل</button>
@@ -364,6 +365,10 @@ var A={
       '</div>'+
       '<div class="sc" id="sc-cats"><button class="btn bp bb" style="margin-bottom:10px;" onclick="A.catForm()">+ إضافة قسم</button><div id="cat-list"></div></div>'+
       '<div class="sc" id="sc-pays"><button class="btn bp bb" style="margin-bottom:10px;" onclick="A.payForm()">+ إضافة طريقة دفع</button><div id="pay-list"></div></div>'+
+      '<div class="sc" id="sc-flights">'+
+        '<div class="sw"><svg class="sic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" id="f-search" placeholder="ابحث في حجوزات الطيران..." oninput="A.renderFlights()"></div>'+
+        '<div id="flights-list" style="padding: 15px;"></div>'+
+      '</div>'+
       '<div class="sc" id="sc-orders">'+
         '<div class="sw"><svg class="sic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" id="o-search" placeholder="ابحث..." oninput="A.renderOrders()"></div>'+
         '<div class="ch">'+
@@ -460,7 +465,7 @@ var A={
 
   renderAll:function(){
     this.renderDash();this.renderReports();this.renderProducts();this.renderCats();this.renderPays();
-    this.renderOrders();this.renderSups();this.renderBalances();this.renderDelivery();this.renderUsers();this.renderAdmins();this.renderSettings();
+    this.renderOrders();this.renderFlights();this.renderSups();this.renderBalances();this.renderDelivery();this.renderUsers();this.renderAdmins();this.renderSettings();
   },
 
   tab:function(n,el){
@@ -470,7 +475,7 @@ var A={
     if(el)el.classList.add('active');
     document.getElementById('ct').scrollTop=0;
     this.currentTab=n;
-    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,admins:this.renderAdmins,settings:this.renderSettings}[n];
+    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,flights:this.renderFlights,sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,admins:this.renderAdmins,settings:this.renderSettings}[n];
     if(f)try{f.call(this);}catch(e){console.warn(e);}
   },
 
@@ -716,6 +721,55 @@ var A={
   deletePay:function(idx){
     var self=this;var name=this.pays[idx].name;
     this.confirm('حذف؟',name,async function(){self.pays.splice(idx,1);try{await FB.setConfig('payments',{list:self.pays});self.renderPays();self.toast('تم','suc');}catch(e){self.toast('فشل','err');}});
+  },
+
+
+  renderFlights: function() {
+    var c = document.getElementById('flights-list');
+    if (!c) return;
+    var q = (document.getElementById('f-search') ? document.getElementById('f-search').value : '').toLowerCase();
+    
+    // فلترة الطلبات التي نوعها حجز طيران
+    var flights = (this.orders || []).filter(function(o) {
+        if (o.type !== 'flight_booking') return false;
+        if (!q) return true;
+        var cust = o.customer || {};
+        var det = o.details || {};
+        return (cust.name && cust.name.toLowerCase().includes(q)) || 
+               (cust.phone && cust.phone.includes(q)) || 
+               (det.to && det.to.toLowerCase().includes(q)) || 
+               (det.from && det.from.toLowerCase().includes(q));
+    });
+
+    if (flights.length === 0) {
+        c.innerHTML = '<div class="emp">لا توجد حجوزات طيران مطابقة</div>';
+        return;
+    }
+
+    c.innerHTML = flights.map(function(o) {
+        var d = o.details || {};
+        var cust = o.customer || {};
+        var dateStr = (o.createdAt && o.createdAt.toDate) ? o.createdAt.toDate().toLocaleString('ar-EG') : '';
+        var waNumber = (cust.phone || '').replace(/[^0-9]/g, '');
+        
+        return '<div class="cd" style="margin-bottom:15px; border-right:4px solid #ff27c9;">'+
+            '<div class="cti"><div class="ctl">✈️ حجز طيران</div>'+
+            '<div style="font-size:12px;color:#888;">'+ dateStr +'</div></div>'+
+            '<div style="padding:10px 0; font-size:14px; line-height:1.8; color:#ccc;">'+
+                '<div>🛫 من: <b style="color:#fff;">'+ esc(d.from || '') +'</b></div>'+
+                '<div>🛬 إلى: <b style="color:#fff;">'+ esc(d.to || '') +'</b></div>'+
+                '<div>📅 التاريخ: <b style="color:#fff;">'+ esc(d.date || '') +'</b></div>'+
+                '<div>👥 عدد المسافرين: <b style="color:#fff;">'+ esc(d.pax || '1') +'</b></div>'+
+                '<div style="margin-top:10px; padding-top:10px; border-top:1px solid #333;">'+
+                    '👤 العميل: <b>'+ esc(cust.name || '') +'</b><br>'+
+                    '📱 الجوال: <span style="direction:ltr;display:inline-block;">'+ esc(cust.phone || '') +'</span>'+
+                '</div>'+
+            '</div>'+
+            '<div style="display:flex; gap:10px; margin-top:10px;">'+
+                '<a href="https://wa.me/'+ waNumber +'" target="_blank" class="btn bg2 bsm" style="flex:1; text-align:center; text-decoration:none; background:#25D366; color:#fff; border:none;">💬 تواصل واتساب</a>'+
+            '</div>'+
+        '</div>';
+    }).join('');
   },
 
   renderOrders:function(){
