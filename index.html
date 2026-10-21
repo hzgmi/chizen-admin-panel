@@ -174,77 +174,74 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 
 
 
-/* ═══ CHIZEN ADMIN ULTIMATE UI ═══ */
+
+/* ═══ CHIZEN PRO DASHBOARD (DARK) ═══ */
 :root {
-  --bg: #F5F6F8 !important; /* خلفية رمادية فاتحة */
-  --nav: #FFFFFF !important; /* بطاقات بيضاء */
-  --cr: #1C1C1E !important; /* نصوص داكنة */
-  --mt: #8E8E93 !important; /* نصوص ثانوية */
-  --bd: #EAEAEA !important; /* حدود ناعمة */
-  --grad: linear-gradient(135deg, #7C3AED, #EC4899) !important; /* بنفسجي ووردي */
-  --grad2: linear-gradient(135deg, #8B5CF6, #F472B6) !important;
-  --pl: #7C3AED !important;
-  --pk: #EC4899 !important;
-  --gn: #10B981 !important; /* أخضر للنجاح */
-  --rd: #EF4444 !important; /* أحمر للخطأ */
+  --bg: #0F111A !important; /* أزرق/أسود داكن جداً (Obsidian) */
+  --nav: #181B26 !important; /* لون البطاقات */
+  --cr: #F8FAFC !important; /* أبيض ناصع للنصوص */
+  --mt: #94A3B8 !important; /* رمادي فاتح للنصوص الثانوية */
+  --bd: #2D3748 !important; /* حدود واضحة ولكن هادئة */
+  --grad: linear-gradient(135deg, #7C3AED, #EC4899) !important; /* بنفسجي ووردي للهوية */
+  --pl: #A78BFA !important; /* بنفسجي فاتح للتمييز */
+  --pk: #F472B6 !important;
+  --gn: #34D399 !important; /* أخضر للنجاح */
+  --rd: #F87171 !important; /* أحمر للخطأ */
 }
 
 body, #app { background: var(--bg) !important; color: var(--cr) !important; font-family: 'Tajawal', sans-serif !important; }
 
 /* ── الشريط العلوي ── */
-.hd { background: var(--nav) !important; border-bottom: 1px solid var(--bd) !important; padding: 15px 20px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.02) !important; }
-.ht { color: #1C1C1E !important; font-weight: 900 !important; font-size: 20px !important; letter-spacing: 1px; }
+.hd { background: var(--nav) !important; border-bottom: 1px solid var(--bd) !important; padding: 15px 20px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important; }
+.ht { color: #FFF !important; font-weight: 900 !important; font-size: 20px !important; }
 .hs { color: var(--mt) !important; }
-.hb { background: #F2F2F7 !important; border: none !important; color: var(--pl) !important; border-radius: 10px !important; transition: all 0.2s; }
-.hb:active { transform: scale(0.95); }
+.hb { background: rgba(255,255,255,0.05) !important; border: 1px solid var(--bd) !important; color: var(--pl) !important; border-radius: 10px !important; }
+.hb:active { background: rgba(255,255,255,0.1) !important; }
 
 /* ── شريط التبويبات ── */
 .sw-tabs { background: var(--nav) !important; border-bottom: 1px solid var(--bd) !important; padding: 10px 15px !important; }
 .tb { color: var(--mt) !important; font-weight: 700 !important; padding: 8px 16px !important; border-radius: 10px !important; border: none !important; transition: all 0.2s; }
-.tb.active { background: var(--grad) !important; color: #FFF !important; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2) !important; }
+.tb.active { background: var(--grad) !important; color: #FFF !important; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important; }
 
-/* ── البطاقات (Cards) ── */
-.cd, .sc { background: var(--nav) !important; border: 1px solid var(--bd) !important; border-radius: 16px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important; margin-bottom: 15px; }
+/* ── البطاقات ── */
+.cd, .sc { background: var(--nav) !important; border: 1px solid var(--bd) !important; border-radius: 16px !important; box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important; margin-bottom: 15px; }
 .cti { border-bottom: 1px solid var(--bd) !important; padding-bottom: 15px !important; margin-bottom: 15px !important; }
-.ctl { color: #1C1C1E !important; font-weight: 900 !important; font-size: 16px !important; }
+.ctl { color: #FFF !important; font-weight: 900 !important; font-size: 16px !important; }
+.rs { color: var(--mt) !important; }
+.rti { color: #FFF !important; font-weight: 700 !important; }
 
 /* ── الأزرار ── */
 .btn { font-weight: 700 !important; border-radius: 10px !important; padding: 10px 18px !important; border: none !important; }
-.btn.bp { background: var(--grad) !important; color: #FFF !important; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2) !important; }
-.btn.bg2 { background: #F2F2F7 !important; color: #1C1C1E !important; }
-.btn.bd { background: rgba(239, 68, 68, 0.1) !important; color: var(--rd) !important; }
-.btn.bs { background: rgba(16, 185, 129, 0.1) !important; color: var(--gn) !important; }
+.btn.bp { background: var(--grad) !important; color: #FFF !important; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important; }
+.btn.bg2 { background: rgba(255,255,255,0.05) !important; color: #FFF !important; border: 1px solid var(--bd) !important; }
+.btn.bd { background: rgba(248, 113, 113, 0.15) !important; color: var(--rd) !important; }
+.btn.bs { background: rgba(52, 211, 153, 0.15) !important; color: var(--gn) !important; }
 
-/* ── الحقول والمدخلات ── */
-.fi, .si, select, textarea { background: #F2F2F7 !important; border: 1px solid transparent !important; color: #1C1C1E !important; border-radius: 10px !important; padding: 12px 15px !important; font-family: 'Tajawal', sans-serif !important; width: 100%; box-sizing: border-box; }
-.fi:focus, .si:focus, select:focus, textarea:focus { border-color: var(--pl) !important; outline: none !important; background: #FFF !important; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important; }
-.fll { color: #1C1C1E !important; font-weight: 700 !important; margin-bottom: 8px !important; display: block; }
+/* ── الحقول ── */
+.fi, .si, select, textarea { background: rgba(0,0,0,0.3) !important; border: 1px solid var(--bd) !important; color: #FFF !important; border-radius: 10px !important; padding: 12px 15px !important; font-family: 'Tajawal', sans-serif !important; width: 100%; box-sizing: border-box; }
+.fi:focus, .si:focus, select:focus, textarea:focus { border-color: var(--pl) !important; outline: none !important; background: rgba(0,0,0,0.5) !important; box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2) !important; }
+.fll { color: var(--mt) !important; font-weight: 700 !important; margin-bottom: 8px !important; display: block; }
 
-/* ── شاشة تسجيل الدخول ── */
+/* ── شاشة الدخول ── */
 #gs { background: var(--bg) !important; }
-.gl { color: #1C1C1E !important; font-weight: 900 !important; font-size: 28px !important; }
+.gl { color: #FFF !important; font-weight: 900 !important; font-size: 28px !important; }
 .gt { color: var(--mt) !important; }
-.gd { color: #1C1C1E !important; }
+.gd { color: #FFF !important; }
 .gi { color: var(--pl) !important; }
-.gbtn { background: var(--grad) !important; color: #FFF !important; font-weight: 900 !important; border: none !important; border-radius: 12px !important; padding: 14px !important; }
-.gbtn.sec { background: #F2F2F7 !important; color: #1C1C1E !important; }
+.gbtn { background: var(--grad) !important; color: #FFF !important; font-weight: 900 !important; border: none !important; border-radius: 12px !important; padding: 14px !important; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important; }
+.gbtn.sec { background: rgba(255,255,255,0.05) !important; color: #FFF !important; border: 1px solid var(--bd) !important; }
 
-/* ── النوافذ المنبثقة (Modals) ── */
-.mdl, .modal { background: var(--nav) !important; border-radius: 20px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important; }
-.mtl { color: #1C1C1E !important; font-weight: 900 !important; }
+/* ── النوافذ المنبثقة ── */
+.mdl, .modal { background: var(--nav) !important; border: 1px solid var(--bd) !important; border-radius: 20px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important; }
+.mtl { color: #FFF !important; font-weight: 900 !important; }
 
-/* ── الإشعارات (Toasts) ── */
-.toast { border-radius: 10px !important; font-weight: 700 !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important; }
-.toast.suc { background: var(--gn) !important; color: #FFF !important; }
-.toast.err { background: var(--rd) !important; color: #FFF !important; }
+/* ── الإشعارات ── */
+.toast.suc { background: var(--gn) !important; color: #000 !important; font-weight: 900 !important; }
+.toast.err { background: var(--rd) !important; color: #FFF !important; font-weight: 900 !important; }
 
-/* ── القوائم والصفوف ── */
+/* ── القوائم ── */
 .rw { border-bottom: 1px solid var(--bd) !important; padding: 15px !important; }
-.rw:hover { background: #F9F9F9 !important; }
-.rs { color: var(--mt) !important; }
-.rti { color: #1C1C1E !important; font-weight: 700 !important; }
-
-/* ── حقول التحكم في الخدمات ── */
+.rw:hover { background: rgba(255,255,255,0.02) !important; }
 input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !important; cursor: pointer; }
 
 </style>
