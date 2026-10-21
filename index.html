@@ -1145,7 +1145,8 @@ var A={
             h += '</div>';
         });
         c.innerHTML = h;
-    },
+        }); // إغلاق onSnapshot
+    }, // إغلاق renderBrands
 
     addBrand: async function() {
         var input = document.getElementById('new-brand-input');
