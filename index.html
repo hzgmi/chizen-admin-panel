@@ -740,7 +740,26 @@ var A={
     });
   },
 
+
+  var CORE_CATS_ADMIN = [
+      {key:'electronics', name:'إلكترونيات', icon:'📱'},
+      {key:'beauty', name:'تجميل', icon:'💄'},
+      {key:'home', name:'منزلية', icon:'🏠'},
+      {key:'clothes', name:'ملابس', icon:'👕'},
+      {key:'school', name:'مدرسية', icon:'📚'},
+      {key:'food', name:'طعام', icon:'🍔'},
+      {key:'games', name:'ألعاب', icon:'🎮'},
+      {key:'kids', name:'أطفال', icon:'🧸'}
+  ];
+
   renderCats:function(){
+        if (!this.cats) this.cats = [];
+        var self = this;
+        CORE_CATS_ADMIN.forEach(function(c) {
+            var exists = self.cats.find(function(x) { return x.key === c.key; });
+            if (!exists) self.cats.push(c);
+        });
+
     var c=document.getElementById('cat-list');if(!c)return;
     if(!this.cats.length){c.innerHTML='<div class="emp">لا أقسام</div>';return;}
     var h='';
@@ -769,7 +788,8 @@ var A={
     try{await FB.setConfig('categories',{list:this.cats});this.cm();this.renderCats();this.toast('✓','suc');}catch(e){this.toast('فشل','err');}
   },
 
-  deleteCat:function(idx){
+  deleteCat: function(idx) {
+    if (this.isProtectedCat(this.cats[idx].key)) return this.toast('هذا القسم أساسي ولا يمكن حذفه', 'err');
     var self=this;var name=this.cats[idx].name;
     this.confirm('حذف القسم؟',name,async function(){self.cats.splice(idx,1);try{await FB.setConfig('categories',{list:self.cats});self.renderCats();self.toast('تم','suc');}catch(e){self.toast('فشل','err');}});
   },
