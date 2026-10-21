@@ -175,71 +175,67 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 
 
 
-/* ═══ CHIZEN PRO DASHBOARD (DARK) ═══ */
+
+/* ═══ CHIZEN COMFORT DARK IDENTITY ═══ */
 :root {
-  --bg: #0F111A !important; /* أزرق/أسود داكن جداً (Obsidian) */
-  --nav: #181B26 !important; /* لون البطاقات */
-  --cr: #F8FAFC !important; /* أبيض ناصع للنصوص */
-  --mt: #94A3B8 !important; /* رمادي فاتح للنصوص الثانوية */
-  --bd: #2D3748 !important; /* حدود واضحة ولكن هادئة */
-  --grad: linear-gradient(135deg, #7C3AED, #EC4899) !important; /* بنفسجي ووردي للهوية */
-  --pl: #A78BFA !important; /* بنفسجي فاتح للتمييز */
-  --pk: #F472B6 !important;
-  --gn: #34D399 !important; /* أخضر للنجاح */
-  --rd: #F87171 !important; /* أحمر للخطأ */
+  --bg: #14141F !important; /* كحلي داكن جداً ومريح */
+  --nav: #1C1C28 !important; /* لون البطاقات */
+  --cr: #E2E2E9 !important; /* أبيض مريح للعين وليس حاد */
+  --mt: #8B8B9F !important; /* رمادي للنصوص الثانوية */
+  --bd: rgba(255, 255, 255, 0.07) !important; /* حدود ناعمة */
+  --grad: linear-gradient(135deg, #8B5CF6, #EC4899) !important; /* بنفسجي ووردي هادئ */
+  --grad2: linear-gradient(135deg, #A78BFA, #F472B6) !important;
+  --pl: #A78BFA !important; /* بنفسجي فاتح */
+  --pk: #F472B6 !important; /* وردي فاتح */
+  --gn: #10B981 !important;
+  --rd: #EF4444 !important;
 }
 
 body, #app { background: var(--bg) !important; color: var(--cr) !important; font-family: 'Tajawal', sans-serif !important; }
 
-/* ── الشريط العلوي ── */
-.hd { background: var(--nav) !important; border-bottom: 1px solid var(--bd) !important; padding: 15px 20px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important; }
+/* الشريط العلوي */
+.hd { background: var(--nav) !important; border-bottom: 1px solid var(--bd) !important; padding: 15px 20px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; }
 .ht { color: #FFF !important; font-weight: 900 !important; font-size: 20px !important; }
 .hs { color: var(--mt) !important; }
-.hb { background: rgba(255,255,255,0.05) !important; border: 1px solid var(--bd) !important; color: var(--pl) !important; border-radius: 10px !important; }
-.hb:active { background: rgba(255,255,255,0.1) !important; }
+.hb { background: rgba(255,255,255,0.04) !important; border: 1px solid var(--bd) !important; color: var(--pl) !important; border-radius: 10px !important; }
 
-/* ── شريط التبويبات ── */
+/* التبويبات */
 .sw-tabs { background: var(--nav) !important; border-bottom: 1px solid var(--bd) !important; padding: 10px 15px !important; }
-.tb { color: var(--mt) !important; font-weight: 700 !important; padding: 8px 16px !important; border-radius: 10px !important; border: none !important; transition: all 0.2s; }
-.tb.active { background: var(--grad) !important; color: #FFF !important; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important; }
+.tb { color: var(--mt) !important; font-weight: 700 !important; padding: 8px 16px !important; border-radius: 10px !important; border: none !important; }
+.tb.active { background: var(--grad) !important; color: #FFF !important; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25) !important; }
 
-/* ── البطاقات ── */
-.cd, .sc { background: var(--nav) !important; border: 1px solid var(--bd) !important; border-radius: 16px !important; box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important; margin-bottom: 15px; }
+/* البطاقات */
+.cd, .sc { background: var(--nav) !important; border: 1px solid var(--bd) !important; border-radius: 16px !important; box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important; margin-bottom: 15px; }
 .cti { border-bottom: 1px solid var(--bd) !important; padding-bottom: 15px !important; margin-bottom: 15px !important; }
 .ctl { color: #FFF !important; font-weight: 900 !important; font-size: 16px !important; }
 .rs { color: var(--mt) !important; }
 .rti { color: #FFF !important; font-weight: 700 !important; }
 
-/* ── الأزرار ── */
+/* الأزرار */
 .btn { font-weight: 700 !important; border-radius: 10px !important; padding: 10px 18px !important; border: none !important; }
-.btn.bp { background: var(--grad) !important; color: #FFF !important; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important; }
+.btn.bp { background: var(--grad) !important; color: #FFF !important; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2) !important; }
 .btn.bg2 { background: rgba(255,255,255,0.05) !important; color: #FFF !important; border: 1px solid var(--bd) !important; }
-.btn.bd { background: rgba(248, 113, 113, 0.15) !important; color: var(--rd) !important; }
-.btn.bs { background: rgba(52, 211, 153, 0.15) !important; color: var(--gn) !important; }
+.btn.bd { background: rgba(239, 68, 68, 0.15) !important; color: var(--rd) !important; }
+.btn.bs { background: rgba(16, 185, 129, 0.15) !important; color: var(--gn) !important; }
 
-/* ── الحقول ── */
-.fi, .si, select, textarea { background: rgba(0,0,0,0.3) !important; border: 1px solid var(--bd) !important; color: #FFF !important; border-radius: 10px !important; padding: 12px 15px !important; font-family: 'Tajawal', sans-serif !important; width: 100%; box-sizing: border-box; }
-.fi:focus, .si:focus, select:focus, textarea:focus { border-color: var(--pl) !important; outline: none !important; background: rgba(0,0,0,0.5) !important; box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2) !important; }
+/* الحقول */
+.fi, .si, select, textarea { background: rgba(0,0,0,0.25) !important; border: 1px solid var(--bd) !important; color: #FFF !important; border-radius: 10px !important; padding: 12px 15px !important; font-family: 'Tajawal', sans-serif !important; width: 100%; box-sizing: border-box; }
+.fi:focus, .si:focus, select:focus, textarea:focus { border-color: var(--pl) !important; outline: none !important; background: rgba(0,0,0,0.4) !important; }
 .fll { color: var(--mt) !important; font-weight: 700 !important; margin-bottom: 8px !important; display: block; }
 
-/* ── شاشة الدخول ── */
+/* شاشة الدخول */
 #gs { background: var(--bg) !important; }
-.gl { color: #FFF !important; font-weight: 900 !important; font-size: 28px !important; }
+.gl { color: #FFF !important; font-weight: 900 !important; font-size: 28px !important; background: var(--grad) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; }
 .gt { color: var(--mt) !important; }
 .gd { color: #FFF !important; }
-.gi { color: var(--pl) !important; }
-.gbtn { background: var(--grad) !important; color: #FFF !important; font-weight: 900 !important; border: none !important; border-radius: 12px !important; padding: 14px !important; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important; }
+.gbtn { background: var(--grad) !important; color: #FFF !important; font-weight: 900 !important; border: none !important; border-radius: 12px !important; padding: 14px !important; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important; }
 .gbtn.sec { background: rgba(255,255,255,0.05) !important; color: #FFF !important; border: 1px solid var(--bd) !important; }
 
-/* ── النوافذ المنبثقة ── */
+/* النوافذ المنبثقة */
 .mdl, .modal { background: var(--nav) !important; border: 1px solid var(--bd) !important; border-radius: 20px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important; }
 .mtl { color: #FFF !important; font-weight: 900 !important; }
 
-/* ── الإشعارات ── */
-.toast.suc { background: var(--gn) !important; color: #000 !important; font-weight: 900 !important; }
-.toast.err { background: var(--rd) !important; color: #FFF !important; font-weight: 900 !important; }
-
-/* ── القوائم ── */
+/* القوائم */
 .rw { border-bottom: 1px solid var(--bd) !important; padding: 15px !important; }
 .rw:hover { background: rgba(255,255,255,0.02) !important; }
 input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !important; cursor: pointer; }
@@ -748,7 +744,9 @@ var A={
     var c=document.getElementById('cat-list');if(!c)return;
     if(!this.cats.length){c.innerHTML='<div class="emp">لا أقسام</div>';return;}
     var h='';
-    this.cats.forEach((cat,i)=>{var cnt=this.products.filter(p=>p.category===cat.key).length;h+='<div class="rw" onclick="A.catForm('+i+')"><div class="rt" style="font-size:22px;">'+esc(cat.icon||'📦')+'</div><div class="ri"><div class="rti">'+esc(cat.name)+'</div><div class="rs">'+esc(cat.key)+' • '+cnt+' منتج</div></div><div class="ra" onclick="event.stopPropagation()"><button class="btn bd bsm" onclick="A.deleteCat('+i+')">🗑️</button></div></div>';});
+    this.cats.forEach((cat,i)=>{var cnt=this.products.filter(p=>p.category===cat.key).length;var isProt = this.isProtectedCat(cat.key);
+      var deleteBtn = isProt ? '<span style="font-size:18px;padding:5px;" title="قسم أساسي (لا يمكن حذفه)">🔒</span>' : '<button class="btn bd bsm" onclick="A.deleteCat('+i+')">🗑️</button>';
+      h+='<div class="rw" onclick="A.catForm('+i+')"><div class="rt" style="font-size:22px;">'+esc(cat.icon||'📦')+'</div><div class="ri"><div class="rti">'+esc(cat.name)+(isProt?' <span style="font-size:10px;color:var(--pl);">(أساسي)</span>':'')+'</div><div class="rs">'+esc(cat.key)+' • '+cnt+' منتج</div></div><div class="ra" onclick="event.stopPropagation()">'+deleteBtn+'</div></div>';});
     c.innerHTML=h;
   },
 
