@@ -212,6 +212,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 <button class="tb" onclick="A.tab('cats',this)">🗂️ الأقسام</button>
 <button class="tb" onclick="A.tab('pays',this)">💳 الدفع</button>
 <button class="tb" onclick="A.tab('orders',this)">🛒 الطلبات</button>
+<button class="tb" onclick="A.tab('push',this)">🔔 الإشعارات</button>
 <button class="tb" onclick="A.tab('flights',this)">✈️ الحجوزات</button>
 <button class="tb" onclick="A.tab('sups',this)">🏢 الموردين</button>
 <button class="tb" onclick="A.tab('balances',this)">💰 الديون</button>
@@ -365,7 +366,16 @@ var A={
       '</div>'+
       '<div class="sc" id="sc-cats"><button class="btn bp bb" style="margin-bottom:10px;" onclick="A.catForm()">+ إضافة قسم</button><div id="cat-list"></div></div>'+
       '<div class="sc" id="sc-pays"><button class="btn bp bb" style="margin-bottom:10px;" onclick="A.payForm()">+ إضافة طريقة دفع</button><div id="pay-list"></div></div>'+
-      '<div class="sc" id="sc-flights">'+
+      
+'<div class="sc" id="sc-push">'+
+  '<div class="sw"><div class="cti"><div class="ctl">🔔 إرسال إشعار خارجي</div></div>'+
+    '<div class="fl"><label class="fll">عنوان الإشعار</label><input class="fi" id="push-title" placeholder="خصم 50% اليوم فقط!"></div>'+
+    '<div class="fl"><label class="fll">نص الإشعار</label><textarea class="fi" id="push-body" placeholder="لا تفوت الفرصة..." style="height:80px;"></textarea></div>'+
+    '<button class="btn bp" onclick="A.sendPush()" style="width:100%;margin-top:10px;">🚀 إرسال للجميع</button>'+
+  '</div>'+
+'</div>'+
+
+'<div class="sc" id="sc-flights">'+
         '<div class="sw"><svg class="sic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" id="f-search" placeholder="ابحث في حجوزات الطيران..." oninput="A.renderFlights()"></div>'+
         '<div id="flights-list" style="padding: 15px;"></div>'+
       '</div>'+
@@ -475,7 +485,7 @@ var A={
     if(el)el.classList.add('active');
     document.getElementById('ct').scrollTop=0;
     this.currentTab=n;
-    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,flights:this.renderFlights,sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,admins:this.renderAdmins,settings:this.renderSettings}[n];
+    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,flights:this.renderFlights,push:function(){},sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,admins:this.renderAdmins,settings:this.renderSettings}[n];
     if(f)try{f.call(this);}catch(e){console.warn(e);}
   },
 
@@ -723,6 +733,22 @@ var A={
     this.confirm('حذف؟',name,async function(){self.pays.splice(idx,1);try{await FB.setConfig('payments',{list:self.pays});self.renderPays();self.toast('تم','suc');}catch(e){self.toast('فشل','err');}});
   },
 
+
+
+  sendPush: async function() {
+    var title = document.getElementById('push-title').value.trim();
+    var body = document.getElementById('push-body').value.trim();
+    if (!title || !body) return this.toast('أكمل البيانات', 'err');
+    
+    try {
+      await FB.db.collection('push_queue').add({
+        title: title, body: body, status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      this.toast('✅ تم وضع الإشعار في الطابور', 'suc');
+      document.getElementById('push-title').value = '';
+      document.getElementById('push-body').value = '';
+    } catch(e) { this.toast('فشل الإرسال', 'err'); }
+  },
 
   renderFlights: function() {
     var c = document.getElementById('flights-list');
