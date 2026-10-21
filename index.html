@@ -172,52 +172,65 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 }
 @media(max-width:380px){.sg3{grid-template-columns:1fr 1fr;}.sg3>div:last-child{grid-column:span 2;}}
 
-/* ═══ PREMIUM MIDNIGHT & GOLD THEME (ADMIN) ═══ */
+
+/* ═══ CHIZEN OBSIDIAN THEME ═══ */
 :root {
-  --bg: #0a0a0f !important;
-  --nav: rgba(20, 20, 25, 0.95) !important;
-  --bd: rgba(200, 170, 110, 0.2) !important;
-  --cr: #f5f5f7 !important;
-  --mt: #8e8e93 !important;
-  --pl: #dfbd69 !important;
-  --pk: #c3a26f !important;
-  --gn: #00d4a0 !important;
-  --rd: #ff4d6d !important;
-  --grad: linear-gradient(135deg, #dfbd69, #926c15) !important;
-  --grad2: linear-gradient(135deg, #c3a26f, #83612b) !important;
+  --bg: #0A0C10 !important;
+  --nav: #13161C !important;
+  --bd: rgba(214, 185, 140, 0.12) !important;
+  --cr: #F4EFE6 !important;
+  --mt: #7A7768 !important;
+  --mt2: #5A5749 !important;
+  --pl: #D6B98C !important;
+  --pk: #D6B98C !important;
+  --gn: #8FA88E !important;
+  --rd: #E07856 !important;
+  --grad: linear-gradient(135deg, #D6B98C 0%, #A67C52 100%) !important;
+  --grad2: linear-gradient(135deg, #D6B98C 0%, #8B6F47 100%) !important;
 }
 
 body, #app { background: var(--bg) !important; color: var(--cr) !important; }
 
-/* الهيدر والتبويبات */
-.hd { background: rgba(10, 10, 15, 0.95) !important; border-bottom: 1px solid var(--bd) !important; backdrop-filter: blur(10px); }
-.ht { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900 !important; }
+.hd { background: rgba(10, 12, 16, 0.95) !important; border-bottom: 1px solid var(--bd) !important; backdrop-filter: blur(12px); }
+.ht { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 900 !important; letter-spacing: 1px; }
+.hs { color: var(--mt) !important; }
+.hb { background: rgba(214, 185, 140, 0.08) !important; border: 1px solid var(--bd) !important; color: var(--pl) !important; border-radius: 12px !important; }
+
 .tb { color: var(--mt) !important; border-bottom: 2px solid transparent !important; }
 .tb.active { color: var(--pl) !important; border-bottom-color: var(--pl) !important; }
-.hb { background: rgba(255,255,255,0.05) !important; border: 1px solid var(--bd) !important; color: var(--pl) !important; }
-.hb svg { stroke: var(--pl) !important; }
 
-/* البطاقات (Cards) */
-.cd, .sc, .fl { background: rgba(20, 20, 25, 0.6) !important; border: 1px solid var(--bd) !important; border-radius: 16px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
-.ctl, .stl, .sh2 .st2 { color: var(--pl) !important; font-weight: 900 !important; }
+.cd { background: var(--nav) !important; border: 1px solid var(--bd) !important; border-radius: 16px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important; }
+.cti { border-bottom: 1px solid var(--bd) !important; }
+.ctl { color: var(--pl) !important; font-weight: 900 !important; }
 
-/* الأزرار */
-.btn.bp, .btn.bg2 { background: var(--grad) !important; color: #0a0a0f !important; font-weight: 900 !important; border: none !important; box-shadow: 0 4px 15px rgba(223, 189, 105, 0.3) !important; }
-.btn.bd { background: rgba(255, 77, 109, 0.15) !important; color: var(--rd) !important; border: 1px solid rgba(255, 77, 109, 0.3) !important; }
-.btn.bs { background: rgba(0, 212, 160, 0.15) !important; color: var(--gn) !important; border: 1px solid rgba(0, 212, 160, 0.3) !important; }
+.btn { font-weight: 700 !important; border-radius: 10px !important; }
+.btn.bp { background: var(--grad) !important; color: #0A0C10 !important; border: none !important; box-shadow: 0 4px 12px rgba(214, 185, 140, 0.2) !important; }
+.btn.bg2 { background: rgba(214, 185, 140, 0.1) !important; color: var(--pl) !important; border: 1px solid var(--bd) !important; }
+.btn.bd { background: rgba(224, 120, 86, 0.12) !important; color: var(--rd) !important; border: 1px solid rgba(224, 120, 86, 0.3) !important; }
+.btn.bs { background: rgba(143, 168, 142, 0.12) !important; color: var(--gn) !important; border: 1px solid rgba(143, 168, 142, 0.3) !important; }
 
-/* الحقول والمدخلات */
-.fi, .si, select, textarea { background: rgba(0,0,0,0.5) !important; border: 1px solid var(--bd) !important; color: var(--cr) !important; border-radius: 10px !important; }
-.fi:focus, .si:focus { border-color: var(--pl) !important; outline: none !important; }
+.fi, .si, select, textarea { background: rgba(0, 0, 0, 0.4) !important; border: 1px solid var(--bd) !important; color: var(--cr) !important; border-radius: 10px !important; }
+.fi:focus, .si:focus, select:focus, textarea:focus { border-color: var(--pl) !important; outline: none !important; box-shadow: 0 0 0 3px rgba(214, 185, 140, 0.1) !important; }
 .fll { color: var(--pl) !important; font-weight: 700 !important; }
 
-/* شاشة تسجيل الدخول */
-.gl { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.gbtn { background: var(--grad) !important; color: #0a0a0f !important; font-weight: 900 !important; border: none !important; }
-.gbtn.sec { background: rgba(255,255,255,0.05) !important; color: var(--pl) !important; border: 1px solid var(--bd) !important; }
+.gl { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.gt { color: var(--mt) !important; }
+.gd { color: var(--cr) !important; }
+.gbtn { background: var(--grad) !important; color: #0A0C10 !important; font-weight: 900 !important; border: none !important; border-radius: 12px !important; }
+.gbtn.sec { background: rgba(255, 255, 255, 0.05) !important; color: var(--pl) !important; border: 1px solid var(--bd) !important; }
 
-/* إخفاء أي ألوان وردية قديمة */
-[style*="#ff27c9"] { border-color: var(--bd) !important; }
+.mdl, .modal { background: var(--nav) !important; border: 1px solid var(--bd) !important; border-radius: 18px !important; }
+.mtl { color: var(--pl) !important; }
+
+.toast { border-radius: 10px !important; font-weight: 700 !important; }
+.toast.suc { background: var(--gn) !important; color: #0A0C10 !important; }
+.toast.err { background: var(--rd) !important; color: #fff !important; }
+
+.rw { border-bottom: 1px solid var(--bd) !important; }
+.rw:hover { background: rgba(214, 185, 140, 0.04) !important; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: rgba(214, 185, 140, 0.3); border-radius: 3px; }
 
 </style>
 
