@@ -323,6 +323,17 @@ window.addEventListener('unhandledrejection', function(e){ console.error('❌ Un
 
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]});};
 
+var CORE_CATS_ADMIN = [
+      {key:'electronics', name:'إلكترونيات', icon:'📱'},
+      {key:'beauty', name:'تجميل', icon:'💄'},
+      {key:'home', name:'منزلية', icon:'🏠'},
+      {key:'clothes', name:'ملابس', icon:'👕'},
+      {key:'school', name:'مدرسية', icon:'📚'},
+      {key:'food', name:'طعام', icon:'🍔'},
+      {key:'games', name:'ألعاب', icon:'🎮'},
+      {key:'kids', name:'أطفال', icon:'🧸'}
+  ];
+
 var A={
   products:[],orders:[],users:[],admins:[],cats:[],pays:[],sups:[],notifs:[],deliveryLocs:{aden:[],yemen:[]},
   orderFilter:'all',prodFilter:'all',currentTab:'dash',
@@ -769,8 +780,8 @@ var A={
     var html=
       '<div class="fl"><label class="fll">الاسم</label><input class="fi" id="f-name" value="'+esc(p.name||'')+'"></div>'+
       '<div class="fr"><div class="fl"><label class="fll">الماركة</label><select class="fi" id="f-brand"><option value="">بدون ماركة</option></select></div><div class="fl"><label class="fll">القسم</label><select class="fi" id="f-cat">'+catOpts+'</select></div></div>'+
-      '<div class="fr3"><div class="fl"><label class="fll">الألوان (مفصولة بفاصلة)</label><input class="fi" id="f-colors" placeholder="أحمر, أزرق, أخضر"></div>
-<div class="fl"><label class="fll">السعر</label><input class="fi" type="number" id="f-price" value="'+esc(p.price||'')+'"></div><div class="fl"><label class="fll">القديم</label><input class="fi" type="number" id="f-old" value="'+esc(p.old||'')+'"></div><div class="fl"><label class="fll">المخزون</label><input class="fi" type="number" id="f-stock" value="'+esc(typeof p.stock==='number'?p.stock:'')+'"></div></div>'+
+      '<div class="fr3"><div class="fl"><label class="fll">الألوان (مفصولة بفاصلة)</label><input class="fi" id="f-colors" placeholder="أحمر, أزرق, أخضر"></div>'+
+      '<div class="fl"><label class="fll">السعر</label><input class="fi" type="number" id="f-price" value="'+esc(p.price||'')+'"></div><div class="fl"><label class="fll">القديم</label><input class="fi" type="number" id="f-old" value="'+esc(p.old||'')+'"></div><div class="fl"><label class="fll">المخزون</label><input class="fi" type="number" id="f-stock" value="'+esc(typeof p.stock==='number'?p.stock:'')+'"></div></div>'+
       '<div class="fl"><label class="fll">شارة</label><input class="fi" id="f-badge" value="'+esc(p.badge||'')+'" placeholder="-30%"></div>'+
       '<div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="f-img" value="'+esc(p.img||'')+'" oninput="A.prevImg(this.value)"><div class="ipt'+(p.img?' hi':'')+'" id="f-prev"><span>معاينة</span><img id="f-img-el" src="'+esc(p.img||'')+'"></div></div>'+
       '<div class="fl"><label class="fll">الوصف</label><textarea class="fi" id="f-desc">'+esc(p.desc||'')+'</textarea></div>'+
@@ -816,16 +827,7 @@ var A={
   },
 
 
-  var CORE_CATS_ADMIN = [
-      {key:'electronics', name:'إلكترونيات', icon:'📱'},
-      {key:'beauty', name:'تجميل', icon:'💄'},
-      {key:'home', name:'منزلية', icon:'🏠'},
-      {key:'clothes', name:'ملابس', icon:'👕'},
-      {key:'school', name:'مدرسية', icon:'📚'},
-      {key:'food', name:'طعام', icon:'🍔'},
-      {key:'games', name:'ألعاب', icon:'🎮'},
-      {key:'kids', name:'أطفال', icon:'🧸'}
-  ];
+  
 
   renderCats:function(){
         if (!this.cats) this.cats = [];
@@ -1740,8 +1742,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-</script>
-
 </body>
 
 
