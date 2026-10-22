@@ -290,7 +290,8 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 <button class="tb" onclick="A.tab('users',this)">👥 المستخدمين</button>
 <button class="tb" onclick="A.tab('employees',this)">👥 الموظفين</button>
 <button class="tb" onclick="A.tab('admins',this)">🔑 المسؤولين</button>
-<button class="tb" onclick="A.tab('settings',this)">⚙️ الإعدادات</button>
+<button class="tb" onclick="A.tab('banners',this)">🖼️ البانرات</button>
+      <button class="tb" onclick="A.tab('settings',this)">⚙️ الإعدادات</button>
 </div>
 <div class="ct" id="ct"></div>
 </div>
@@ -604,6 +605,57 @@ var A={
   },
 
 
+  
+  // ═══ Banners ═══
+  loadBanners: async function() {
+    var list = document.getElementById("banners-list");
+    if (!list) return;
+    try {
+      var doc = await FB.db.collection("config").doc("banners").get();
+      var arr = (doc.exists && doc.data().list) ? doc.data().list : [];
+      if (arr.length === 0) { list.innerHTML = "<p style='padding:20px;color:#888;'>لا توجد بانرات</p>"; return; }
+      var out = "";
+      for (var i = 0; i < arr.length; i++) {
+        var b = arr[i];
+        out += "<div style='padding:10px;margin-bottom:10px;border:1px solid #333;border-radius:8px;'>" +
+          "<img src='" + b.img + "' style='width:100%;max-width:300px;border-radius:6px;'>" +
+          "<p style='font-weight:bold;margin:8px 0 4px;'>" + b.title + "</p>" +
+          "<p style='color:#888;font-size:12px;margin:0;'>" + (b.sub || "") + "</p>" +
+          "<button onclick='A.deleteBanner(" + i + ")' style='background:#ef4444;color:#fff;border:none;padding:6px 12px;border-radius:6px;margin-top:8px;cursor:pointer;'>🗑️ حذف</button>" +
+          "</div>";
+      }
+      list.innerHTML = out;
+    } catch(e) { list.innerHTML = "<p style='color:red;'>خطأ: " + e.message + "</p>"; }
+  },
+  saveBanner: async function() {
+    var img = document.getElementById("bn-img").value.trim();
+    var title = document.getElementById("bn-title").value.trim();
+    var sub = document.getElementById("bn-sub").value.trim();
+    var btn = document.getElementById("bn-btn").value.trim() || "تسوق الآن";
+    if (!img || !title) { alert("الصورة والعنوان مطلوبان"); return; }
+    try {
+      var doc = await FB.db.collection("config").doc("banners").get();
+      var arr = (doc.exists && doc.data().list) ? doc.data().list : [];
+      arr.push({ img: img, title: title, sub: sub, btn: btn });
+      await FB.db.collection("config").doc("banners").set({ list: arr }, { merge: true });
+      alert("✅ تم الإضافة");
+      document.getElementById("bn-img").value = "";
+      document.getElementById("bn-title").value = "";
+      document.getElementById("bn-sub").value = "";
+      document.getElementById("bn-btn").value = "";
+      this.loadBanners();
+    } catch(e) { alert("خطأ: " + e.message); }
+  },
+  deleteBanner: async function(idx) {
+    if (!confirm("حذف؟")) return;
+    try {
+      var doc = await FB.db.collection("config").doc("banners").get();
+      var arr = (doc.exists && doc.data().list) ? doc.data().list : [];
+      arr.splice(idx, 1);
+      await FB.db.collection("config").doc("banners").set({ list: arr }, { merge: true });
+      this.loadBanners();
+    } catch(e) { alert("خطأ: " + e.message); }
+  },
   applyPermissions: function(role, perms) {
     if (role === 'superadmin') return;
     var hideTabs = ['users', 'admins', 'settings', 'reports', 'sups', 'balances', 'push', 'employees', 'cats', 'pays'];
@@ -1743,6 +1795,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+<!-- BANNERS TAB -->
+<div class="sc" id="sc-banners">
+  <div class="sh"><h2>🖼️ إدارة البانرات</h2></div>
+  <div class="cd" style="padding:20px; margin-bottom:20px;">
+    <h3 style="margin-top:0; color:var(--pk);">إضافة بانر جديد</h3>
+    <div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="bn-img" placeholder="https://i.ibb.co/..."></div>
+    <div class="fl"><label class="fll">العنوان</label><input class="fi" id="bn-title" placeholder="كل ما تحتاجه"></div>
+    <div class="fl"><label class="fll">الوصف الفرعي</label><input class="fi" id="bn-sub" placeholder="أجهزة ذكية..."></div>
+    <div class="fl"><label class="fll">نص الزر</label><input class="fi" id="bn-btn" placeholder="تسوق الآن"></div>
+    <button class="btn bp" onclick="A.saveBanner()" style="width:100%;margin-top:10px;">➕ إضافة</button>
+  </div>
+  <h3 style="color:var(--pk);">البانرات الحالية</h3>
+  <div id="banners-list"></div>
+</div>
 </body>
 
 
