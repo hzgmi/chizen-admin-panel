@@ -287,6 +287,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 <button class="tb" onclick="A.tab('balances',this)">💰 الديون</button>
 <button class="tb" onclick="A.tab('delivery',this)">📍 التوصيل</button>
 <button class="tb" onclick="A.tab('users',this)">👥 المستخدمين</button>
+<button class="tb" onclick="A.tab('employees',this)">👥 الموظفين</button>
 <button class="tb" onclick="A.tab('admins',this)">🔑 المسؤولين</button>
 <button class="tb" onclick="A.tab('settings',this)">⚙️ الإعدادات</button>
 </div>
@@ -495,7 +496,28 @@ var A={
         '<div class="sw"><svg class="sic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" id="u-search" placeholder="ابحث..." oninput="A.renderUsers()"></div>'+
         '<div id="u-list"></div>'+
       '</div>'+
-      '<div class="sc" id="sc-admins">'+
+      
+'<div class="sc" id="sc-employees">'+
+  '<div class="sw"><div class="cti"><div class="ctl">👥 إدارة الموظفين والصلاحيات</div></div>'+
+    '<div class="fl"><label class="fll">اسم الموظف</label><input class="fi" id="emp-name" placeholder="مثال: أحمد علي"></div>'+
+    '<div class="fl"><label class="fll">البريد الإلكتروني (للدخول)</label><input class="fi" id="emp-email" type="email" placeholder="ahmed@gmail.com"></div>'+
+    '<div class="fl"><label class="fll">رقم الواتساب (لاستلام إشعارات الحجز)</label><input class="fi" id="emp-wa" type="tel" placeholder="967771234567"></div>'+
+    '<div class="fl"><label class="fll">الأقسام المصرح له بها (اختر واحداً أو أكثر)</label>'+
+      '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px;">'+
+        '<label><input type="checkbox" class="emp-perm" value="products"> المنتجات</label>'+
+        '<label><input type="checkbox" class="emp-perm" value="orders"> الطلبات</label>'+
+        '<label><input type="checkbox" class="emp-perm" value="flights"> الحجوزات</label>'+
+        '<label><input type="checkbox" class="emp-perm" value="delivery"> التوصيل</label>'+
+      '</div>'+
+    '</div>'+
+    '<div class="fl" id="emp-cat-wrap" style="display:none;"><label class="fll">القسم المسؤول عنه (للمنتجات فقط)</label>'+
+       '<select class="fi" id="emp-cat"><option value="electronics">إلكترونيات</option><option value="beauty">تجميل</option><option value="home">منزلية</option><option value="clothes">ملابس</option><option value="school">مدرسية</option></select>'+
+    '</div>'+
+    '<button class="btn bp bb" onclick="A.saveEmployee()" style="width:100%;">إضافة الموظف / تحديثه</button>'+
+  '</div>'+
+  '<div class="cd"><div class="cti"><div class="ctl">القائمة الحالية</div></div><div id="emp-list"></div></div>'+
+'</div>'+
+'<div class="sc" id="sc-admins">'+
         '<button class="btn bp bb" style="margin-bottom:10px;" onclick="A.addAdminForm()">+ إضافة مسؤول</button>'+
         '<div id="adm-list"></div>'+
       '</div>'+
@@ -554,8 +576,31 @@ var A={
     if(el)el.classList.add('active');
     document.getElementById('ct').scrollTop=0;
     this.currentTab=n;
-    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,flights:this.renderFlights,push:function(){},sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,admins:this.renderAdmins,settings:this.renderSettings}[n];
+    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,flights:this.renderFlights,push:function(){},sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,employees:this.renderEmployees,admins:this.renderAdmins,settings:this.renderSettings}[n];
     if(f)try{f.call(this);}catch(e){console.warn(e);}
+  },
+
+
+  applyPermissions: function(role, perms) {
+    if (role === 'superadmin') return;
+    var hideTabs = ['users', 'admins', 'settings', 'reports', 'sups', 'balances', 'push', 'employees', 'cats', 'pays'];
+    hideTabs.forEach(function(tab) {
+        var btn = document.querySelector('.tb[onclick*="tab(\''+tab+'\'"]');
+        if (btn) btn.style.display = 'none';
+    });
+    var allTabs = ['dash', 'products', 'brands', 'orders', 'flights', 'delivery'];
+    allTabs.forEach(function(tab) {
+        if (perms.indexOf(tab) === -1) {
+            var btn = document.querySelector('.tb[onclick*="tab(\''+tab+'\'"]');
+            if (btn) btn.style.display = 'none';
+        }
+    });
+    if (perms.indexOf('dash') === -1 && perms.length > 0) {
+        setTimeout(function() {
+            var firstBtn = document.querySelector('.tb[onclick*="tab(\''+perms[0]+'\'"]');
+            if (firstBtn) firstBtn.click();
+        }, 500);
+    }
   },
 
   renderDash:function(){
@@ -639,7 +684,19 @@ var A={
     if(g('r-avg'))g('r-avg').textContent=(this.orders.length?Math.round(total/this.orders.length):0).toLocaleString()+' ر.س';
   },
 
+
+  _renderProductsFiltered: function(list) {
+    var orig = this.products;
+    this.products = list;
+    this._origRenderProducts();
+    this.products = orig;
+  },
   renderProducts:function(){
+    if (this.userRole === 'employee' && this.employeeCategory) {
+        var all = this.products || [];
+        var filtered = all.filter(p => p.category === this.employeeCategory);
+        return this._renderProductsFiltered(filtered);
+    }
     var ce=document.getElementById('p-chips');
     if(!ce)return;
     var chips='<div class="cp'+(this.prodFilter==='all'?' active':'')+'" onclick="A.setProdFilter(\'all\',this)">الكل</div>';
@@ -767,6 +824,12 @@ var A={
       var deleteBtn = isProt ? '<span style="font-size:18px;padding:5px;" title="قسم أساسي (لا يمكن حذفه)">🔒</span>' : '<button class="btn bd bsm" onclick="A.deleteCat('+i+')">🗑️</button>';
       h+='<div class="rw" onclick="A.catForm('+i+')"><div class="rt" style="font-size:22px;">'+esc(cat.icon||'📦')+'</div><div class="ri"><div class="rti">'+esc(cat.name)+(isProt?' <span style="font-size:10px;color:var(--pl);">(أساسي)</span>':'')+'</div><div class="rs">'+esc(cat.key)+' • '+cnt+' منتج</div></div><div class="ra" onclick="event.stopPropagation()">'+deleteBtn+'</div></div>';});
     c.innerHTML=h;
+  },
+
+
+  isProtectedCat: function(key) {
+    var coreCats = ['electronics', 'beauty', 'home', 'clothes', 'school', 'food', 'games', 'kids'];
+    return coreCats.indexOf(key) > -1;
   },
 
   catForm:function(idx){
@@ -1009,47 +1072,7 @@ var A={
   },
 
   addAdenDistrictPrompt: function() {
-    var name = 'مديرية جديدة'; this.toast('تمت إضافة مديرية افتراضية (يمكنك تعديلها لاحقاً)', 'suc');
-    if(!name) return;
-    this.deliveryLocs.aden.push({ district: name.trim(), areas: [] });
-    this.saveDelivery();
-  },
-
-  deleteAdenDistrict: function(idx) {
-    var self = this;
-    this.confirm('حذف المديرية؟', this.deliveryLocs.aden[idx].district, function() { self.deliveryLocs.aden.splice(idx, 1); self.saveDelivery(); });
-  },
-
-  openAdenAreas: function(idx) {
-    var d = this.deliveryLocs.aden[idx];
-    var body = '<div class="fl"><label class="fll">مناطق ومراكز مديرية ' + esc(d.district) + '</label><div id="areas-list" style="margin-bottom:10px;">';
-    if(d.areas.length === 0) body += '<div class="emp" style="padding:10px;">لا توجد مناطق</div>';
-    else { d.areas.forEach((a, i) => { body += '<div style="display:flex;justify-content:space-between;padding:8px;background:var(--bg2);border-radius:8px;margin-bottom:6px;"><span>' + esc(a) + '</span><button class="btn bd bsm" onclick="A.deleteAdenArea(' + idx + ',' + i + ')">🗑️</button></div>'; }); }
-    body += '</div><div class="fr"><input class="fi" id="new-area-input" placeholder="اسم المنطقة/الشارع"><button class="btn bp" onclick="A.addAdenArea(' + idx + ')">إضافة</button></div></div>';
-    this.modal('مناطق ' + esc(d.district), body, '<button class="btn bg2" onclick="A.cm()">إغلاق</button>');
-  },
-
-  addAdenArea: function(districtIdx) {
-    var input = document.getElementById('new-area-input'); if(!input) return;
-    var val = input.value.trim(); if(!val) return;
-    this.deliveryLocs.aden[districtIdx].areas.push(val);
-    this.saveDelivery(); this.openAdenAreas(districtIdx);
-  },
-
-  deleteAdenArea: function(dIdx, aIdx) { this.deliveryLocs.aden[dIdx].areas.splice(aIdx, 1); this.saveDelivery(); this.openAdenAreas(dIdx); },
-
-  addYemenGovPrompt: function(idx) {
-    var isEdit = typeof idx === 'number';
-    var g = isEdit ? this.deliveryLocs.yemen[idx] : { gov: '', station: '' };
-    var body = '<div class="fl"><label class="fll">اسم المحافظة</label><input class="fi" id="yem-gov" value="' + esc(g.gov) + '" placeholder="مثال: تعز"></div><div class="fl"><label class="fll">اسم مكتب الباصات / العنوان</label><input class="fi" id="yem-station" value="' + esc(g.station) + '" placeholder="مثال: مكتب باصات الحوبان"></div>';
-    var actions = '<button class="btn bg2" onclick="A.cm()">إلغاء</button><button class="btn bp" onclick="A.saveYemenGov(' + (isEdit ? idx : 'null') + ')">حفظ</button>';
-    this.modal(isEdit ? 'تعديل المحافظة' : 'إضافة محافظة', body, actions);
-  },
-
-  saveYemenGov: function(idx) {
-    var gov = document.getElementById('yem-gov').value.trim();
-    var station = document.getElementById('yem-station').value.trim();
-    if(!gov || !station) return this.toast('أدخل جميع البيانات', 'err');
+    var name = prompt('أدخل اسم المديرية الجديدة:'); if(!name || !name.trim()) return; this.toast('تمت إضافة المديرية', 'suc');
     if(typeof idx === 'number') this.deliveryLocs.yemen[idx] = { gov, station };
     else this.deliveryLocs.yemen.push({ gov, station });
     this.cm(); this.saveDelivery();
@@ -1292,6 +1315,64 @@ var A={
     this.confirm('إزالة صلاحية؟','',async function(){try{await FB.db.collection('admins').doc(uid).delete();await self.loadData();self.renderUsers();self.renderAdmins();self.toast('✓','suc');}catch(e){self.toast('فشل','err');}});
   },
 
+
+  renderEmployees: async function() {
+    var c = document.getElementById('emp-list');
+    if (!c) return;
+    c.innerHTML = '<div style="padding:15px;text-align:center;color:#888;">جاري التحميل...</div>';
+    try {
+        var snap = await FB.db.collection('admins').where('role', '==', 'employee').get();
+        if(snap.empty) { c.innerHTML = '<div class="emp">لا يوجد موظفين مسجلين</div>'; return; }
+        var h = '';
+        snap.forEach(function(doc) {
+            var d = doc.data();
+            h += '<div class="rw" style="display:flex;justify-content:space-between;align-items:center;padding:10px;">'+
+                 '<div><div class="rti" style="color:#fff;">'+esc(d.name||'بدون اسم')+'</div>'+
+                 '<div class="rs" style="font-size:11px;">'+esc(d.email||'')+' | '+esc(d.whatsapp||'')+'</div>'+
+                 '<div class="rs" style="font-size:10px;color:var(--pl);">'+ (d.permissions||[]).join(', ') +'</div></div>'+
+                 '<button class="btn bd bsm" onclick="A.deleteEmployee(\''+doc.id+'\')">🗑️</button></div>';
+        });
+        c.innerHTML = h;
+    } catch(e) { c.innerHTML = '<div class="emp">خطأ في التحميل</div>'; }
+  },
+  saveEmployee: async function() {
+    var name = document.getElementById('emp-name').value.trim();
+    var email = document.getElementById('emp-email').value.trim();
+    var wa = document.getElementById('emp-wa').value.trim();
+    var perms = [];
+    document.querySelectorAll('.emp-perm:checked').forEach(function(cb) { perms.push(cb.value); });
+    var cat = document.getElementById('emp-cat').value;
+    
+    if (!name || !email) return this.toast('أدخل الاسم والبريد', 'err');
+    
+    try {
+        // البحث عن المستخدم في Auth (أو إنشائه)
+        var userRecord;
+        try {
+            userRecord = await auth.getUserByEmail(email);
+        } catch(e) {
+            userRecord = await auth.createUser({ email: email, password: 'Chizen@' + Math.floor(Math.random()*10000) });
+        }
+        
+        await FB.db.collection('admins').doc(userRecord.uid).set({
+            name: name, email: email, whatsapp: wa, role: 'employee',
+            permissions: perms, employeeCategory: perms.includes('products') ? cat : null,
+            active: true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        this.toast('✅ تم حفظ الموظف بنجاح. كلمة المرور: Chizen@XXXX (اطلب منه تغييرها)', 'suc');
+        this.renderEmployees();
+    } catch(e) { this.toast('فشل: ' + e.message, 'err'); }
+  },
+  deleteEmployee: async function(uid) {
+    var self = this;
+    this.confirm('حذف الموظف؟', 'سيتم منع وصوله للوحة', async function() {
+        await FB.db.collection('admins').doc(uid).delete();
+        self.renderEmployees();
+        self.toast('تم الحذف', 'suc');
+    });
+  },
+
   renderAdmins:function(){
     var c=document.getElementById('adm-list');if(!c)return;
     if(!this.admins.length){c.innerHTML='<div class="emp">لا مسؤولين</div>';return;}
@@ -1410,7 +1491,16 @@ var A={
     }
   },
 
-  saveContact:async function(){
+  
+  saveBookingSettings: async function() {
+    var isEnabled = document.getElementById('s-serv-booking-master').checked;
+    try {
+      await FB.db.collection('config').doc('services').set({ bookingEnabled: isEnabled }, { merge: true });
+      this.toast(isEnabled ? '✓ تم تفعيل الحجز' : '✓ تم توقيف الحجز بالكامل', 'suc');
+    } catch(e) { this.toast('فشل الحفظ', 'err'); }
+  },
+
+saveContact:async function(){
     var data={phone:document.getElementById('s-phone').value.trim(),whatsapp:document.getElementById('s-wa').value.trim(),email:document.getElementById('s-email').value.trim()};
     try{await FB.setConfig('contact',data);localStorage.setItem('chizen_contact',JSON.stringify(data));this.toast('✓','suc');}catch(e){this.toast('فشل','err');}
   },
