@@ -167,7 +167,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 .dr{font-size:11px;padding:6px 0;}
 .cp{padding:8px 12px;font-size:11px;min-height:38px;}
 .ii{width:40px;height:40px;font-size:16px;}
-.gb{padding:28px 20px;}.gl{font-size:36px;}.gbtn{pointer-events:auto!important;z-index:9999!important;cursor:pointer;min-height:52px;}
+.gb{padding:28px 20px;}.gl{font-size:36px;}
 .ib{font-size:10px;padding:10px;}
 }
 @media(max-width:380px){.sg3{grid-template-columns:1fr 1fr;}.sg3>div:last-child{grid-column:span 2;}}
@@ -228,7 +228,7 @@ body, #app { background: var(--bg) !important; color: var(--cr) !important; font
 .gl { color: #FFF !important; font-weight: 900 !important; font-size: 28px !important; background: var(--grad) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; }
 .gt { color: var(--mt) !important; }
 .gd { color: #FFF !important; }
-.gbtn { background: var(--grad) !important; color: #FFF !important; font-weight: 900 !important; border: none !important; border-radius: 12px !important; padding: 14px !important; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important; }
+
 .gbtn.sec { background: rgba(255,255,255,0.05) !important; color: #FFF !important; border: 1px solid var(--bd) !important; }
 
 /* النوافذ المنبثقة */
@@ -259,6 +259,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
     
     
 
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -603,6 +604,12 @@ var A={
     }
   },
 
+
+  exportAllSuppliersPDF: function() { this.toast('جاري تجهيز التقرير...', 'suc'); setTimeout(() => this.toast('تم التجهيز (قيد التطوير)', 'suc'), 1500); },
+  openMonthlyReport: function() { this.toast('تقرير الشهر قيد التطوير', 'suc'); },
+  addYemenGovPrompt: function() { var gov = prompt('اسم المحافظة (مثال: صنعاء):'); if(gov && gov.trim()) { this.deliveryLocs.yemen.push({gov: gov.trim(), station: ''}); this.saveDelivery(); } },
+  openAdenAreas: function(idx) { var d = this.deliveryLocs.aden[idx]; var areas = prompt('أدخل المناطق مفصولة بفاصلة:', (d.areas||[]).join(',')); if(areas !== null) { d.areas = areas.split(',').map(a=>a.trim()).filter(a=>a); this.saveDelivery(); this.renderDelivery(); } },
+
   renderDash:function(){
     var sales=0,comp=0,pend=0,canc=0,cSales=0;
     this.orders.forEach(o=>{
@@ -752,7 +759,8 @@ var A={
     var html=
       '<div class="fl"><label class="fll">الاسم</label><input class="fi" id="f-name" value="'+esc(p.name||'')+'"></div>'+
       '<div class="fr"><div class="fl"><label class="fll">الماركة</label><select class="fi" id="f-brand"><option value="">بدون ماركة</option></select></div><div class="fl"><label class="fll">القسم</label><select class="fi" id="f-cat">'+catOpts+'</select></div></div>'+
-      '<div class="fr3"><div class="fl"><label class="fll">السعر</label><input class="fi" type="number" id="f-price" value="'+esc(p.price||'')+'"></div><div class="fl"><label class="fll">القديم</label><input class="fi" type="number" id="f-old" value="'+esc(p.old||'')+'"></div><div class="fl"><label class="fll">المخزون</label><input class="fi" type="number" id="f-stock" value="'+esc(typeof p.stock==='number'?p.stock:'')+'"></div></div>'+
+      '<div class="fr3"><div class="fl"><label class="fll">الألوان (مفصولة بفاصلة)</label><input class="fi" id="f-colors" placeholder="أحمر, أزرق, أخضر"></div>
+<div class="fl"><label class="fll">السعر</label><input class="fi" type="number" id="f-price" value="'+esc(p.price||'')+'"></div><div class="fl"><label class="fll">القديم</label><input class="fi" type="number" id="f-old" value="'+esc(p.old||'')+'"></div><div class="fl"><label class="fll">المخزون</label><input class="fi" type="number" id="f-stock" value="'+esc(typeof p.stock==='number'?p.stock:'')+'"></div></div>'+
       '<div class="fl"><label class="fll">شارة</label><input class="fi" id="f-badge" value="'+esc(p.badge||'')+'" placeholder="-30%"></div>'+
       '<div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="f-img" value="'+esc(p.img||'')+'" oninput="A.prevImg(this.value)"><div class="ipt'+(p.img?' hi':'')+'" id="f-prev"><span>معاينة</span><img id="f-img-el" src="'+esc(p.img||'')+'"></div></div>'+
       '<div class="fl"><label class="fll">الوصف</label><textarea class="fi" id="f-desc">'+esc(p.desc||'')+'</textarea></div>'+
@@ -1106,7 +1114,7 @@ var A={
       var e=ex.find(ep=>String(ep.id)===String(p.id));
       var pp=e?e.purchasePrice:(p.price*0.7).toFixed(0);
       var ch=e?' checked':'';
-      prodHtml+='<div class="sp-pr" data-id="'+esc(p.id)+'" style="display:flex;gap:8px;padding:10px;background:var(--bg2);border-radius:8px;margin-bottom:6px;align-items:center;flex-wrap:wrap;"><input type="checkbox" class="sp-pch"'+ch+' style="width:20px;height:20px;flex-shrink:0;"><div style="flex:1;min-width:120px;"><div style="font-size:11px;font-weight:700;">'+esc(p.name)+'</div><div style="font-size:9px;color:var(--mt2);">بيع: '+p.price+' ر.س</div></div><div style="display:flex;flex-direction:column;align-items:center;"><label style="font-size:8px;color:var(--mt);margin-bottom:2px;">شراء</label><input type="number" class="sp-ppr" value="'+pp+'" style="width:80px;padding:8px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;color:var(--tx);text-align:center;font-family:Cairo;font-size:14px;font-weight:900;"></div></div>';
+      prodHtml+='<div class="sp-pr" data-data-id="'+esc(p.id)+'" style="display:flex;gap:8px;padding:10px;background:var(--bg2);border-radius:8px;margin-bottom:6px;align-items:center;flex-wrap:wrap;"><input type="checkbox" class="sp-pch"'+ch+' style="width:20px;height:20px;flex-shrink:0;"><div style="flex:1;min-width:120px;"><div style="font-size:11px;font-weight:700;">'+esc(p.name)+'</div><div style="font-size:9px;color:var(--mt2);">بيع: '+p.price+' ر.س</div></div><div style="display:flex;flex-direction:column;align-items:center;"><label style="font-size:8px;color:var(--mt);margin-bottom:2px;">شراء</label><input type="number" class="sp-ppr" value="'+pp+'" style="width:80px;padding:8px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;color:var(--tx);text-align:center;font-family:Cairo;font-size:14px;font-weight:900;"></div></div>';
     });
     var html='<div class="fl"><label class="fll">اسم المورد</label><input class="fi" id="sp-name" value="'+esc(s.name)+'"></div><div class="fl"><label class="fll">الواتساب</label><input class="fi" id="sp-phone" type="tel" value="'+esc(s.phone)+'" style="direction:ltr;"></div><div class="fl"><label class="fll">الأقسام</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:5px;max-height:200px;overflow-y:auto;">'+catChecks+'</div></div><div class="fl"><label class="fll">🏷️ المنتجات وأسعار الشراء</label><div id="sp-prod-cont" style="max-height:300px;overflow-y:auto;margin-top:5px;">'+(prodHtml||'<div class="emp" style="padding:15px;font-size:11px;">اختر قسماً</div>')+'</div></div><div class="fr"><div class="fl"><label class="fll">الصفة</label><select class="fi" id="sp-pay"><option value="cash"'+(s.paymentType==='cash'?' selected':'')+'>نقد</option><option value="credit"'+(s.paymentType==='credit'?' selected':'')+'>آجل</option></select></div><div class="fl"><label class="fll">أيام الآجل</label><input class="fi" id="sp-days" type="number" value="'+(s.creditDays||30)+'"></div></div><div class="fl"><label class="fll">ملاحظات</label><textarea class="fi" id="sp-notes">'+esc(s.notes)+'</textarea></div>';
     var actions='<button class="btn bg2" onclick="A.cm()">إلغاء</button><button class="btn bp" onclick="A.saveSup('+(isEdit?idx:'null')+')">'+(isEdit?'حفظ':'إضافة')+'</button>';
@@ -1123,7 +1131,7 @@ var A={
       if(cats.indexOf(p.category)===-1)return;
       var pp=ex[String(p.id)]||(p.price*0.7).toFixed(0);
       var ch=ex[String(p.id)]!==undefined?' checked':'';
-      html+='<div class="sp-pr" data-id="'+esc(p.id)+'" style="display:flex;gap:8px;padding:10px;background:var(--bg2);border-radius:8px;margin-bottom:6px;align-items:center;flex-wrap:wrap;"><input type="checkbox" class="sp-pch"'+ch+' style="width:20px;height:20px;"><div style="flex:1;min-width:120px;"><div style="font-size:11px;font-weight:700;">'+esc(p.name)+'</div><div style="font-size:9px;color:var(--mt2);">بيع: '+p.price+'</div></div><div style="display:flex;flex-direction:column;align-items:center;"><label style="font-size:8px;color:var(--mt);">شراء</label><input type="number" class="sp-ppr" value="'+pp+'" style="width:80px;padding:8px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;color:var(--tx);text-align:center;font-family:Cairo;font-size:14px;font-weight:900;"></div></div>';
+      html+='<div class="sp-pr" data-data-id="'+esc(p.id)+'" style="display:flex;gap:8px;padding:10px;background:var(--bg2);border-radius:8px;margin-bottom:6px;align-items:center;flex-wrap:wrap;"><input type="checkbox" class="sp-pch"'+ch+' style="width:20px;height:20px;"><div style="flex:1;min-width:120px;"><div style="font-size:11px;font-weight:700;">'+esc(p.name)+'</div><div style="font-size:9px;color:var(--mt2);">بيع: '+p.price+'</div></div><div style="display:flex;flex-direction:column;align-items:center;"><label style="font-size:8px;color:var(--mt);">شراء</label><input type="number" class="sp-ppr" value="'+pp+'" style="width:80px;padding:8px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;color:var(--tx);text-align:center;font-family:Cairo;font-size:14px;font-weight:900;"></div></div>';
     });
     cont.innerHTML=html||'<div class="emp" style="padding:15px;font-size:11px;">لا منتجات في هذه الأقسام</div>';
   },
