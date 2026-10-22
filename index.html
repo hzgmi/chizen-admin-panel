@@ -533,7 +533,17 @@ var A={
             '</div>'+
         '</div>'+
         '<div class="sc" id="sc-settings">'+
-        '<div class="cd"><div class="cti"><div class="ctl">📞 التواصل</div></div>'+
+        
+        '<div class="cd"><div class="cti"><div class="ctl">✈️ إدارة الخدمات</div></div>'+
+          '<div class="fl" style="display:flex;justify-content:space-between;margin-bottom:10px;"><label class="fll" style="margin:0;">تفعيل الطيران</label><input type="checkbox" id="s-serv-flight"></div>'+
+          '<div class="fl" style="display:flex;justify-content:space-between;margin-bottom:10px;"><label class="fll" style="margin:0;">تفعيل الفنادق</label><input type="checkbox" id="s-serv-hotel"></div>'+
+          '<div class="fl" style="display:flex;justify-content:space-between;margin-bottom:10px;"><label class="fll" style="margin:0;">تفعيل الباصات</label><input type="checkbox" id="s-serv-bus"></div>'+
+          '<div class="fl" style="display:flex;justify-content:space-between;margin-bottom:15px;"><label class="fll" style="margin:0;">تفعيل الحج والعمرة</label><input type="checkbox" id="s-serv-hajj"></div>'+
+          '<div class="fl" style="display:flex;justify-content:space-between;margin-bottom:15px;"><label class="fll" style="margin:0;color:var(--rd);">توقيف الحجز الشامل</label><input type="checkbox" id="s-serv-booking-master"></div>'+
+          '<button class="btn bp" onclick="A.saveServices(); A.saveBookingSettings();">حفظ إعدادات الخدمات</button>'+
+        '</div>'+
+    
+'<div class="cd"><div class="cti"><div class="ctl">📞 التواصل</div></div>'+
           '<div class="fl"><label class="fll">الهاتف</label><input class="fi" id="s-phone" type="tel"></div>'+
           '<div class="fl"><label class="fll">واتساب</label><input class="fi" id="s-wa" type="tel"></div>'+
           '<div class="fl"><label class="fll">البريد</label><input class="fi" id="s-email" type="email"></div>'+
