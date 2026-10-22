@@ -1,0 +1,8 @@
+# diagnostic & backup artifacts
+*.bak.*
+inspect_s8.js
+recheck.js
+fix_105.js
+diag_admin.js
+.chk.js
+.diag_scripts/
