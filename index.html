@@ -290,7 +290,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 <button class="tb" onclick="A.tab('users',this)">👥 المستخدمين</button>
 <button class="tb" onclick="A.tab('employees',this)">👥 الموظفين</button>
 <button class="tb" onclick="A.tab('admins',this)">🔑 المسؤولين</button>
-<button class="tb" onclick="A.tab('banners',this)">🖼️ البانرات</button>
+<button class="tb" onclick="A.tab('banners',this); setTimeout(function(){A.loadBanners();}, 100);">🖼️ البانرات</button>🖼️ البانرات</button>
       <button class="tb" onclick="A.tab('settings',this)">⚙️ الإعدادات</button>
 </div>
 <div class="ct" id="ct"></div>
