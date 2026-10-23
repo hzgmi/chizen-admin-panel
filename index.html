@@ -655,7 +655,14 @@ var A={
       try {
         var doc = await FB.db.collection("config").doc("banners").get();
         var arr = (doc.exists && doc.data().list) ? doc.data().list : [];
-        arr.push({ img: img, title: title, sub: sub, btn: btn, link: link, fit: fit, position: position });
+        arr.push({ 
+          img: img, title: title, sub: sub, btn: btn, link: link, fit: fit, position: position,
+          scale: (window._chzBannerState||{}).scale || 1,
+          rotate: (window._chzBannerState||{}).rotate || 0,
+          height: (window._chzBannerState||{}).height || 200,
+          align: (window._chzBannerState||{}).align || "right",
+          overlay: (window._chzBannerState||{}).overlay !== undefined ? window._chzBannerState.overlay : 50
+        });
         await FB.db.collection("config").doc("banners").set({ list: arr }, { merge: true });
         alert("✅ تم الإضافة");
         ["bn-img", "bn-title", "bn-sub", "bn-btn", "bn-link"].forEach(function(id) {
@@ -1844,6 +1851,7 @@ document.addEventListener('click', function(e) {
 });
 </script>
 
+<script src="banner-upload.js"></script>
 </body>
 
 
