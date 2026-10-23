@@ -545,21 +545,21 @@ var A={
                 '<div id="brands-list"></div>'+
             '</div>'+
         '</div>'+
-        '<div class="sc" id="sc-banners">
-  <div class="sh"><h2>🖼️ إدارة البانرات</h2></div>
-  <div class="cd" style="padding:20px; margin-bottom:20px;">
-    <h3 style="margin-top:0; color:var(--pk);">إضافة بانر جديد</h3>
-    <div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="bn-img" placeholder="https://i.ibb.co/..."></div>
-    <div class="fl"><label class="fll">العنوان</label><input class="fi" id="bn-title" placeholder="كل ما تحتاجه"></div>
-    <div class="fl"><label class="fll">الوصف الفرعي</label><input class="fi" id="bn-sub" placeholder="أجهزة ذكية..."></div>
-    <div class="fl"><label class="fll">نص الزر</label><input class="fi" id="bn-btn" placeholder="تسوق الآن"></div>
-    <div class="fl"><label class="fll">رابط الزر (اختياري)</label><input class="fi" id="bn-link" placeholder="#"></div>
-      <button class="btn bp" onclick="A.saveBanner()" style="width:100%;margin-top:10px;">➕ إضافة</button>
-  </div>
-  <h3 style="color:var(--pk);">البانرات الحالية</h3>
-  <div id="banners-list"></div>
-</div>
-<div class="sc" id="sc-settings">'+
+        '<div class="sc" id="sc-banners">' +
+'  <div class="sh"><h2>🖼️ إدارة البانرات</h2></div>' +
+'  <div class="cd" style="padding:20px; margin-bottom:20px;">' +
+'    <h3 style="margin-top:0; color:var(--pk);">إضافة بانر جديد</h3>' +
+'    <div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="bn-img" placeholder="https://i.ibb.co/..."></div>' +
+'    <div class="fl"><label class="fll">العنوان</label><input class="fi" id="bn-title" placeholder="كل ما تحتاجه"></div>' +
+'    <div class="fl"><label class="fll">الوصف الفرعي</label><input class="fi" id="bn-sub" placeholder="أجهزة ذكية..."></div>' +
+'    <div class="fl"><label class="fll">نص الزر</label><input class="fi" id="bn-btn" placeholder="تسوق الآن"></div>' +
+'    <div class="fl"><label class="fll">رابط الزر (اختياري)</label><input class="fi" id="bn-link" placeholder="#"></div>' +
+'      <button class="btn bp" onclick="A.saveBanner()" style="width:100%;margin-top:10px;">➕ إضافة</button>' +
+'  </div>' +
+'  <h3 style="color:var(--pk);">البانرات الحالية</h3>' +
+'  <div id="banners-list"></div>' +
+'</div>'
+        '<div class="sc" id="sc-settings">' +
         
         '<div class="cd"><div class="cti"><div class="ctl">✈️ إدارة الخدمات</div></div>'+
           '<div class="fl" style="display:flex;justify-content:space-between;margin-bottom:10px;"><label class="fll" style="margin:0;">تفعيل الطيران</label><input type="checkbox" id="s-serv-flight"></div>'+
@@ -1805,8 +1805,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 <!-- BANNERS TAB -->
-
-
+</script>
+<!-- ═══ PTR Assets ═══ -->
 <style id="admin-ptr-css">
   #admin-ptr {
     position: fixed;
@@ -1901,7 +1901,8 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('touchmove', onMove, { passive: true });
   document.addEventListener('touchend', onEnd);
 })();
-</script>
+<!-- ═══ End PTR ═══ -->
+
 
 </body>
 
