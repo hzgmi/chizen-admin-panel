@@ -545,7 +545,21 @@ var A={
                 '<div id="brands-list"></div>'+
             '</div>'+
         '</div>'+
-        '<div class="sc" id="sc-settings">'+
+        '<div class="sc" id="sc-banners">
+  <div class="sh"><h2>🖼️ إدارة البانرات</h2></div>
+  <div class="cd" style="padding:20px; margin-bottom:20px;">
+    <h3 style="margin-top:0; color:var(--pk);">إضافة بانر جديد</h3>
+    <div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="bn-img" placeholder="https://i.ibb.co/..."></div>
+    <div class="fl"><label class="fll">العنوان</label><input class="fi" id="bn-title" placeholder="كل ما تحتاجه"></div>
+    <div class="fl"><label class="fll">الوصف الفرعي</label><input class="fi" id="bn-sub" placeholder="أجهزة ذكية..."></div>
+    <div class="fl"><label class="fll">نص الزر</label><input class="fi" id="bn-btn" placeholder="تسوق الآن"></div>
+    <div class="fl"><label class="fll">رابط الزر (اختياري)</label><input class="fi" id="bn-link" placeholder="#"></div>
+      <button class="btn bp" onclick="A.saveBanner()" style="width:100%;margin-top:10px;">➕ إضافة</button>
+  </div>
+  <h3 style="color:var(--pk);">البانرات الحالية</h3>
+  <div id="banners-list"></div>
+</div>
+<div class="sc" id="sc-settings">'+
         
         '<div class="cd"><div class="cti"><div class="ctl">✈️ إدارة الخدمات</div></div>'+
           '<div class="fl" style="display:flex;justify-content:space-between;margin-bottom:10px;"><label class="fll" style="margin:0;">تفعيل الطيران</label><input type="checkbox" id="s-serv-flight"></div>'+
@@ -1791,20 +1805,104 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 <!-- BANNERS TAB -->
-<div class="sc" id="sc-banners">
-  <div class="sh"><h2>🖼️ إدارة البانرات</h2></div>
-  <div class="cd" style="padding:20px; margin-bottom:20px;">
-    <h3 style="margin-top:0; color:var(--pk);">إضافة بانر جديد</h3>
-    <div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="bn-img" placeholder="https://i.ibb.co/..."></div>
-    <div class="fl"><label class="fll">العنوان</label><input class="fi" id="bn-title" placeholder="كل ما تحتاجه"></div>
-    <div class="fl"><label class="fll">الوصف الفرعي</label><input class="fi" id="bn-sub" placeholder="أجهزة ذكية..."></div>
-    <div class="fl"><label class="fll">نص الزر</label><input class="fi" id="bn-btn" placeholder="تسوق الآن"></div>
-    <div class="fl"><label class="fll">رابط الزر (اختياري)</label><input class="fi" id="bn-link" placeholder="#"></div>
-      <button class="btn bp" onclick="A.saveBanner()" style="width:100%;margin-top:10px;">➕ إضافة</button>
-  </div>
-  <h3 style="color:var(--pk);">البانرات الحالية</h3>
-  <div id="banners-list"></div>
+
+
+<style id="admin-ptr-css">
+  #admin-ptr {
+    position: fixed;
+    top: -60px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    transition: top 0.3s ease;
+    pointer-events: none;
+  }
+  #admin-ptr.active { top: 15px; }
+  #admin-ptr svg {
+    width: 20px; height: 20px;
+    stroke: #7C3AED; stroke-width: 2.5; fill: none;
+    transition: transform 0.3s;
+  }
+  #admin-ptr.loading svg { animation: ptrSpin 1s linear infinite; }
+  @keyframes ptrSpin { 100% { transform: rotate(360deg); } }
+</style>
+
+<div id="admin-ptr">
+  <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
 </div>
+
+<script>
+// ═══ Pull to Refresh for Admin ═══
+(function() {
+  let startY = 0, currentY = 0, pulling = false;
+  const ptr = document.getElementById('admin-ptr');
+  const ct = document.getElementById('ct') || window; // الحاوية الرئيسية للتمرير
+  
+  function getScrollTop() {
+    if (ct === window) return document.body.scrollTop || document.documentElement.scrollTop;
+    return ct.scrollTop;
+  }
+
+  function onStart(e) {
+    if (getScrollTop() > 0) return; // فقط إذا كنا في الأعلى
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    pulling = true;
+  }
+
+  function onMove(e) {
+    if (!pulling) return;
+    currentY = e.touches ? e.touches[0].clientY : e.clientY;
+    const diff = currentY - startY;
+    
+    if (diff > 50) {
+      ptr.classList.add('active');
+      ptr.querySelector('svg').style.transform = 'rotate(' + (diff * 2) + 'deg)';
+    }
+  }
+
+  function onEnd() {
+    if (!pulling) return;
+    pulling = false;
+    const diff = currentY - startY;
+    
+    if (diff > 80) {
+      // تفعيل التحديث
+      ptr.classList.add('loading');
+      ptr.querySelector('svg').style.transform = 'rotate(0)';
+      
+      // استدعاء دالة التحديث (إعادة تحميل البيانات)
+      if (window.A && A.currentTab) {
+        const t = A.currentTab;
+        if (t === 'banners' && A.loadBanners) A.loadBanners();
+        else if (t === 'dash' && A.renderDash) A.renderDash();
+        else if (t === 'products' && A.renderProducts) A.renderProducts();
+        else if (t === 'orders' && A.renderOrders) A.renderOrders();
+        else if (A.tab) A.tab(t, document.querySelector('.tb.active'));
+      } else {
+        location.reload();
+      }
+
+      // إخفاء بعد ثانية
+      setTimeout(() => {
+        ptr.classList.remove('active');
+        ptr.classList.remove('loading');
+        startY = 0; currentY = 0;
+      }, 1000);
+    } else {
+      ptr.classList.remove('active');
+      ptr.querySelector('svg').style.transform = 'rotate(0)';
+    }
+  }
+
+  document.addEventListener('touchstart', onStart, { passive: true });
+  document.addEventListener('touchmove', onMove, { passive: true });
+  document.addEventListener('touchend', onEnd);
+})();
+</script>
+
 </body>
 
 
