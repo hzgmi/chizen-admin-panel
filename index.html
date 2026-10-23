@@ -642,198 +642,32 @@ var A={
     } catch(e) { list.innerHTML = "<p style='color:red;'>خطأ: " + e.message + "</p>"; }
   },
   saveBanner: async function() {
-    var img = document.getElementById("bn-img").value.trim();
-    var title = document.getElementById("bn-title").value.trim();
-    var sub = document.getElementById("bn-sub").value.trim();
-    var btn = document.getElementById("bn-btn").value.trim() || "تسوق الآن";
-    if (!img || !title) { alert("الصورة والعنوان مطلوبان"); return; }
-    try {
-      var doc = await FB.db.collection("config").doc("banners").get();
-      var arr = (doc.exists && doc.data().list) ? doc.data().list : [];
-      arr.push({ img: img, title: title, sub: sub, btn: btn });
-      await FB.db.collection("config").doc("banners").set({ list: arr }, { merge: true });
-      alert("✅ تم الإضافة");
-      document.getElementById("bn-img").value = "";
-      document.getElementById("bn-title").value = "";
-      document.getElementById("bn-sub").value = "";
-      document.getElementById("bn-btn").value = "";
-      this.loadBanners();
-    } catch(e) { alert("خطأ: " + e.message); }
-  },
-  deleteBanner: async function(idx) {
-    if (!confirm("حذف؟")) return;
-    try {
-      var doc = await FB.db.collection("config").doc("banners").get();
-      var arr = (doc.exists && doc.data().list) ? doc.data().list : [];
-      arr.splice(idx, 1);
-      await FB.db.collection("config").doc("banners").set({ list: arr }, { merge: true });
-      this.loadBanners();
-    } catch(e) { alert("خطأ: " + e.message); }
-  },
-  applyPermissions: function(role, perms) {
-    if (role === 'superadmin') return;
-    var hideTabs = ['users', 'admins', 'settings', 'reports', 'sups', 'balances', 'push', 'employees', 'cats', 'pays'];
-    hideTabs.forEach(function(tab) {
-        var btn = document.querySelector('.tb[onclick*="tab(\''+tab+'\'"]');
-        if (btn) btn.style.display = 'none';
-    });
-    var allTabs = ['dash', 'products', 'brands', 'orders', 'flights', 'delivery'];
-    allTabs.forEach(function(tab) {
-        if (perms.indexOf(tab) === -1) {
-            var btn = document.querySelector('.tb[onclick*="tab(\''+tab+'\'"]');
-            if (btn) btn.style.display = 'none';
-        }
-    });
-    if (perms.indexOf('dash') === -1 && perms.length > 0) {
-        setTimeout(function() {
-            var firstBtn = document.querySelector('.tb[onclick*="tab(\''+perms[0]+'\'"]');
-            if (firstBtn) firstBtn.click();
-        }, 500);
-    }
-  },
-
-
-  exportAllSuppliersPDF: function() { this.toast('جاري تجهيز التقرير...', 'suc'); setTimeout(() => this.toast('تم التجهيز (قيد التطوير)', 'suc'), 1500); },
-  openMonthlyReport: function() { this.toast('تقرير الشهر قيد التطوير', 'suc'); },
-  addYemenGovPrompt: function() { var gov = prompt('اسم المحافظة (مثال: صنعاء):'); if(gov && gov.trim()) { this.deliveryLocs.yemen.push({gov: gov.trim(), station: ''}); this.saveDelivery(); } },
-  openAdenAreas: function(idx) { var d = this.deliveryLocs.aden[idx]; var areas = prompt('أدخل المناطق مفصولة بفاصلة:', (d.areas||[]).join(',')); if(areas !== null) { d.areas = areas.split(',').map(a=>a.trim()).filter(a=>a); this.saveDelivery(); this.renderDelivery(); } },
-
-  renderDash:function(){
-    var sales=0,comp=0,pend=0,canc=0,cSales=0;
-    this.orders.forEach(o=>{
-      if(o.status!=='cancelled')sales+=o.total||0;
-      if(o.status==='pending')pend++;
-      else if(o.status==='completed'){comp++;cSales+=o.total||0;}
-      else if(o.status==='cancelled')canc++;
-    });
-    var g=function(id){return document.getElementById(id);};
-    if(g('d-sales'))g('d-sales').textContent=sales.toLocaleString()+' ر.س';
-    if(g('d-sales-s'))g('d-sales-s').textContent=cSales.toLocaleString()+' مكتمل';
-    if(g('d-orders'))g('d-orders').textContent=this.orders.length;
-    if(g('d-orders-s'))g('d-orders-s').textContent=pend+' معلق';
-    if(g('d-products'))g('d-products').textContent=this.products.length;
-    if(g('d-products-s'))g('d-products-s').textContent=this.products.filter(p=>typeof p.stock==='number'&&p.stock<=5).length+' منخفض';
-    if(g('d-users'))g('d-users').textContent=this.users.length;
-    if(g('d-users-s'))g('d-users-s').textContent=this.admins.length+' مسؤول';
-    if(g('d-pending'))g('d-pending').textContent=pend;
-    if(g('d-completed'))g('d-completed').textContent=comp;
-    if(g('d-cancelled'))g('d-cancelled').textContent=canc;
-    var low=this.products.filter(p=>typeof p.stock==='number'&&p.stock<=5);
-    var lc=g('low-stock');
-    if(lc){
-      if(low.length){lc.style.display='block';var lh='';low.forEach(p=>{lh+='<div class="rw" onclick="A.productForm(\''+esc(p.id)+'\')" style="margin-bottom:6px;"><div class="ri"><div class="rti">'+esc(p.name)+'</div><div class="rs" style="color:var(--rd);font-weight:900;">متبقي: '+p.stock+'</div></div></div>';});g('low-stock-list').innerHTML=lh;}
-      else{lc.style.display='none';}
-    }
-    var ro=this.orders.slice().sort((a,b)=>(b.createdAt&&b.createdAt.seconds||0)-(a.createdAt&&a.createdAt.seconds||0)).slice(0,3);
-    var rh='';
-    if(!ro.length)rh='<div class="emp">لا توجد طلبات</div>';
-    ro.forEach(o=>{rh+='<div class="rw" onclick="A.orderDetails(\''+esc(o.id)+'\')" style="margin-bottom:6px;"><div class="rt">🛒</div><div class="ri"><div class="rti">#'+esc((o.id||'').substring(0,14))+'</div><div class="rs">'+(esc(o.name||'') + (o.receiptUrl ? ' <a href="'+o.receiptUrl+'" target="_blank" style="color:#00d4a0;font-size:12px;text-decoration:none;margin-right:5px;">[🧾 الإيصال]</a>' : ''))+' • '+esc(o.total)+' ر.س</div></div><span class="bst b'+(o.status||'pending').substring(0,1)+'2">'+(o.status==='pending'?'قيد المعالجة':o.status==='shipped'?'في الطريق':o.status==='completed'?'مكتمل':'ملغي')+'</span></div>';});
-    if(g('recent-orders'))g('recent-orders').innerHTML=rh;
-    this.renderCreditReminders();
-  },
-
-  renderCreditReminders:function(){
-    var c=document.getElementById('credit-rem');
-    if(!c)return;
-    var rem=[];
-    this.sups.forEach(function(sup,i){
-      if(sup.paymentType!=='credit'||!sup.history||(sup.balance||0)<=0)return;
-      var orders=sup.history.filter(h=>h.type==='order').sort((a,b)=>new Date(a.date)-new Date(b.date));
-      var pays=sup.history.filter(h=>h.type==='payment');
-      var paid=pays.reduce((s,p)=>s+p.amount,0);
-      var run=0,oldest=null;
-      for(var k=0;k<orders.length;k++){run+=orders[k].amount;if(run>paid){oldest=orders[k];break;}}
-      if(!oldest)return;
-      var due=new Date(new Date(oldest.date).getTime()+(sup.creditDays||30)*86400000);
-      var daysLeft=Math.ceil((due-new Date())/86400000);
-      if(daysLeft<=7)rem.push({sup:sup,info:{daysLeft:daysLeft,due:due},idx:i});
-    });
-    if(!rem.length){c.innerHTML='';return;}
-    rem.sort((a,b)=>a.info.daysLeft-b.info.daysLeft);
-    var html='<div class="cd" style="border-color:rgba(239,68,68,.4);"><div class="cti"><div class="ctl" style="color:var(--rd);">⏰ تنبيهات الآجل</div></div>';
-    rem.forEach(r=>{
-      var color=r.info.daysLeft<0?'var(--rd)':r.info.daysLeft<=3?'var(--or)':'var(--yl)';
-      var icon=r.info.daysLeft<0?'🚨':r.info.daysLeft<=3?'⚠️':'⏰';
-      var text=r.info.daysLeft<0?'متأخر '+Math.abs(r.info.daysLeft)+' يوم':r.info.daysLeft===0?'اليوم':'باقي '+r.info.daysLeft+' أيام';
-      html+='<div class="rw" onclick="A.balanceDetails('+r.idx+')" style="margin-bottom:6px;border-color:'+color+'40;"><div class="rt" style="background:'+color+'20;color:'+color+';">'+icon+'</div><div class="ri"><div class="rti">'+esc(r.sup.name)+'</div><div class="rs" style="color:'+color+';font-weight:900;">'+text+' · '+r.sup.balance.toLocaleString()+' ر.س</div></div></div>';
-    });
-    html+='</div>';
-    c.innerHTML=html;
-  },
-
-  renderReports:function(){
-    var days=[];
-    for(var i=6;i>=0;i--){var d=new Date(Date.now()-i*86400000);days.push({date:d,total:0,label:['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'][d.getDay()]});}
-    this.orders.forEach(o=>{if(o.status==='cancelled'||!o.createdAt)return;var od=new Date(o.createdAt.seconds*1000);days.forEach(d=>{if(od.toDateString()===d.date.toDateString())d.total+=o.total||0;});});
-    var max=Math.max.apply(null,days.map(d=>d.total).concat([1]));
-    var ch='',xh='';
-    days.forEach(d=>{var pct=Math.max(4,(d.total/max)*100);ch+='<div style="flex:1;background:linear-gradient(180deg,var(--pk),var(--pp));border-radius:4px 4px 0 0;min-height:4px;height:'+pct+'%;position:relative;"><span style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--mt);white-space:nowrap;">'+d.total+'</span></div>';xh+='<div style="flex:1;">'+d.label+'</div>';});
-    var rc=document.getElementById('rep-chart');if(rc)rc.innerHTML=ch;
-    var rx=document.getElementById('rep-x');if(rx)rx.innerHTML=xh;
-    var total=0,comp=0,pend=0;
-    this.orders.forEach(o=>{if(o.status==='cancelled')return;total+=o.total||0;if(o.status==='completed')comp+=o.total||0;if(o.status==='pending')pend+=o.total||0;});
-    var g=function(id){return document.getElementById(id);};
-    if(g('r-total'))g('r-total').textContent=total.toLocaleString()+' ر.س';
-    if(g('r-comp'))g('r-comp').textContent=comp.toLocaleString()+' ر.س';
-    if(g('r-pend'))g('r-pend').textContent=pend.toLocaleString()+' ر.س';
-    if(g('r-avg'))g('r-avg').textContent=(this.orders.length?Math.round(total/this.orders.length):0).toLocaleString()+' ر.س';
-  },
-
-
-  _renderProductsFiltered: function(list) {
-    var orig = this.products;
-    this.products = list;
-    this._origRenderProducts();
-    this.products = orig;
-  },
-  renderProducts:function(){
-    if (this.userRole === 'employee' && this.employeeCategory) {
-        var all = this.products || [];
-        var filtered = all.filter(p => p.category === this.employeeCategory);
-        return this._renderProductsFiltered(filtered);
-    }
-    var ce=document.getElementById('p-chips');
-    if(!ce)return;
-    var chips='<div class="cp'+(this.prodFilter==='all'?' active':'')+'" onclick="A.setProdFilter(\'all\',this)">الكل</div>';
-    this.cats.forEach(c=>{chips+='<div class="cp'+(this.prodFilter===c.key?' active':'')+'" onclick="A.setProdFilter(\''+esc(c.key)+'\',this)">'+esc(c.name)+'</div>';});
-    ce.innerHTML=chips;
-    var q=(document.getElementById('p-search').value||'').toLowerCase().trim();
-    var list=this.products.filter(p=>{
-      if(this.prodFilter!=='all'&&p.category!==this.prodFilter)return false;
-      if(q&&((p.name||'')+' '+(p.brand||'')).toLowerCase().indexOf(q)===-1)return false;
-      return true;
-    });
-    var el=document.getElementById('p-list');
-    if(!list.length){el.innerHTML='<div class="emp">لا توجد منتجات</div>';return;}
-    var html='';
-    for(var i=list.length-1;i>=0;i--){
-      var p=list[i];
-      var img=p.img?'<img src="'+esc(p.img)+'" loading="lazy">':'📦';
-      var stock='';
-      if(typeof p.stock==='number'){stock=p.stock<=0?'<span class="bdg bggr">نفذ</span>':p.stock<=5?'<span class="bdg" style="background:rgba(239,68,68,.15);color:var(--rd);">'+p.stock+'</span>':'<span class="bdg bgg">'+p.stock+'</span>';}
-      var act=p.active===false?' <span class="bdg bggr">معطّل</span>':'';
-      html+='<div class="rw" onclick="A.productForm(\''+esc(p.id)+'\')"><div class="rt">'+img+'</div><div class="ri"><div class="rti">'+(p.featured?'<span class="ft">⭐</span> ':'')+esc(p.name||'—')+act+'</div><div class="rs">'+esc(p.brand||'')+' • '+esc(p.price||0)+' ر.س '+stock+'</div></div><div class="ra" onclick="event.stopPropagation()"><button class="btn bg2 bsm" onclick="A.productForm(\''+esc(p.id)+'\')">✏️</button><button class="btn bd bsm" onclick="A.deleteProduct(\''+esc(p.id)+'\')">🗑️</button></div></div>';
-    }
-    el.innerHTML=html;
-  },
-
-  setProdFilter:function(k,el){this.prodFilter=k;document.querySelectorAll('#p-chips .cp').forEach(c=>c.classList.remove('active'));el.classList.add('active');this.renderProducts();},
-
-  
-    loadBrandsIntoSelect: async function(currentBrand) {
-        var sel = document.getElementById('f-brand');
-        if(!sel) return;
-        var config = await FB.getConfig('brands');
-        var brands = (config && config.list) ? config.list : ['CHIZEN', 'Nike', 'Adidas', 'Apple', 'Samsung'];
-        
-        sel.innerHTML = '<option value="">بدون ماركة</option>';
-        brands.forEach(function(b){
-            var opt = document.createElement('option');
-            opt.value = b;
-            opt.textContent = b;
-            if(b === currentBrand) opt.selected = true;
-            sel.appendChild(opt);
+      var img = document.getElementById("bn-img").value.trim();
+      var title = document.getElementById("bn-title").value.trim();
+      var sub = document.getElementById("bn-sub").value.trim();
+      var btn = document.getElementById("bn-btn").value.trim() || "تسوق الآن";
+      var link = document.getElementById("bn-link") ? document.getElementById("bn-link").value.trim() : "";
+      var fit = document.getElementById("bn-fit") ? document.getElementById("bn-fit").value : "cover";
+      var position = document.getElementById("bn-position") ? document.getElementById("bn-position").value : "center";
+      
+      if (!img || !title) { alert("الصورة والعنوان مطلوبان"); return; }
+      
+      try {
+        var doc = await FB.db.collection("config").doc("banners").get();
+        var arr = (doc.exists && doc.data().list) ? doc.data().list : [];
+        arr.push({ img: img, title: title, sub: sub, btn: btn, link: link, fit: fit, position: position });
+        await FB.db.collection("config").doc("banners").set({ list: arr }, { merge: true });
+        alert("✅ تم الإضافة");
+        ["bn-img", "bn-title", "bn-sub", "bn-btn", "bn-link"].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.value = "";
         });
+        var preview = document.getElementById("bn-preview-img");
+        var label = document.getElementById("bn-preview-label");
+        if (preview) preview.src = "";
+        if (label) { label.style.display = "flex"; label.textContent = "معاينة الصورة"; }
+        this.loadBanners();
+      } catch(e) { alert("خطأ: " + e.message); }
     },
     
     productForm:function(id){
@@ -1901,8 +1735,114 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('touchmove', onMove, { passive: true });
   document.addEventListener('touchend', onEnd);
 })();
+</script>
+
 <!-- ═══ End PTR ═══ -->
 
+<script>
+// ═══ إضافة معاينة + تحكم للبانرات ═══
+window.enhanceBannersUI = function() {
+  var sc = document.getElementById('sc-banners');
+  if (!sc) return;
+  if (sc.querySelector('.bn-preview-controls')) return;
+  
+  var imgInput = sc.querySelector('#bn-img');
+  if (!imgInput) return;
+  
+  var wrapper = document.createElement('div');
+  wrapper.className = 'bn-preview-controls';
+  wrapper.style.cssText = 'margin: 12px 0; padding: 12px; background: rgba(255,39,201,0.05); border: 1px solid rgba(255,39,201,0.2); border-radius: 12px;';
+  wrapper.innerHTML = '<div style="margin-bottom: 8px; font-size: 11px; color: #ff27c9; font-weight: 800;">🖼️ معاينة الصورة والتحكم</div>' +
+    '<div style="position: relative; width: 100%; height: 180px; background: linear-gradient(135deg,#1a1a2e,#000); border-radius: 10px; overflow: hidden; border: 1px solid #333;">' +
+      '<img id="bn-preview-img" src="" style="width:100%;height:100%;object-fit:cover;object-position:center;display:none;">' +
+      '<div id="bn-preview-label" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#666;font-size:13px;font-weight:700;">📷 ضع رابط الصورة للمعاينة</div>' +
+    '</div>' +
+    '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">' +
+      '<div>' +
+        '<label style="font-size:10px;color:#b8c5ee;display:block;margin-bottom:4px;font-weight:700;">طريقة العرض</label>' +
+        '<select id="bn-fit" style="width:100%;padding:8px;background:#1a1a2e;color:#fff;border:1px solid #444;border-radius:6px;font-family:inherit;font-size:12px;">' +
+          '<option value="cover">🖼️ ملء (يُقص الزائد)</option>' +
+          '<option value="contain">📦 احتواء (الصورة كاملة)</option>' +
+          '<option value="fill">↔️ تمدد</option>' +
+        '</select>' +
+      '</div>' +
+      '<div>' +
+        '<label style="font-size:10px;color:#b8c5ee;display:block;margin-bottom:4px;font-weight:700;">الموضع</label>' +
+        '<select id="bn-position" style="width:100%;padding:8px;background:#1a1a2e;color:#fff;border:1px solid #444;border-radius:6px;font-family:inherit;font-size:12px;">' +
+          '<option value="center">وسط</option>' +
+          '<option value="top">أعلى</option>' +
+          '<option value="bottom">أسفل</option>' +
+          '<option value="left">يسار</option>' +
+          '<option value="right">يمين</option>' +
+          '<option value="top left">أعلى يسار</option>' +
+          '<option value="top right">أعلى يمين</option>' +
+          '<option value="bottom left">أسفل يسار</option>' +
+          '<option value="bottom right">أسفل يمين</option>' +
+        '</select>' +
+      '</div>' +
+    '</div>';
+  
+  // إدراج بعد حقل الصورة
+  imgInput.parentNode.insertBefore(wrapper, imgInput.nextSibling);
+  
+  // ═══ ربط الأحداث ═══
+  var previewImg = document.getElementById('bn-preview-img');
+  var label = document.getElementById('bn-preview-label');
+  var fitSelect = document.getElementById('bn-fit');
+  var posSelect = document.getElementById('bn-position');
+  
+  // معاينة عند إدخال رابط الصورة
+  imgInput.addEventListener('input', function() {
+    var url = this.value.trim();
+    if (url) {
+      previewImg.src = url;
+      previewImg.style.display = 'block';
+      label.style.display = 'none';
+      previewImg.onerror = function() {
+        previewImg.style.display = 'none';
+        label.style.display = 'flex';
+        label.textContent = '❌ فشل تحميل الصورة';
+        label.style.color = '#ff4d6d';
+      };
+      previewImg.onload = function() {
+        previewImg.style.display = 'block';
+        label.style.display = 'none';
+      };
+    } else {
+      previewImg.style.display = 'none';
+      label.style.display = 'flex';
+      label.textContent = '📷 ضع رابط الصورة للمعاينة';
+      label.style.color = '#666';
+    }
+  });
+  
+  // تغيير طريقة العرض
+  fitSelect.addEventListener('change', function() {
+    previewImg.style.objectFit = this.value;
+  });
+  
+  // تغيير الموضع
+  posSelect.addEventListener('change', function() {
+    previewImg.style.objectPosition = this.value;
+  });
+  
+  console.log('✅ تم إضافة أدوات التحكم بالبانر');
+};
+
+// تشغيل عند فتح تبويب البانرات (إذا كان tab مُعرّف)
+var origTab = window.tab || (window.A && A.tab);
+setTimeout(function() {
+  // انتظر حتى يُبنى الـ DOM
+  setTimeout(window.enhanceBannersUI, 500);
+}, 1500);
+
+// تشغيل عند الضغط على زر البانرات
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.getAttribute('onclick') && e.target.getAttribute('onclick').indexOf("tab('banners'") !== -1) {
+    setTimeout(window.enhanceBannersUI, 100);
+  }
+});
+</script>
 
 </body>
 
