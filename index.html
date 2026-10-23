@@ -600,7 +600,7 @@ var A={
     if(el)el.classList.add('active');
     document.getElementById('ct').scrollTop=0;
     this.currentTab=n;
-    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,flights:this.renderFlights,push:function(){},sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,employees:this.renderEmployees,admins:this.renderAdmins,settings:this.renderSettings}[n];
+    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,flights:this.renderFlights,push:function(){},sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,employees:this.renderEmployees,admins:this.renderAdmins,settings:this.renderSettings,banners:this.loadBanners}[n];
     if(f)try{f.call(this);}catch(e){console.warn(e);}
   },
 
