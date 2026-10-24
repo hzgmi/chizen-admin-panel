@@ -2014,6 +2014,181 @@ document.addEventListener('click', function(e) {
 </script>
 
 <script src="banner-upload.js"></script>
+<script id="cat-manager-ui">
+(function(){
+  function waitForA(cb){
+    if (window.A && A.renderOrders && A.renderProducts && A.orderDetails && A.modal) return cb();
+    setTimeout(function(){ waitForA(cb); }, 200);
+  }
+  
+  waitForA(function(){
+    if (window.__CAT_MGR_UI__) return;
+    window.__CAT_MGR_UI__ = true;
+    
+    function isCatMgr(){ return window.CURRENT_ROLE === 'cat_manager' && window.CURRENT_CATEGORY; }
+    function myCat(){ return window.CURRENT_CATEGORY; }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function myProductIds(){
+      var s = new Set();
+      (A.products || []).forEach(function(p){ if (p.category === myCat()) s.add(String(p.id)); });
+      return s;
+    }
+    function orderHasMyCat(o){
+      if (!o || !o.items) return false;
+      var ids = myProductIds();
+      return o.items.some(function(it){ return ids.has(String(it.id)); });
+    }
+    function orderMyItems(o){
+      if (!o || !o.items) return [];
+      var ids = myProductIds();
+      return o.items.filter(function(it){ return ids.has(String(it.id)); });
+    }
+    
+    // ═══ 1) Filter orders ═══
+    var _renderOrders = A.renderOrders;
+    A.renderOrders = function(){
+      if (!isCatMgr()) return _renderOrders.call(this);
+      var orig = this.orders;
+      try {
+        this.orders = (orig || []).filter(orderHasMyCat);
+        return _renderOrders.call(this);
+      } finally {
+        this.orders = orig;
+      }
+    };
+    
+    // ═══ 2) Filter products ═══
+    var _renderProducts = A.renderProducts;
+    A.renderProducts = function(){
+      if (!isCatMgr()) return _renderProducts.call(this);
+      var orig = this.products;
+      try {
+        this.products = (orig || []).filter(function(p){ return p.category === myCat(); });
+        return _renderProducts.call(this);
+      } finally {
+        this.products = orig;
+      }
+    };
+    
+    // ═══ 3) Custom order details for cat_manager ═══
+    var _orderDetails = A.orderDetails;
+    A.orderDetails = function(id){
+      if (!isCatMgr()) return _orderDetails.call(this, id);
+      var o = null;
+      (A.orders || []).forEach(function(x){ if (String(x.id) === String(id)) o = x; });
+      if (!o) return;
+      
+      var items = orderMyItems(o);
+      var total = items.reduce(function(s, it){ return s + ((it.qty||0) * (it.price||0)); }, 0);
+      
+      var itemsHtml = '';
+      items.forEach(function(it){
+        var pr = A.getProduct ? A.getProduct(it.id) : null;
+        var img = (pr && pr.img) ? '<img src="' + esc(pr.img) + '" style="width:52px;height:52px;border-radius:10px;object-fit:cover;">' : '<div style="width:52px;height:52px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">📦</div>';
+        var nm = pr ? pr.name : (it.name || 'منتج');
+        var price = pr ? pr.price : (it.price || 0);
+        itemsHtml += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">' + img +
+          '<div style="flex:1;"><div style="font-weight:700;color:#fff;font-size:13px;">' + esc(nm) + '</div>' +
+          '<div style="font-size:12px;color:#aaa;margin-top:2px;">' + esc(it.qty) + ' × ' + esc(price) + ' ر.س</div></div>' +
+          '<div style="font-weight:700;color:var(--pk);font-size:13px;">' + ((it.qty||0) * price) + ' ر.س</div></div>';
+      });
+      
+      var curStatus = (o.categoryStatus && o.categoryStatus[myCat()]) || 'pending';
+      var curNote = (o.categoryNotes && o.categoryNotes[myCat()]) || '';
+      
+      var banner = '';
+      if (curStatus === 'confirmed') banner = '<div style="background:rgba(16,185,129,0.15);border:1.5px solid #10b981;border-radius:12px;padding:14px;text-align:center;color:#10b981;font-weight:900;margin-bottom:12px;">✅ تم تأكيد قسمك</div>';
+      else if (curStatus === 'rejected') banner = '<div style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;border-radius:12px;padding:14px;text-align:center;color:#ef4444;font-weight:900;margin-bottom:12px;">❌ رفضت هذا الطلب</div>';
+      else banner = '<div style="background:rgba(245,158,11,0.15);border:1.5px solid #f59e0b;border-radius:12px;padding:14px;text-align:center;color:#f59e0b;font-weight:900;margin-bottom:12px;">⏳ بانتظار قرارك</div>';
+      
+      var body = banner +
+        '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;margin-bottom:12px;">' +
+        '<div style="font-weight:900;color:var(--pk);margin-bottom:10px;font-size:13px;">👤 بيانات العميل</div>' +
+        '<div style="font-size:13px;color:#ddd;line-height:2;">' +
+        '<div>الاسم: <b>' + esc(o.name || '-') + '</b></div>' +
+        '<div>الهاتف: <b dir="ltr">' + esc(o.phone || '-') + '</b></div>' +
+        '<div>العنوان: ' + esc(o.pickup || '-') + '</div>' +
+        '</div></div>' +
+        '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;margin-bottom:12px;">' +
+        '<div style="font-weight:900;color:var(--pk);margin-bottom:10px;font-size:13px;">📦 منتجات قسمك (' + items.length + ')</div>' +
+        (itemsHtml || '<div style="color:#888;text-align:center;padding:15px;">لا توجد منتجات</div>') +
+        '<div style="display:flex;justify-content:space-between;padding-top:12px;border-top:1.5px solid rgba(255,77,148,0.3);margin-top:10px;">' +
+        '<div style="font-weight:900;color:#fff;font-size:15px;">مجموع قسمك</div>' +
+        '<div style="font-weight:900;color:var(--pk);font-size:18px;">' + total + ' ر.س</div></div></div>' +
+        '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;">' +
+        '<div style="font-weight:900;color:var(--pk);margin-bottom:10px;font-size:13px;">📝 ملاحظة لمندوب الطلبات</div>' +
+        '<textarea id="cat-note" class="fi" placeholder="أي تفاصيل يحتاجها المندوب..." style="width:100%;min-height:80px;font-size:13px;">' + esc(curNote) + '</textarea>' +
+        '</div>';
+      
+      var actions = '<button class="btn bg2" onclick="A.cm()" style="flex:1;">إغلاق</button>';
+      if (curStatus === 'confirmed') {
+        actions += '<button class="btn bd" onclick="A.rejectCatOrder(\'' + esc(id) + '\')" style="flex:1;">↩️ تراجع</button>';
+      } else {
+        actions += '<button class="btn bs" onclick="A.confirmCatOrder(\'' + esc(id) + '\')" style="flex:1;">✅ تأكيد</button>';
+        if (curStatus === 'pending') actions += '<button class="btn bd" onclick="A.rejectCatOrder(\'' + esc(id) + '\')" style="flex:1;">❌ رفض</button>';
+      }
+      
+      A.modal('الطلب #' + String(o.id || '').substring(0, 14), body, actions);
+    };
+    
+    // ═══ 4) Confirm ═══
+    A.confirmCatOrder = async function(id){
+      var note = (document.getElementById('cat-note') || {}).value || '';
+      try {
+        var snap = await FB.db.collection('orders').where('id', '==', id).get();
+        if (snap.empty) { A.toast('الطلب غير موجود', 'err'); return; }
+        var doc = snap.docs[0];
+        var data = doc.data();
+        var status = data.categoryStatus || {};
+        var notes = data.categoryNotes || {};
+        var by = data.categoryConfirmedBy || {};
+        var at = data.categoryConfirmedAt || {};
+        status[myCat()] = 'confirmed';
+        notes[myCat()] = note;
+        by[myCat()] = FB.currentUser ? FB.currentUser.uid : '';
+        at[myCat()] = Date.now();
+        await doc.ref.update({ categoryStatus: status, categoryNotes: notes, categoryConfirmedBy: by, categoryConfirmedAt: at });
+        for (var i = 0; i < A.orders.length; i++) {
+          if (A.orders[i].id === id) { A.orders[i].categoryStatus = status; A.orders[i].categoryNotes = notes; break; }
+        }
+        A.toast('✅ تم التأكيد', 'suc');
+        A.renderOrders();
+        A.cm();
+      } catch(e) { A.toast('فشل: ' + e.message, 'err'); }
+    };
+    
+    // ═══ 5) Reject ═══
+    A.rejectCatOrder = async function(id){
+      A.confirm('رفض الطلب؟', 'سيُعلم العميل والمندوب', async function(){
+        var note = (document.getElementById('cat-note') || {}).value || '';
+        try {
+          var snap = await FB.db.collection('orders').where('id', '==', id).get();
+          if (snap.empty) { A.toast('الطلب غير موجود', 'err'); return; }
+          var doc = snap.docs[0];
+          var data = doc.data();
+          var status = data.categoryStatus || {};
+          var notes = data.categoryNotes || {};
+          var by = data.categoryConfirmedBy || {};
+          var at = data.categoryConfirmedAt || {};
+          status[myCat()] = 'rejected';
+          notes[myCat()] = note;
+          by[myCat()] = FB.currentUser ? FB.currentUser.uid : '';
+          at[myCat()] = Date.now();
+          await doc.ref.update({ categoryStatus: status, categoryNotes: notes, categoryConfirmedBy: by, categoryConfirmedAt: at });
+          for (var i = 0; i < A.orders.length; i++) {
+            if (A.orders[i].id === id) { A.orders[i].categoryStatus = status; A.orders[i].categoryNotes = notes; break; }
+          }
+          A.toast('تم الرفض', 'suc');
+          A.renderOrders();
+          A.cm();
+        } catch(e) { A.toast('فشل: ' + e.message, 'err'); }
+      }, 'danger');
+    };
+    
+    console.log('[CAT_MGR_UI] Loaded for category:', myCat());
+  });
+})();
+</script>
 </body>
 
 
