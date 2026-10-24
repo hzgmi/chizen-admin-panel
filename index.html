@@ -351,21 +351,39 @@ var A={
       this._listening = true;
       try {
         FB.auth.onAuthStateChanged(function(u) {
-          if(self._checked) return;
-          self._checked = true;
-          if (u) { self.access(u); } else { self.loginScreen(); }
+          if (u) {
+            // ✅ استخدم checkAdmin للتحقق من الدور
+            self.checkAdmin(u);
+          } else {
+            self.loginScreen();
+          }
         });
       } catch(e) { console.error(e); this.loginScreen(); }
     }
   },
 
   loginScreen:function(){
-    document.getElementById('gb').innerHTML=
-      '<div class="gl">CHIZEN</div><div class="gt">ADMIN PANEL</div>'+
-      '<div class="gi">🔐</div><div class="gtt">لوحة محمية</div>'+
-      '<div class="gd">سجّل دخول بحساب المسؤول</div>'+
-      '<button class="gbtn" onclick="forceLogin()">🔓 تسجيل الدخول للإدارة</button>'+
-      '<button class="gbtn sec" onclick="location.reload()">🔄 إعادة</button>';
+    document.getElementById('gb').innerHTML =
+      '<div class="gl">CHIZEN</div>' +
+      '<div class="gt">ADMIN PANEL</div>' +
+      '<div class="gi">🔐</div>' +
+      '<div class="gtt">لوحة محمية</div>' +
+      '<div class="gd">سجّل دخول بحسابك</div>' +
+      '<div style="width:100%;max-width:320px;margin:15px auto 0;">' +
+      '  <input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="username" style="width:100%;padding:12px 15px;margin-bottom:10px;border-radius:12px;border:1.5px solid rgba(255,77,148,.4);background:rgba(20,15,45,.85);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box;">' +
+      '  <input id="login-pass" type="password" placeholder="كلمة السر" autocomplete="current-password" style="width:100%;padding:12px 15px;margin-bottom:10px;border-radius:12px;border:1.5px solid rgba(255,77,148,.4);background:rgba(20,15,45,.85);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box;">' +
+      '  <button id="btn-do-login" class="gbtn" onclick="doLogin()" style="width:100%;margin-bottom:8px;">🔓 تسجيل الدخول</button>' +
+      '  <div id="login-err" style="color:#ff4d94;font-size:12px;text-align:center;min-height:16px;"></div>' +
+      '</div>' +
+      '<button class="gbtn sec" onclick="location.reload()" style="margin-top:10px;">🔄 إعادة</button>';
+    
+    // Enter key submits
+    setTimeout(function(){
+      var passInp = document.getElementById('login-pass');
+      if (passInp) passInp.addEventListener('keypress', function(e){
+        if (e.key === 'Enter') doLogin();
+      });
+    }, 100);
   },
 
   gateMsg:function(i,t,d){
@@ -1599,8 +1617,27 @@ saveContact:async function(){
   },
   openApp:function(){window.open('../chizen.html','_blank');},
   logout:async function(){
-    var self=this;
-    this.confirm('تسجيل الخروج؟','',async function(){try{if(FB.ready)await FB.logout();}catch(e){ console.error('ERR:', e.message); }location.reload();},'danger');
+    var self = this;
+    this.confirm('تسجيل الخروج؟', 'سيتم مسح كل شيء من الجهاز', async function(){
+      try {
+        if (FB.ready) await FB.logout();
+      } catch(e) { console.error('ERR:', e.message); }
+      
+      // امسح Firebase persistence + كل التخزين
+      try {
+        await firebase.auth().signOut();
+        await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE);
+      } catch(e) {}
+      
+      try { localStorage.clear(); } catch(e) {}
+      try { sessionStorage.clear(); } catch(e) {}
+      try {
+        var dbs = await indexedDB.databases();
+        dbs.forEach(function(db){ indexedDB.deleteDatabase(db.name); });
+      } catch(e) {}
+      
+      setTimeout(function(){ window.location.href = window.location.pathname + '?logout=' + Date.now(); }, 300);
+    }, 'danger');
   },
 
   exportOrdersPDF:function(){
@@ -1649,41 +1686,40 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else {try{A.init();}catch(e){console.error(e);}}
 </script>
 <script>
-window.forceLogin = function() {
-    var btn = document.getElementById('btn-login');
-    if(btn) btn.innerText = 'جاري الدخول...';
-    
-    if (!window.FB || !window.FB.auth) {
-        alert('Firebase غير جاهز');
-        if(btn) btn.innerText = '🔓 تسجيل الدخول للإدارة';
-        return;
-    }
-
-    FB.auth.signInWithEmailAndPassword('hazimchat@gmail.com', 'Chizen@2026').then((res) => {
-        if(btn) btn.innerText = '✅ تم الدخول';
-        
-        // إخفاء شاشة الدخول وإظهار اللوحة مباشرة
-        var gs = document.getElementById('gs');
-        var am = document.getElementById('am');
-        if(gs) gs.style.display = 'none';
-        if(am) am.style.display = 'flex';
-
-        // محاولة تحميل بيانات اللوحة
-        if (window.A) {
-            try {
-                if (window.A.buildSections) window.A.buildSections();
-                if (window.A.loadData) {
-                    window.A.loadData().then(function(){
-                        if (window.A.renderAll) window.A.renderAll();
-                    });
-                }
-            } catch(e) { console.log('Dashboard load error:', e); }
-        }
-    }).catch(e => {
-        alert('خطأ: ' + e.message);
-        if(btn) btn.innerText = '🔓 تسجيل الدخول للإدارة';
-    });
+window.doLogin = async function() {
+  var emailInp = document.getElementById('login-email');
+  var passInp = document.getElementById('login-pass');
+  var errBox = document.getElementById('login-err');
+  var btn = document.getElementById('btn-do-login');
+  
+  var email = (emailInp ? emailInp.value : '').trim();
+  var pass = (passInp ? passInp.value : '');
+  
+  if (!email || !pass) {
+    if (errBox) errBox.textContent = '⚠️ أدخل البريد وكلمة السر';
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'جاري الدخول...'; }
+  if (errBox) errBox.textContent = '';
+  
+  try {
+    // استخدم persist المحلي لتسجيل الدخول
+    await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    var cred = await firebase.auth().signInWithEmailAndPassword(email, pass);
+    console.log('[LOGIN] success:', cred.user.email);
+    // onAuthStateChanged سيتولى الباقي (checkAdmin)
+  } catch(e) {
+    var msg = e.message || 'فشل الدخول';
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'البريد أو كلمة السر غير صحيحة';
+    else if (e.code === 'auth/user-not-found') msg = 'لا يوجد حساب بهذا البريد';
+    else if (e.code === 'auth/too-many-requests') msg = 'محاولات كثيرة، حاول لاحقاً';
+    if (errBox) errBox.textContent = '❌ ' + msg;
+    if (btn) { btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول'; }
+  }
 };
+
+// alias قديم للتوافق
+window.forceLogin = window.doLogin;
 </script>
 
 
