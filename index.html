@@ -2384,27 +2384,19 @@ document.addEventListener('click', function(e) {
     var c = window.CM;
     if (!c || !c.category) return;
     var p = null;
-    if (id) {
-      (c.products || []).forEach(function(pr){ if (String(pr.id) === String(id)) p = pr; });
-    }
+    if (id) { (c.products || []).forEach(function(pr){ if (String(pr.id) === String(id)) p = pr; }); }
     var isEdit = !!p;
-    p = p || { id: 'p_' + Date.now(), name: '', brand: '', category: c.category, price: '', old: '', badge: '', img: '', desc: '', features: [], stock: '', active: true, featured: false, colors: [] };
+    p = p || { id: 'p_' + Date.now(), name: '', brand: '', category: c.category, price: '', old: '', badge: '', img: '', images: [], desc: '', features: [], stock: '', active: true, featured: false, colors: [] };
     var feats = Array.isArray(p.features) ? p.features.join('\n') : (p.features || '');
     var colors = Array.isArray(p.colors) ? p.colors.join(', ') : (p.colors || '');
-    
+    window.__CM_IMAGES__ = Array.isArray(p.images) ? p.images.slice() : [];
+    if (window.__CM_IMAGES__.length === 0 && p.img) window.__CM_IMAGES__ = [p.img];
     var overlay = document.createElement('div');
     overlay.id = 'cm-product-form';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9800;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:0;direction:rtl;font-family:Tajawal,sans-serif;';
-    
-    var inp = function(id, label, ph, val, type) {
-      return '<div style="margin-bottom:14px;">' +
-        '<label style="display:block;color:#a855f7;font-size:12px;font-weight:700;margin-bottom:6px;">' + label + '</label>' +
-        '<input id="' + id + '" type="' + (type||'text') + '" placeholder="' + (ph||'') + '" value="' + esc(val||'') + '" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.85);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;">' +
-      '</div>';
+    var inp = function(fid, label, ph, val, type) {
+      return '<div style="margin-bottom:14px;"><label style="display:block;color:#a855f7;font-size:12px;font-weight:700;margin-bottom:6px;">' + label + '</label><input id="' + fid + '" type="' + (type||'text') + '" placeholder="' + (ph||'') + '" value="' + esc(val||'') + '" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.85);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;"></div>';
     };
-    
-    var prForm = p.img ? '<img id="cm-pf-img-el" src="' + esc(p.img) + '" style="width:100%;height:180px;object-fit:cover;border-radius:14px;">' : '<div id="cm-pf-img-ph" style="width:100%;height:180px;border-radius:14px;background:rgba(255,255,255,0.05);border:2px dashed rgba(168,85,247,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);"><div style="font-size:48px;">📷</div><div style="font-size:11px;margin-top:8px;">لا صورة بعد</div></div>';
-    
     overlay.innerHTML = '' +
     '<div style="background:linear-gradient(180deg,#151b3a,#0a0825);width:100%;max-width:650px;min-height:100vh;padding:16px;box-sizing:border-box;">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:linear-gradient(180deg,#151b3a,transparent);padding:10px 0;z-index:10;">' +
@@ -2413,47 +2405,96 @@ document.addEventListener('click', function(e) {
       '</div>' +
       '<div style="background:rgba(16,185,129,0.1);border:1.5px solid rgba(16,185,129,0.4);border-radius:12px;padding:12px;margin-bottom:16px;text-align:center;color:#10b981;font-size:12px;font-weight:700;">📦 القسم: ' + esc(c.categoryName) + ' (مقفل)</div>' +
       '<div style="margin-bottom:16px;">' +
-        '<label style="display:block;color:#a855f7;font-size:12px;font-weight:700;margin-bottom:8px;">📸 صورة المنتج (معاينة فورية)</label>' +
-        '<div id="cm-pf-img-prev" style="margin-bottom:10px;">' + prForm + '</div>' +
-        '<div style="display:flex;gap:8px;">' +
-          '<input id="cm-pf-img" type="url" placeholder="أو الصق رابط صورة..." value="' + esc(p.img||'') + '" oninput="cmPreviewImg(this.value)" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.85);color:#fff;font-family:inherit;font-size:11px;box-sizing:border-box;">' +
-          '<label style="background:linear-gradient(135deg,#ff4d94,#a855f7);border:none;color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer;font-size:11px;white-space:nowrap;">📤 رفع<input type="file" accept="image/*" onchange="cmUploadImg(this)" style="display:none;"></label>' +
+        '<label style="display:block;color:#a855f7;font-size:12px;font-weight:700;margin-bottom:8px;">📸 صور المنتج (الصورة الأولى = الرئيسية)</label>' +
+        '<div id="cm-images-gallery"></div>' +
+        '<div style="display:flex;gap:8px;margin-top:10px;">' +
+          '<input id="cm-pf-img-url" type="url" placeholder="رابط صورة + Enter" onkeypress="if(event.key===\'Enter\'){event.preventDefault();cmAddImageByUrl(this.value);this.value=\'\';}" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.85);color:#fff;font-family:inherit;font-size:11px;box-sizing:border-box;">' +
+          '<label style="background:linear-gradient(135deg,#ff4d94,#a855f7);border:none;color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer;font-size:11px;white-space:nowrap;">📤 رفع<input type="file" accept="image/*" multiple onchange="cmUploadImages(this)" style="display:none;"></label>' +
         '</div>' +
+        '<div style="color:rgba(255,255,255,0.4);font-size:10px;margin-top:6px;">💡 يمكنك رفع عدة صور دفعة واحدة</div>' +
       '</div>' +
       inp('cm-pf-name', 'اسم المنتج *', 'مثال: آيفون 15 برو', p.name) +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
-        inp('cm-pf-price', 'السعر *', '0', p.price, 'number') +
-        inp('cm-pf-old', 'السعر القديم', '0', p.old, 'number') +
-      '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
-        inp('cm-pf-stock', 'المخزون', '10', p.stock, 'number') +
-        inp('cm-pf-badge', 'شارة', 'جديد', p.badge) +
-      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + inp('cm-pf-price', 'السعر *', '0', p.price, 'number') + inp('cm-pf-old', 'السعر القديم', '0', p.old, 'number') + '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + inp('cm-pf-stock', 'المخزون', '10', p.stock, 'number') + inp('cm-pf-badge', 'شارة', 'جديد', p.badge) + '</div>' +
       inp('cm-pf-brand', 'الماركة', 'Apple', p.brand) +
       inp('cm-pf-colors', 'الألوان (مفصولة بفاصلة)', 'أسود, أبيض', colors) +
-      '<div style="margin-bottom:14px;">' +
-        '<label style="display:block;color:#a855f7;font-size:12px;font-weight:700;margin-bottom:6px;">الوصف</label>' +
-        '<textarea id="cm-pf-desc" placeholder="تفاصيل المنتج..." style="width:100%;min-height:70px;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.85);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;">' + esc(p.desc||'') + '</textarea>' +
-      '</div>' +
-      '<div style="margin-bottom:14px;">' +
-        '<label style="display:block;color:#a855f7;font-size:12px;font-weight:700;margin-bottom:6px;">المميزات (سطر لكل ميزة)</label>' +
-        '<textarea id="cm-pf-feats" placeholder="بطارية تدوم 24 ساعة\nكاميرا 48 ميجا" style="width:100%;min-height:70px;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.85);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;">' + esc(feats) + '</textarea>' +
-      '</div>' +
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#a855f7;font-size:12px;font-weight:700;margin-bottom:6px;">الوصف</label><textarea id="cm-pf-desc" placeholder="تفاصيل المنتج..." style="width:100%;min-height:70px;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.85);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;">' + esc(p.desc||'') + '</textarea></div>' +
+      '<div style="margin-bottom:14px;"><label style="display:block;color:#a855f7;font-size:12px;font-weight:700;margin-bottom:6px;">المميزات (سطر لكل ميزة)</label><textarea id="cm-pf-feats" placeholder="بطارية تدوم 24 ساعة\nكاميرا 48 ميجا" style="width:100%;min-height:70px;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.85);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;">' + esc(feats) + '</textarea></div>' +
       '<div style="display:flex;gap:10px;margin-bottom:14px;">' +
-        '<label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;cursor:pointer;color:#fff;font-size:12px;">' +
-          '<input type="checkbox" id="cm-pf-active" ' + (p.active!==false?'checked':'') + ' style="width:20px;height:20px;"> مفعّل' +
-        '</label>' +
-        '<label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;cursor:pointer;color:#fff;font-size:12px;">' +
-          '<input type="checkbox" id="cm-pf-featured" ' + (p.featured?'checked':'') + ' style="width:20px;height:20px;"> ⭐ مميز' +
-        '</label>' +
+        '<label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;cursor:pointer;color:#fff;font-size:12px;"><input type="checkbox" id="cm-pf-active" ' + (p.active!==false?'checked':'') + ' style="width:20px;height:20px;"> مفعّل</label>' +
+        '<label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;cursor:pointer;color:#fff;font-size:12px;"><input type="checkbox" id="cm-pf-featured" ' + (p.featured?'checked':'') + ' style="width:20px;height:20px;"> ⭐ مميز</label>' +
       '</div>' +
       '<div style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1.5px solid rgba(168,85,247,0.2);">' +
         '<button onclick="document.getElementById(\'cm-product-form\').remove()" style="flex:1;background:rgba(255,255,255,0.08);border:none;color:#fff;padding:14px;border-radius:12px;font-weight:700;font-family:inherit;font-size:14px;cursor:pointer;">إلغاء</button>' +
         '<button onclick="cmSaveProduct(\'' + esc(p.id) + '\',' + isEdit + ')" style="flex:2;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-family:inherit;font-size:14px;cursor:pointer;">' + (isEdit?'💾 حفظ التعديلات':'✅ إضافة المنتج') + '</button>' +
       '</div>' +
     '</div>';
-    
     document.body.appendChild(overlay);
+    setTimeout(cmRenderImages, 10);
+  };
+  
+  window.cmRenderImages = function() {
+    var c = document.getElementById('cm-images-gallery');
+    if (!c) return;
+    if (!window.__CM_IMAGES__) window.__CM_IMAGES__ = [];
+    if (window.__CM_IMAGES__.length === 0) {
+      c.innerHTML = '<div style="width:100%;height:180px;border-radius:14px;background:rgba(255,255,255,0.05);border:2px dashed rgba(168,85,247,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);"><div style="font-size:48px;">📷</div><div style="font-size:11px;margin-top:8px;">لا صور بعد — أضف صورة أو أكثر</div></div>';
+      return;
+    }
+    var h = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+    window.__CM_IMAGES__.forEach(function(url, i) {
+      var mainBadge = i === 0 ? '<div style="position:absolute;top:4px;right:4px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:2px 6px;border-radius:4px;font-size:8px;font-weight:900;">رئيسية</div>' : '';
+      var mainBtn = i > 0 ? '<div onclick="cmSetMainImage(' + i + ')" style="position:absolute;bottom:4px;left:4px;background:rgba(59,130,246,0.9);color:#fff;padding:3px 6px;border-radius:4px;font-size:9px;cursor:pointer;font-weight:700;">⭐ رئيسية</div>' : '';
+      h += '<div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:rgba(255,255,255,0.05);border:1px solid rgba(168,85,247,0.3);"><img src="' + esc(url) + '" style="width:100%;height:100%;object-fit:cover;">' + mainBadge + mainBtn + '<button onclick="cmRemoveImage(' + i + ')" style="position:absolute;top:4px;left:4px;background:rgba(239,68,68,0.95);color:#fff;border:none;width:24px;height:24px;border-radius:50%;font-size:14px;cursor:pointer;font-weight:900;line-height:1;">×</button></div>';
+    });
+    h += '</div>';
+    c.innerHTML = h;
+  };
+  
+  window.cmAddImageByUrl = function(url) {
+    url = (url || '').trim();
+    if (!url) return;
+    if (!window.__CM_IMAGES__) window.__CM_IMAGES__ = [];
+    window.__CM_IMAGES__.push(url);
+    cmRenderImages();
+  };
+  
+  window.cmRemoveImage = function(i) {
+    if (!window.__CM_IMAGES__) return;
+    window.__CM_IMAGES__.splice(i, 1);
+    cmRenderImages();
+  };
+  
+  window.cmSetMainImage = function(i) {
+    if (!window.__CM_IMAGES__ || i <= 0) return;
+    var img = window.__CM_IMAGES__.splice(i, 1)[0];
+    window.__CM_IMAGES__.unshift(img);
+    cmRenderImages();
+  };
+  
+  window.cmUploadImages = async function(input) {
+    var files = input.files;
+    if (!files || files.length === 0) return;
+    var uploaded = 0, total = files.length;
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      if (file.size > 5 * 1024 * 1024) { alert('الصورة ' + (i+1) + ' كبيرة (الحد 5MB)'); continue; }
+      try {
+        var fd = new FormData();
+        fd.append('image', file);
+        var API_KEY = '6d0b2b51c4b8d4f0e3c9f8a2b7d1e5f0';
+        var resp = await fetch('https://api.imgbb.com/1/upload?key=' + API_KEY, { method: 'POST', body: fd });
+        var json = await resp.json();
+        if (json && json.data && json.data.url) {
+          if (!window.__CM_IMAGES__) window.__CM_IMAGES__ = [];
+          window.__CM_IMAGES__.push(json.data.url);
+          uploaded++;
+          cmRenderImages();
+        }
+      } catch(e) { console.error('upload error:', e); }
+    }
+    if (uploaded < total) alert('تم رفع ' + uploaded + ' من ' + total);
+    input.value = '';
   };
   
   window.cmPreviewImg = function(url) {
@@ -2498,11 +2539,10 @@ document.addEventListener('click', function(e) {
     var price = parseFloat(document.getElementById('cm-pf-price').value);
     if (!name) { alert('أدخل اسم المنتج'); return; }
     if (!price || price <= 0) { alert('أدخل سعراً صحيحاً'); return; }
-    
-    var feats = document.getElementById('cm-pf-feats').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
-    var colors = document.getElementById('cm-pf-colors').value.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+    if (!window.__CM_IMAGES__ || window.__CM_IMAGES__.length === 0) { alert('أضف صورة واحدة على الأقل'); return; }
+    var feats = document.getElementById('cm-pf-feats').value.split('\n').map(function(x){ return x.trim(); }).filter(function(x){ return x; });
+    var colors = document.getElementById('cm-pf-colors').value.split(',').map(function(x){ return x.trim(); }).filter(function(x){ return x; });
     var stockV = document.getElementById('cm-pf-stock').value;
-    
     var data = {
       name: name,
       brand: document.getElementById('cm-pf-brand').value.trim(),
@@ -2511,10 +2551,9 @@ document.addEventListener('click', function(e) {
       old: parseFloat(document.getElementById('cm-pf-old').value) || null,
       stock: stockV ? parseInt(stockV) : null,
       badge: document.getElementById('cm-pf-badge').value.trim(),
-      rating: 4.5,
-      reviews: 0,
-      sold: 0,
-      img: document.getElementById('cm-pf-img').value.trim(),
+      rating: 4.5, reviews: 0, sold: 0,
+      img: window.__CM_IMAGES__[0] || '',
+      images: window.__CM_IMAGES__.slice(),
       colors: colors,
       desc: document.getElementById('cm-pf-desc').value.trim(),
       features: feats,
@@ -2522,21 +2561,14 @@ document.addEventListener('click', function(e) {
       featured: document.getElementById('cm-pf-featured').checked,
       updatedAt: Date.now()
     };
-    
     try {
       if (isEdit) await FB.updateProduct(id, data);
       else await FB.addProduct(data);
-      
-      // إغلاق النموذج
       var form = document.getElementById('cm-product-form');
       if (form) form.remove();
-      
-      // إعادة تحميل
       if (window.cmReloadData) await window.cmReloadData();
       if (A && A.toast) A.toast(isEdit ? '✅ تم التعديل' : '✅ تمت الإضافة', 'suc');
-    } catch(e) {
-      alert('فشل الحفظ: ' + e.message);
-    }
+    } catch(e) { alert('فشل الحفظ: ' + e.message); }
   };
   
   // Override A.productForm لموظف القسم
