@@ -2516,7 +2516,7 @@ document.addEventListener('click', function(e) {
     var fileName = 'chz_' + Date.now() + '_' + file.name.replace(/[^a-z0-9.]/gi, '_');
     var fd = new FormData();
     fd.append('image', file, fileName);
-    var API_KEY = '6d0b2b51c4b8d4f0e3c9f8a2b7d1e5f0';
+    var API_KEY = 'ضع_مفتاحك_هنا';
     var r = await fetch('https://api.imgbb.com/1/upload?key=' + API_KEY, { method: 'POST', body: fd });
     if (!r.ok) {
         var errTxt = await r.text();
