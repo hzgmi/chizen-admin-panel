@@ -2480,58 +2480,53 @@ document.addEventListener('click', function(e) {
       var file = files[i];
       if (file.size > 5 * 1024 * 1024) { alert('الصورة ' + (i+1) + ' كبيرة (الحد 5MB)'); continue; }
       try {
-        var fd = new FormData();
-        fd.append('image', file);
-        var API_KEY = '6d0b2b51c4b8d4f0e3c9f8a2b7d1e5f0';
-        var resp = await fetch('https://api.imgbb.com/1/upload?key=' + API_KEY, { method: 'POST', body: fd });
-        var json = await resp.json();
-        if (json && json.data && json.data.url) {
-          if (!window.__CM_IMAGES__) window.__CM_IMAGES__ = [];
-          window.__CM_IMAGES__.push(json.data.url);
-          uploaded++;
-          cmRenderImages();
-        }
-      } catch(e) { console.error('upload error:', e); }
+        var url = await uploadToImageKit(file);
+        if (!window.__CM_IMAGES__) window.__CM_IMAGES__ = [];
+        window.__CM_IMAGES__.push(url);
+        uploaded++;
+        cmRenderImages();
+      } catch(e) { console.error('upload error:', e); alert('فشل رفع: ' + e.message); }
     }
     if (uploaded < total) alert('تم رفع ' + uploaded + ' من ' + total);
     input.value = '';
   };
   
-  window.cmPreviewImg = function(url) {
-    var prev = document.getElementById('cm-pf-img-prev');
-    if (!prev) return;
-    if (!url) {
-      prev.innerHTML = '<div style="width:100%;height:180px;border-radius:14px;background:rgba(255,255,255,0.05);border:2px dashed rgba(168,85,247,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);"><div style="font-size:48px;">📷</div><div style="font-size:11px;margin-top:8px;">لا صورة بعد</div></div>';
-      return;
+  async function getImageKitSignature() {
+    if (!window.FB || !FB.db) throw new Error('FB غير جاهز');
+    var ref = await FB.db.collection('image_sign_requests').add({
+      status: 'pending',
+      uid: FB.currentUser ? FB.currentUser.uid : 'anon',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    var startT = Date.now();
+    while (Date.now() - startT < 15000) {
+      await new Promise(function(r){ setTimeout(r, 400); });
+      var snap = await ref.get();
+      if (!snap.exists) throw new Error('الطلب حُذف');
+      var d = snap.data();
+      if (d.status === 'ready') { try { await ref.delete(); } catch(e){} return { token: d.token, expire: d.expire, signature: d.signature }; }
+      if (d.status === 'error') { try { await ref.delete(); } catch(e){} throw new Error(d.error || 'فشل التوقيع'); }
     }
-    prev.innerHTML = '<img src="' + esc(url) + '" style="width:100%;height:180px;object-fit:cover;border-radius:14px;" onerror="this.style.display=\'none\';">';
-  };
+    try { await ref.delete(); } catch(e){}
+    throw new Error('انتهت المهلة — تحقق من push-listener');
+  }
   
-  window.cmUploadImg = async function(input) {
-    var file = input.files && input.files[0];
-    if (!file) return;
-    if (file.size > 5*1024*1024) { alert('الصورة كبيرة (الحد 5MB)'); return; }
-    var prev = document.getElementById('cm-pf-img-prev');
-    if (prev) prev.innerHTML = '<div style="height:180px;background:rgba(255,255,255,0.05);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#ff4d94;font-weight:700;">⏳ جاري الرفع...</div>';
-    
-    try {
-      var fd = new FormData();
-      fd.append('image', file);
-      // احصل على ImgBB API key من config أو استخدم المفتاح العام الموجود
-      var API_KEY = '6d0b2b51c4b8d4f0e3c9f8a2b7d1e5f0';
-      var resp = await fetch('https://api.imgbb.com/1/upload?key=' + API_KEY, { method:'POST', body: fd });
-      var json = await resp.json();
-      if (json && json.data && json.data.url) {
-        var url = json.data.url;
-        document.getElementById('cm-pf-img').value = url;
-        cmPreviewImg(url);
-      } else {
-        throw new Error('رفع فشل');
-      }
-    } catch(e) {
-      if (prev) prev.innerHTML = '<div style="height:180px;background:rgba(239,68,68,0.1);border:1.5px solid rgba(239,68,68,0.4);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#ef4444;font-weight:700;font-size:12px;text-align:center;padding:20px;">❌ فشل الرفع<br>جرب لصق الرابط بدلاً</div>';
-    }
-  };
+  async function uploadToImageKit(file) {
+    var auth = await getImageKitSignature();
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('fileName', 'p_' + Date.now() + '_' + file.name.replace(/[^a-z0-9.]/gi, '_'));
+    fd.append('publicKey', 'public_AyhNrATJS');
+    fd.append('token', auth.token);
+    fd.append('expire', String(auth.expire));
+    fd.append('signature', auth.signature);
+    fd.append('folder', '/products');
+    fd.append('useUniqueFileName', 'true');
+    var r = await fetch('https://upload.imagekit.io/api/v1/files/upload', { method: 'POST', body: fd });
+    var j = await r.json();
+    if (!j.url) throw new Error(j.message || 'ImageKit: upload failed');
+    return j.url;
+  }
   
   window.cmSaveProduct = async function(id, isEdit) {
     var c = window.CM;
