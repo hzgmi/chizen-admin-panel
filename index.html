@@ -2014,179 +2014,366 @@ document.addEventListener('click', function(e) {
 </script>
 
 <script src="banner-upload.js"></script>
-<script id="cat-manager-ui">
+
+<script id="dedicated-catmgr-ui">
 (function(){
-  function waitForA(cb){
-    if (window.A && A.renderOrders && A.renderProducts && A.orderDetails && A.modal) return cb();
-    setTimeout(function(){ waitForA(cb); }, 200);
+  var CAT_NAMES = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'جمال',kids:'أطفال',sports:'رياضة',tools:'أدوات'};
+  var CAT_ICONS = {electronics:'📱',fashion:'👗',home:'🏠',beauty:'💄',kids:'🧸',sports:'⚽',tools:'🔧'};
+  
+  window.CM = { category: null, categoryName: null, tab: 'home', products: [], orders: [], orderFilter: 'pending', loading: false };
+  
+  window.activateCatMgrUI = async function(category) {
+    window.CM.category = category;
+    window.CM.categoryName = CAT_NAMES[category] || category;
+    
+    var gs = document.getElementById('gs'); if (gs) gs.style.display = 'none';
+    var am = document.getElementById('am'); if (am) am.style.display = 'none';
+    
+    var app = document.getElementById('cat-mgr-app');
+    if (!app) {
+      app = document.createElement('div');
+      app.id = 'cat-mgr-app';
+      document.body.appendChild(app);
+    }
+    app.style.cssText = 'position:fixed;inset:0;background:radial-gradient(circle at 50% 0%, #151b3a 0%, #07091d 80%);display:flex;flex-direction:column;z-index:9000;font-family:Tajawal,sans-serif;direction:rtl;';
+    app.innerHTML = buildCatMgrShell();
+    
+    await cmReloadData();
+  };
+  
+  window.deactivateCatMgrUI = function() {
+    var app = document.getElementById('cat-mgr-app');
+    if (app) app.remove();
+  };
+  
+  function buildCatMgrShell() {
+    var c = window.CM;
+    return '' +
+    '<header style="padding:14px 18px;background:rgba(10,8,30,0.95);border-bottom:1px solid rgba(168,85,247,0.25);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;">' +
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+        '<div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#ff4d94,#a855f7);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 12px rgba(255,77,148,0.4);">' + (CAT_ICONS[c.category]||'📦') + '</div>' +
+        '<div><div style="color:#fff;font-weight:900;font-size:15px;">' + c.categoryName + '</div>' +
+        '<div style="color:#a855f7;font-size:11px;margin-top:2px;">لوحة إدارة القسم</div></div>' +
+      '</div>' +
+      '<button onclick="A.logout()" style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;padding:8px 14px;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;">🚪 خروج</button>' +
+    '</header>' +
+    '<main id="cm-content" style="flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;"></main>' +
+    '<nav style="display:flex;background:rgba(10,8,30,0.98);border-top:1px solid rgba(168,85,247,0.25);flex-shrink:0;">' +
+      navBtn('home','🏠','الرئيسية',c.tab==='home') +
+      navBtn('products','📦','منتجاتي',c.tab==='products') +
+      navBtn('orders','📋','طلباتي',c.tab==='orders') +
+    '</nav>';
   }
   
-  waitForA(function(){
-    if (window.__CAT_MGR_UI__) return;
-    window.__CAT_MGR_UI__ = true;
-    
-    function isCatMgr(){ return window.CURRENT_ROLE === 'cat_manager' && window.CURRENT_CATEGORY; }
-    function myCat(){ return window.CURRENT_CATEGORY; }
-    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-    function myProductIds(){
-      var s = new Set();
-      (A.products || []).forEach(function(p){ if (p.category === myCat()) s.add(String(p.id)); });
-      return s;
+  function navBtn(tab, icon, label, active) {
+    var bg = active ? 'linear-gradient(135deg,rgba(255,77,148,0.2),rgba(168,85,247,0.1))' : 'transparent';
+    var color = active ? '#ff4d94' : 'rgba(255,255,255,0.55)';
+    return '<button onclick="cmSwitchTab(\''+tab+'\',this)" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;background:'+bg+';border:none;color:'+color+';font-family:inherit;cursor:pointer;font-weight:700;position:relative;">' +
+      '<span style="font-size:22px;">'+icon+'</span>' +
+      '<span style="font-size:10px;">'+label+'</span>' +
+      (active ? '<span style="position:absolute;bottom:6px;left:35%;right:35%;height:3px;background:#ff4d94;border-radius:2px;"></span>' : '') +
+    '</button>';
+  }
+  
+  window.cmSwitchTab = function(tab, btn) {
+    window.CM.tab = tab;
+    document.querySelectorAll('#cat-mgr-app nav button').forEach(function(b){
+      b.style.background = 'transparent';
+      b.style.color = 'rgba(255,255,255,0.55)';
+      var bar = b.querySelector('span[style*="position:absolute"]');
+      if (bar) bar.remove();
+    });
+    if (btn) {
+      btn.style.background = 'linear-gradient(135deg,rgba(255,77,148,0.2),rgba(168,85,247,0.1))';
+      btn.style.color = '#ff4d94';
+      var bar = document.createElement('span');
+      bar.style.cssText = 'position:absolute;bottom:6px;left:35%;right:35%;height:3px;background:#ff4d94;border-radius:2px;';
+      btn.appendChild(bar);
     }
-    function orderHasMyCat(o){
-      if (!o || !o.items) return false;
-      var ids = myProductIds();
-      return o.items.some(function(it){ return ids.has(String(it.id)); });
-    }
-    function orderMyItems(o){
-      if (!o || !o.items) return [];
-      var ids = myProductIds();
-      return o.items.filter(function(it){ return ids.has(String(it.id)); });
-    }
+    cmRender();
+  };
+  
+  window.cmReloadData = async function() {
+    var c = window.CM;
+    var content = document.getElementById('cm-content');
+    if (content) content.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ جاري التحميل...</div>';
     
-    // ═══ 1) Filter orders ═══
-    var _renderOrders = A.renderOrders;
-    A.renderOrders = function(){
-      if (!isCatMgr()) return _renderOrders.call(this);
-      var orig = this.orders;
-      try {
-        this.orders = (orig || []).filter(orderHasMyCat);
-        return _renderOrders.call(this);
-      } finally {
-        this.orders = orig;
-      }
-    };
-    
-    // ═══ 2) Filter products ═══
-    var _renderProducts = A.renderProducts;
-    A.renderProducts = function(){
-      if (!isCatMgr()) return _renderProducts.call(this);
-      var orig = this.products;
-      try {
-        this.products = (orig || []).filter(function(p){ return p.category === myCat(); });
-        return _renderProducts.call(this);
-      } finally {
-        this.products = orig;
-      }
-    };
-    
-    // ═══ 3) Custom order details for cat_manager ═══
-    var _orderDetails = A.orderDetails;
-    A.orderDetails = function(id){
-      if (!isCatMgr()) return _orderDetails.call(this, id);
-      var o = null;
-      (A.orders || []).forEach(function(x){ if (String(x.id) === String(id)) o = x; });
-      if (!o) return;
+    try {
+      var pSnap = await FB.db.collection('products').where('category','==',c.category).get();
+      c.products = []; pSnap.forEach(function(d){ c.products.push(Object.assign({id:d.id}, d.data())); });
       
-      var items = orderMyItems(o);
-      var total = items.reduce(function(s, it){ return s + ((it.qty||0) * (it.price||0)); }, 0);
-      
-      var itemsHtml = '';
-      items.forEach(function(it){
-        var pr = A.getProduct ? A.getProduct(it.id) : null;
-        var img = (pr && pr.img) ? '<img src="' + esc(pr.img) + '" style="width:52px;height:52px;border-radius:10px;object-fit:cover;">' : '<div style="width:52px;height:52px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">📦</div>';
-        var nm = pr ? pr.name : (it.name || 'منتج');
-        var price = pr ? pr.price : (it.price || 0);
-        itemsHtml += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">' + img +
-          '<div style="flex:1;"><div style="font-weight:700;color:#fff;font-size:13px;">' + esc(nm) + '</div>' +
-          '<div style="font-size:12px;color:#aaa;margin-top:2px;">' + esc(it.qty) + ' × ' + esc(price) + ' ر.س</div></div>' +
-          '<div style="font-weight:700;color:var(--pk);font-size:13px;">' + ((it.qty||0) * price) + ' ر.س</div></div>';
+      var oSnap = await FB.db.collection('orders').orderBy('createdAt','desc').limit(200).get();
+      c.orders = [];
+      var ids = new Set(c.products.map(function(p){ return String(p.id); }));
+      oSnap.forEach(function(d){
+        var o = Object.assign({id:d.id}, d.data());
+        var myItems = (o.items||[]).filter(function(it){ return ids.has(String(it.id)); });
+        if (myItems.length > 0) {
+          o._myItems = myItems;
+          o._myTotal = myItems.reduce(function(s,it){ return s + ((it.qty||0)*(it.price||0)); }, 0);
+          c.orders.push(o);
+        }
       });
       
-      var curStatus = (o.categoryStatus && o.categoryStatus[myCat()]) || 'pending';
-      var curNote = (o.categoryNotes && o.categoryNotes[myCat()]) || '';
-      
-      var banner = '';
-      if (curStatus === 'confirmed') banner = '<div style="background:rgba(16,185,129,0.15);border:1.5px solid #10b981;border-radius:12px;padding:14px;text-align:center;color:#10b981;font-weight:900;margin-bottom:12px;">✅ تم تأكيد قسمك</div>';
-      else if (curStatus === 'rejected') banner = '<div style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;border-radius:12px;padding:14px;text-align:center;color:#ef4444;font-weight:900;margin-bottom:12px;">❌ رفضت هذا الطلب</div>';
-      else banner = '<div style="background:rgba(245,158,11,0.15);border:1.5px solid #f59e0b;border-radius:12px;padding:14px;text-align:center;color:#f59e0b;font-weight:900;margin-bottom:12px;">⏳ بانتظار قرارك</div>';
-      
-      var body = banner +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;margin-bottom:12px;">' +
-        '<div style="font-weight:900;color:var(--pk);margin-bottom:10px;font-size:13px;">👤 بيانات العميل</div>' +
-        '<div style="font-size:13px;color:#ddd;line-height:2;">' +
-        '<div>الاسم: <b>' + esc(o.name || '-') + '</b></div>' +
-        '<div>الهاتف: <b dir="ltr">' + esc(o.phone || '-') + '</b></div>' +
-        '<div>العنوان: ' + esc(o.pickup || '-') + '</div>' +
-        '</div></div>' +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;margin-bottom:12px;">' +
-        '<div style="font-weight:900;color:var(--pk);margin-bottom:10px;font-size:13px;">📦 منتجات قسمك (' + items.length + ')</div>' +
-        (itemsHtml || '<div style="color:#888;text-align:center;padding:15px;">لا توجد منتجات</div>') +
+      cmRender();
+    } catch(e) {
+      if (content) content.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ خطأ: ' + e.message + '</div>';
+    }
+  };
+  
+  window.cmRender = function() {
+    var c = window.CM;
+    var content = document.getElementById('cm-content');
+    if (!content) return;
+    if (c.tab === 'home') content.innerHTML = cmHome();
+    else if (c.tab === 'products') content.innerHTML = cmProducts();
+    else if (c.tab === 'orders') content.innerHTML = cmOrders();
+  };
+  
+  function esc(x){ return String(x==null?'':x).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];}); }
+  function orderStatus(o){ return (o.categoryStatus && o.categoryStatus[window.CM.category]) || 'pending'; }
+  
+  function cmHome() {
+    var c = window.CM;
+    var pending = c.orders.filter(function(o){ return orderStatus(o)==='pending'; });
+    var confirmed = c.orders.filter(function(o){ return orderStatus(o)==='confirmed'; });
+    var todayConf = confirmed.filter(function(o){
+      var at = o.categoryConfirmedAt && o.categoryConfirmedAt[c.category];
+      if (!at) return false;
+      return new Date(at).toDateString() === new Date().toDateString();
+    });
+    var todayRev = todayConf.reduce(function(s,o){ return s + o._myTotal; }, 0);
+    
+    var stat = function(label, value, color) {
+      return '<div style="flex:1;min-width:calc(50% - 6px);background:linear-gradient(135deg,rgba(20,15,45,0.9),rgba(30,20,60,0.85));border:1px solid rgba(168,85,247,0.25);border-radius:16px;padding:16px 12px;text-align:center;">' +
+        '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:8px;">'+label+'</div>' +
+        '<div style="font-size:24px;font-weight:900;color:'+(color||'#fff')+';">'+value+'</div>' +
+      '</div>';
+    };
+    
+    var recent = pending.slice(0,5).map(function(o){ return cmOrderCard(o); }).join('') || '<div style="text-align:center;padding:30px;color:#888;background:rgba(255,255,255,0.03);border-radius:14px;">✅ لا طلبات بانتظارك</div>';
+    
+    return '' +
+    '<div style="background:linear-gradient(135deg,rgba(255,77,148,0.15),rgba(168,85,247,0.1));border:1px solid rgba(255,77,148,0.35);border-radius:16px;padding:18px;margin-bottom:16px;text-align:center;">' +
+      '<div style="font-size:15px;color:#fff;font-weight:900;">👋 مرحباً بك</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px;">لوحة إدارة قسم ' + c.categoryName + '</div>' +
+    '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">' +
+      stat('⏳ بانتظارك', pending.length, '#f59e0b') +
+      stat('✅ مؤكدة', confirmed.length, '#10b981') +
+      stat('📦 منتجاتي', c.products.length, '#a855f7') +
+      stat('💰 مبيعات اليوم', todayRev + ' ر.س', '#ff4d94') +
+    '</div>' +
+    '<div style="font-weight:900;color:#fff;margin-bottom:10px;font-size:14px;">📋 طلبات بانتظار قرارك</div>' +
+    '<div>' + recent + '</div>';
+  }
+  
+  function cmProducts() {
+    var c = window.CM;
+    var grid = c.products.length === 0
+      ? '<div style="text-align:center;padding:40px;color:#888;background:rgba(255,255,255,0.03);border-radius:14px;">لا منتجات بعد. اضغط "+ إضافة" لبدء الإضافة</div>'
+      : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' + c.products.map(function(p){
+          var img = p.img ? '<img src="'+esc(p.img)+'" style="width:100%;height:100%;object-fit:cover;">' : '<div style="display:flex;align-items:center;justify-content:center;font-size:32px;">📦</div>';
+          return '<div onclick="A.productForm(\''+esc(p.id)+'\')" style="background:rgba(20,15,45,0.85);border:1px solid rgba(168,85,247,0.2);border-radius:14px;overflow:hidden;cursor:pointer;">' +
+            '<div style="aspect-ratio:1;background:rgba(255,255,255,0.05);overflow:hidden;">'+img+'</div>' +
+            '<div style="padding:10px;">' +
+            '<div style="font-size:12px;color:#fff;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(p.name||'منتج')+'</div>' +
+            '<div style="font-size:12px;color:#ff4d94;font-weight:900;margin-top:4px;">'+esc(p.price||0)+' ر.س</div>' +
+            '</div></div>';
+        }).join('') + '</div>';
+    
+    return '' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+      '<div style="color:#fff;font-weight:900;font-size:15px;">📦 منتجاتي ('+c.products.length+')</div>' +
+      '<button onclick="A.productForm()" style="background:linear-gradient(135deg,#ff4d94,#a855f7);border:none;color:#fff;padding:10px 18px;border-radius:10px;font-weight:900;font-family:inherit;cursor:pointer;font-size:12px;box-shadow:0 4px 12px rgba(255,77,148,0.3);">+ إضافة</button>' +
+    '</div>' + grid;
+  }
+  
+  function cmOrders() {
+    var c = window.CM;
+    var f = c.orderFilter;
+    var filtered = c.orders.filter(function(o){ return f==='all' || orderStatus(o)===f; });
+    
+    var tabBtn = function(key, label, color) {
+      var active = f === key;
+      return '<button onclick="cmFilterOrders(\''+key+'\')" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid '+(active?color:'rgba(255,255,255,0.1)')+';background:'+(active?color+'22':'transparent')+';color:'+(active?color:'rgba(255,255,255,0.6)')+';font-weight:700;font-family:inherit;cursor:pointer;font-size:11px;">'+label+'</button>';
+    };
+    
+    var list = filtered.length === 0 
+      ? '<div style="text-align:center;padding:40px;color:#888;background:rgba(255,255,255,0.03);border-radius:14px;">لا طلبات في هذه الحالة</div>'
+      : filtered.map(function(o){ return cmOrderCard(o); }).join('');
+    
+    return '' +
+    '<div style="display:flex;gap:6px;margin-bottom:14px;">' +
+      tabBtn('pending','⏳ بانتظار','#f59e0b') +
+      tabBtn('confirmed','✅ مؤكدة','#10b981') +
+      tabBtn('rejected','❌ مرفوضة','#ef4444') +
+      tabBtn('all','📋 الكل','#a855f7') +
+    '</div>' + list;
+  }
+  
+  window.cmFilterOrders = function(f) {
+    window.CM.orderFilter = f;
+    cmRender();
+  };
+  
+  function cmOrderCard(o) {
+    var c = window.CM;
+    var status = orderStatus(o);
+    var badge = {
+      pending: '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">⏳ بانتظارك</span>',
+      confirmed: '<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">✅ مؤكد</span>',
+      rejected: '<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">❌ مرفوض</span>'
+    }[status];
+    
+    return '<div onclick="cmOpenOrder(\''+esc(o.id)+'\')" style="background:rgba(20,15,45,0.85);border:1px solid rgba(168,85,247,0.25);border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+        '<div style="color:#a855f7;font-weight:900;font-size:12px;">#'+esc(String(o.id).substring(0,10))+'</div>' +
+        badge +
+      '</div>' +
+      '<div style="font-size:12px;color:#ddd;line-height:1.9;">' +
+        '<div>👤 '+esc(o.name||'عميل')+'</div>' +
+        '<div>📦 '+o._myItems.length+' منتج من قسمك</div>' +
+        '<div style="color:#ff4d94;font-weight:900;font-size:13px;margin-top:6px;">💰 '+o._myTotal+' ر.س</div>' +
+      '</div>' +
+    '</div>';
+  }
+  
+  window.cmOpenOrder = function(id) {
+    var c = window.CM;
+    var o = c.orders.find(function(x){ return String(x.id)===String(id); });
+    if (!o) return;
+    var status = orderStatus(o);
+    
+    var itemsHtml = o._myItems.map(function(it){
+      var pr = (c.products||[]).find(function(p){ return String(p.id)===String(it.id); });
+      var nm = pr ? pr.name : (it.name||'منتج');
+      var price = pr ? pr.price : (it.price||0);
+      var img = (pr&&pr.img) ? '<img src="'+esc(pr.img)+'" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">' : '<div style="width:48px;height:48px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">📦</div>';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">'+img+
+        '<div style="flex:1;"><div style="color:#fff;font-weight:700;font-size:12px;">'+esc(nm)+'</div>'+
+        '<div style="font-size:11px;color:#aaa;margin-top:2px;">'+esc(it.qty)+' × '+esc(price)+' ر.س</div></div>'+
+        '<div style="color:#ff4d94;font-weight:900;font-size:12px;">'+((it.qty||0)*price)+'</div></div>';
+    }).join('');
+    
+    var banner = status === 'confirmed' 
+      ? '<div style="background:rgba(16,185,129,0.15);border:1.5px solid #10b981;border-radius:12px;padding:12px;text-align:center;color:#10b981;font-weight:900;margin-bottom:14px;">✅ تم تأكيد قسمك</div>'
+      : status === 'rejected'
+      ? '<div style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;border-radius:12px;padding:12px;text-align:center;color:#ef4444;font-weight:900;margin-bottom:14px;">❌ رفضت هذا الطلب</div>'
+      : '<div style="background:rgba(245,158,11,0.15);border:1.5px solid #f59e0b;border-radius:12px;padding:12px;text-align:center;color:#f59e0b;font-weight:900;margin-bottom:14px;">⏳ بانتظار قرارك</div>';
+    
+    var curNote = (o.categoryNotes && o.categoryNotes[c.category]) || '';
+    
+    var overlay = document.createElement('div');
+    overlay.id = 'cm-order-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9500;display:flex;align-items:flex-end;justify-content:center;';
+    overlay.onclick = function(e){ if (e.target === overlay) overlay.remove(); };
+    
+    overlay.innerHTML = '' +
+    '<div style="background:linear-gradient(180deg,#151b3a,#0a0825);width:100%;max-width:600px;max-height:90vh;overflow-y:auto;border-radius:24px 24px 0 0;padding:20px;direction:rtl;font-family:Tajawal,sans-serif;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+        '<div style="color:#fff;font-weight:900;font-size:14px;">الطلب #'+esc(String(o.id).substring(0,10))+'</div>' +
+        '<button onclick="document.getElementById(\'cm-order-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">×</button>' +
+      '</div>' +
+      banner +
+      '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;margin-bottom:12px;">' +
+        '<div style="color:#a855f7;font-weight:900;font-size:12px;margin-bottom:10px;">👤 بيانات العميل</div>' +
+        '<div style="font-size:12px;color:#ddd;line-height:2;">' +
+          '<div>الاسم: <b>'+esc(o.name||'-')+'</b></div>' +
+          '<div>الهاتف: <b dir="ltr">'+esc(o.phone||'-')+'</b></div>' +
+          '<div>العنوان: '+esc(o.pickup||o.address||'-')+'</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;margin-bottom:12px;">' +
+        '<div style="color:#a855f7;font-weight:900;font-size:12px;margin-bottom:10px;">📦 منتجات قسمك</div>' +
+        itemsHtml +
         '<div style="display:flex;justify-content:space-between;padding-top:12px;border-top:1.5px solid rgba(255,77,148,0.3);margin-top:10px;">' +
-        '<div style="font-weight:900;color:#fff;font-size:15px;">مجموع قسمك</div>' +
-        '<div style="font-weight:900;color:var(--pk);font-size:18px;">' + total + ' ر.س</div></div></div>' +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;">' +
-        '<div style="font-weight:900;color:var(--pk);margin-bottom:10px;font-size:13px;">📝 ملاحظة لمندوب الطلبات</div>' +
-        '<textarea id="cat-note" class="fi" placeholder="أي تفاصيل يحتاجها المندوب..." style="width:100%;min-height:80px;font-size:13px;">' + esc(curNote) + '</textarea>' +
-        '</div>';
-      
-      var actions = '<button class="btn bg2" onclick="A.cm()" style="flex:1;">إغلاق</button>';
-      if (curStatus === 'confirmed') {
-        actions += '<button class="btn bd" onclick="A.rejectCatOrder(\'' + esc(id) + '\')" style="flex:1;">↩️ تراجع</button>';
-      } else {
-        actions += '<button class="btn bs" onclick="A.confirmCatOrder(\'' + esc(id) + '\')" style="flex:1;">✅ تأكيد</button>';
-        if (curStatus === 'pending') actions += '<button class="btn bd" onclick="A.rejectCatOrder(\'' + esc(id) + '\')" style="flex:1;">❌ رفض</button>';
+          '<div style="color:#fff;font-weight:900;">مجموع قسمك</div>' +
+          '<div style="color:#ff4d94;font-weight:900;font-size:16px;">'+o._myTotal+' ر.س</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;margin-bottom:14px;">' +
+        '<div style="color:#a855f7;font-weight:900;font-size:12px;margin-bottom:10px;">📝 ملاحظة لمندوب الطلبات</div>' +
+        '<textarea id="cm-note" placeholder="أي تفاصيل..." style="width:100%;min-height:70px;padding:10px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:12px;box-sizing:border-box;">'+esc(curNote)+'</textarea>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        (status==='pending'
+          ? '<button onclick="cmConfirmOrder(\''+esc(o.id)+'\')" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-family:inherit;font-size:14px;cursor:pointer;">✅ تأكيد</button>' +
+            '<button onclick="cmRejectOrder(\''+esc(o.id)+'\')" style="flex:1;background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;padding:14px;border-radius:12px;font-weight:900;font-family:inherit;font-size:14px;cursor:pointer;">❌ رفض</button>'
+          : status==='confirmed'
+          ? '<button onclick="cmRejectOrder(\''+esc(o.id)+'\')" style="flex:1;background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;padding:14px;border-radius:12px;font-weight:900;font-family:inherit;font-size:14px;cursor:pointer;">↩️ تراجع</button>'
+          : '<button onclick="cmConfirmOrder(\''+esc(o.id)+'\')" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-family:inherit;font-size:14px;cursor:pointer;">✅ تأكيد</button>'
+        ) +
+      '</div>' +
+    '</div>';
+    document.body.appendChild(overlay);
+  };
+  
+  window.cmConfirmOrder = async function(id) {
+    var c = window.CM;
+    var note = (document.getElementById('cm-note')||{}).value || '';
+    try {
+      var snap = await FB.db.collection('orders').where('id','==',id).get();
+      if (snap.empty) { A.toast('الطلب غير موجود','err'); return; }
+      var doc = snap.docs[0];
+      var data = doc.data();
+      var st = data.categoryStatus || {};
+      var nt = data.categoryNotes || {};
+      var by = data.categoryConfirmedBy || {};
+      var at = data.categoryConfirmedAt || {};
+      st[c.category] = 'confirmed';
+      nt[c.category] = note;
+      by[c.category] = FB.currentUser ? FB.currentUser.uid : '';
+      at[c.category] = Date.now();
+      await doc.ref.update({ categoryStatus: st, categoryNotes: nt, categoryConfirmedBy: by, categoryConfirmedAt: at });
+      A.toast('✅ تم التأكيد','suc');
+      var m = document.getElementById('cm-order-modal'); if (m) m.remove();
+      await cmReloadData();
+    } catch(e) { A.toast('فشل: '+e.message,'err'); }
+  };
+  
+  window.cmRejectOrder = async function(id) {
+    var c = window.CM;
+    var note = (document.getElementById('cm-note')||{}).value || '';
+    if (!confirm('رفض هذا الطلب؟ سيُعلم العميل والمندوب')) return;
+    try {
+      var snap = await FB.db.collection('orders').where('id','==',id).get();
+      if (snap.empty) { A.toast('الطلب غير موجود','err'); return; }
+      var doc = snap.docs[0];
+      var data = doc.data();
+      var st = data.categoryStatus || {};
+      var nt = data.categoryNotes || {};
+      var by = data.categoryConfirmedBy || {};
+      var at = data.categoryConfirmedAt || {};
+      st[c.category] = 'rejected';
+      nt[c.category] = note;
+      by[c.category] = FB.currentUser ? FB.currentUser.uid : '';
+      at[c.category] = Date.now();
+      await doc.ref.update({ categoryStatus: st, categoryNotes: nt, categoryConfirmedBy: by, categoryConfirmedAt: at });
+      A.toast('تم الرفض','suc');
+      var m = document.getElementById('cm-order-modal'); if (m) m.remove();
+      await cmReloadData();
+    } catch(e) { A.toast('فشل: '+e.message,'err'); }
+  };
+  
+  // Hook into applyPermissions
+  var _apply = null;
+  function hookApply(){
+    if (!window.A || !A.applyPermissions) { setTimeout(hookApply, 300); return; }
+    if (A.__cmHooked) return;
+    A.__cmHooked = true;
+    _apply = A.applyPermissions;
+    A.applyPermissions = function(role, category){
+      if (role === 'cat_manager' && category) {
+        window.activateCatMgrUI(category);
+        return;
       }
-      
-      A.modal('الطلب #' + String(o.id || '').substring(0, 14), body, actions);
+      if (_apply) return _apply.call(this, role, category);
     };
-    
-    // ═══ 4) Confirm ═══
-    A.confirmCatOrder = async function(id){
-      var note = (document.getElementById('cat-note') || {}).value || '';
-      try {
-        var snap = await FB.db.collection('orders').where('id', '==', id).get();
-        if (snap.empty) { A.toast('الطلب غير موجود', 'err'); return; }
-        var doc = snap.docs[0];
-        var data = doc.data();
-        var status = data.categoryStatus || {};
-        var notes = data.categoryNotes || {};
-        var by = data.categoryConfirmedBy || {};
-        var at = data.categoryConfirmedAt || {};
-        status[myCat()] = 'confirmed';
-        notes[myCat()] = note;
-        by[myCat()] = FB.currentUser ? FB.currentUser.uid : '';
-        at[myCat()] = Date.now();
-        await doc.ref.update({ categoryStatus: status, categoryNotes: notes, categoryConfirmedBy: by, categoryConfirmedAt: at });
-        for (var i = 0; i < A.orders.length; i++) {
-          if (A.orders[i].id === id) { A.orders[i].categoryStatus = status; A.orders[i].categoryNotes = notes; break; }
-        }
-        A.toast('✅ تم التأكيد', 'suc');
-        A.renderOrders();
-        A.cm();
-      } catch(e) { A.toast('فشل: ' + e.message, 'err'); }
-    };
-    
-    // ═══ 5) Reject ═══
-    A.rejectCatOrder = async function(id){
-      A.confirm('رفض الطلب؟', 'سيُعلم العميل والمندوب', async function(){
-        var note = (document.getElementById('cat-note') || {}).value || '';
-        try {
-          var snap = await FB.db.collection('orders').where('id', '==', id).get();
-          if (snap.empty) { A.toast('الطلب غير موجود', 'err'); return; }
-          var doc = snap.docs[0];
-          var data = doc.data();
-          var status = data.categoryStatus || {};
-          var notes = data.categoryNotes || {};
-          var by = data.categoryConfirmedBy || {};
-          var at = data.categoryConfirmedAt || {};
-          status[myCat()] = 'rejected';
-          notes[myCat()] = note;
-          by[myCat()] = FB.currentUser ? FB.currentUser.uid : '';
-          at[myCat()] = Date.now();
-          await doc.ref.update({ categoryStatus: status, categoryNotes: notes, categoryConfirmedBy: by, categoryConfirmedAt: at });
-          for (var i = 0; i < A.orders.length; i++) {
-            if (A.orders[i].id === id) { A.orders[i].categoryStatus = status; A.orders[i].categoryNotes = notes; break; }
-          }
-          A.toast('تم الرفض', 'suc');
-          A.renderOrders();
-          A.cm();
-        } catch(e) { A.toast('فشل: ' + e.message, 'err'); }
-      }, 'danger');
-    };
-    
-    console.log('[CAT_MGR_UI] Loaded for category:', myCat());
-  });
+  }
+  hookApply();
+  
+  console.log('[DEDICATED_CM_UI] loaded');
 })();
 </script>
 </body>
