@@ -398,7 +398,96 @@ var A={
     }
   },
 
-  checkAdmin: function(u) { this.access(u); },
+  checkAdmin: async function(u) {
+    if (!u) return;
+    try {
+      // 1) تحقق من legacy admin (admins collection)
+      var isLegacy = false;
+      try {
+        var legacyDoc = await FB.db.collection('admins').doc(u.uid).get();
+        isLegacy = legacyDoc.exists;
+      } catch(e) { console.warn('legacy check:', e.message); }
+      
+      // 2) اقرأ role من users
+      var role = 'customer';
+      var assignedCategory = null;
+      try {
+        var userSnap = await FB.db.collection('users').doc(u.uid).get();
+        if (userSnap.exists) {
+          var ud = userSnap.data();
+          role = ud.role || 'customer';
+          assignedCategory = ud.assignedCategory || null;
+        }
+      } catch(e) { console.warn('user role check:', e.message); }
+      
+      // 3) الدور الفعلي
+      var effRole = isLegacy ? 'super_admin' : role;
+      
+      // 4) منع العملاء
+      if (effRole === 'customer') {
+        this.toast('⛔ ليس لديك صلاحية الوصول للوحة', 'err');
+        setTimeout(function(){ try { FB.auth.signOut(); } catch(e){} location.reload(); }, 1800);
+        return;
+      }
+      
+      // 5) خزّن عالمياً
+      window.CURRENT_ROLE = effRole;
+      window.CURRENT_CATEGORY = assignedCategory;
+      window.CURRENT_UID = u.uid;
+      
+      // 6) اعرض اللوحة
+      this.access(u);
+      this.applyPermissions(effRole, assignedCategory);
+      
+    } catch(e) {
+      console.error('checkAdmin failed:', e);
+      this.toast('خطأ في التحقق: ' + e.message, 'err');
+    }
+  },
+
+  applyPermissions: function(role, category) {
+    if (role === 'super_admin') return; // وصول كامل — لا قيود
+    
+    var allowed = {};
+    if (role === 'cat_manager') {
+      allowed = { products: 1, orders: 1, dash: 1 };
+    } else if (role === 'delivery_mgr') {
+      allowed = { orders: 1, dash: 1 };
+    }
+    
+    // إخفاء التبويبات غير المصرح بها
+    document.querySelectorAll('.tb').forEach(function(btn) {
+      var oc = btn.getAttribute('onclick') || '';
+      var m = oc.match(/A\.tab\('([^']+)'/);
+      if (m && !allowed[m[1]]) {
+        btn.style.display = 'none';
+      }
+    });
+    
+    // مؤشر الدور
+    var am = document.getElementById('am');
+    if (am && !document.getElementById('role-indicator')) {
+      var b = document.createElement('div');
+      b.id = 'role-indicator';
+      b.style.cssText = 'position:fixed;top:8px;right:8px;background:linear-gradient(135deg,#ff4d94,#a855f7);color:#fff;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:900;z-index:99999;box-shadow:0 4px 12px rgba(255,77,148,0.4);';
+      var catNames = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'جمال',kids:'أطفال',sports:'رياضة',tools:'أدوات'};
+      var lbl = role === 'cat_manager' 
+        ? ('📦 ' + (catNames[category] || category || 'قسم')) 
+        : '📋 مندوب طلبات';
+      b.textContent = lbl;
+      am.appendChild(b);
+    }
+    
+    // مؤشر إضافي في الشاشة الرئيسية
+    var dash = document.getElementById('dash-c');
+    if (dash) {
+      var catNames2 = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'جمال',kids:'أطفال',sports:'رياضة',tools:'أدوات'};
+      var welcome = role === 'cat_manager'
+        ? '📦 مرحباً — أنت مسؤول قسم ' + (catNames2[category] || category)
+        : '📋 مرحباً — أنت مندوب الطلبات';
+      dash.innerHTML = '<div style="padding:15px;background:linear-gradient(135deg,rgba(255,77,148,0.15),rgba(168,85,247,0.15));border:1px solid rgba(255,77,148,0.4);border-radius:14px;margin-bottom:15px;text-align:center;font-weight:700;">' + welcome + '</div>' + (dash.innerHTML || '');
+    }
+  },
 
   access: function(u){
     document.getElementById('gs').style.display='none';
