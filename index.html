@@ -512,22 +512,29 @@ var A={
       '</div>'+
       
 '<div class="sc" id="sc-employees">'+
-  '<div class="sw"><div class="cti"><div class="ctl">👥 إدارة الموظفين والصلاحيات</div></div>'+
+  '<div class="sw"><div class="cti"><div class="ctl">👥 إدارة الموظفين</div></div>'+
     '<div class="fl"><label class="fll">اسم الموظف</label><input class="fi" id="emp-name" placeholder="مثال: أحمد علي"></div>'+
     '<div class="fl"><label class="fll">البريد الإلكتروني (للدخول)</label><input class="fi" id="emp-email" type="email" placeholder="ahmed@gmail.com"></div>'+
-    '<div class="fl"><label class="fll">رقم الواتساب (لاستلام إشعارات الحجز)</label><input class="fi" id="emp-wa" type="tel" placeholder="967771234567"></div>'+
-    '<div class="fl"><label class="fll">الأقسام المصرح له بها (اختر واحداً أو أكثر)</label>'+
-      '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px;">'+
-        '<label><input type="checkbox" class="emp-perm" value="products"> المنتجات</label>'+
-        '<label><input type="checkbox" class="emp-perm" value="orders"> الطلبات</label>'+
-        '<label><input type="checkbox" class="emp-perm" value="flights"> الحجوزات</label>'+
-        '<label><input type="checkbox" class="emp-perm" value="delivery"> التوصيل</label>'+
-      '</div>'+
+    '<div class="fl"><label class="fll">كلمة السر (6+ أحرف)</label><input class="fi" id="emp-password" type="text" placeholder="مثال: Chizen@123"></div>'+
+    '<div class="fl"><label class="fll">رقم الواتساب</label><input class="fi" id="emp-wa" type="tel" placeholder="967771234567"></div>'+
+    '<div class="fl"><label class="fll">الدور الوظيفي</label>'+
+      '<select class="fi" id="emp-role" onchange="A.toggleEmpCat()">'+
+        '<option value="cat_manager">📦 مدير قسم</option>'+
+        '<option value="delivery_mgr">📋 مندوب طلبات</option>'+
+      '</select>'+
     '</div>'+
-    '<div class="fl" id="emp-cat-wrap" style="display:none;"><label class="fll">القسم المسؤول عنه (للمنتجات فقط)</label>'+
-       '<select class="fi" id="emp-cat"><option value="electronics">إلكترونيات</option><option value="beauty">تجميل</option><option value="home">منزلية</option><option value="clothes">ملابس</option><option value="school">مدرسية</option></select>'+
+    '<div class="fl" id="emp-cat-wrap"><label class="fll">القسم المسؤول عنه</label>'+
+      '<select class="fi" id="emp-cat">'+
+        '<option value="electronics">إلكترونيات</option>'+
+        '<option value="fashion">أزياء</option>'+
+        '<option value="home">منزل</option>'+
+        '<option value="beauty">جمال</option>'+
+        '<option value="kids">أطفال</option>'+
+        '<option value="sports">رياضة</option>'+
+        '<option value="tools">أدوات</option>'+
+      '</select>'+
     '</div>'+
-    '<button class="btn bp bb" onclick="A.saveEmployee()" style="width:100%;">إضافة الموظف / تحديثه</button>'+
+    '<button class="btn bp bb" onclick="A.saveEmployee()" style="width:100%;">➕ إنشاء الحساب</button>'+
   '</div>'+
   '<div class="cd"><div class="cti"><div class="ctl">القائمة الحالية</div></div><div id="emp-list"></div></div>'+
 '</div>'+
@@ -1249,55 +1256,85 @@ var A={
     if (!c) return;
     c.innerHTML = '<div style="padding:15px;text-align:center;color:#888;">جاري التحميل...</div>';
     try {
-        var snap = await FB.db.collection('admins').where('role', '==', 'employee').get();
-        if(snap.empty) { c.innerHTML = '<div class="emp">لا يوجد موظفين مسجلين</div>'; return; }
-        var h = '';
-        snap.forEach(function(doc) {
-            var d = doc.data();
-            h += '<div class="rw" style="display:flex;justify-content:space-between;align-items:center;padding:10px;">'+
-                 '<div><div class="rti" style="color:#fff;">'+esc(d.name||'بدون اسم')+'</div>'+
-                 '<div class="rs" style="font-size:11px;">'+esc(d.email||'')+' | '+esc(d.whatsapp||'')+'</div>'+
-                 '<div class="rs" style="font-size:10px;color:var(--pl);">'+ (d.permissions||[]).join(', ') +'</div></div>'+
-                 '<button class="btn bd bsm" onclick="A.deleteEmployee(\''+doc.id+'\')">🗑️</button></div>';
-        });
-        c.innerHTML = h;
-    } catch(e) { c.innerHTML = '<div class="emp">خطأ في التحميل</div>'; }
+      var snap = await FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr']).get();
+      if (snap.empty) { c.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">لا يوجد موظفون بعد</div>'; return; }
+      var catNames = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'جمال',kids:'أطفال',sports:'رياضة',tools:'أدوات'};
+      var h = '';
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        var roleLabel = d.role === 'cat_manager' ? ('📦 مدير قسم: ' + (catNames[d.assignedCategory] || d.assignedCategory || '—')) : '📋 مندوب طلبات';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid rgba(255,255,255,0.08);">'+
+             '<div style="flex:1;">'+
+             '<div style="color:#fff;font-weight:700;">'+esc(d.name||'بدون اسم')+'</div>'+
+             '<div style="font-size:11px;color:#aaa;">'+esc(d.email||'')+' | '+esc(d.whatsapp||'')+'</div>'+
+             '<div style="font-size:11px;color:#ff4d94;margin-top:4px;">'+roleLabel+'</div>'+
+             '</div>'+
+             '<button class="btn bd bsm" onclick="A.deleteEmployee(\''+doc.id+'\')">🗑️</button>'+
+             '</div>';
+      });
+      c.innerHTML = h;
+    } catch(e) {
+      c.innerHTML = '<div style="padding:15px;color:#f44;">خطأ: ' + e.message + '</div>';
+    }
   },
   saveEmployee: async function() {
     var name = document.getElementById('emp-name').value.trim();
     var email = document.getElementById('emp-email').value.trim();
+    var password = document.getElementById('emp-password').value.trim();
     var wa = document.getElementById('emp-wa').value.trim();
-    var perms = [];
-    document.querySelectorAll('.emp-perm:checked').forEach(function(cb) { perms.push(cb.value); });
+    var role = document.getElementById('emp-role').value;
     var cat = document.getElementById('emp-cat').value;
-    
+
     if (!name || !email) return this.toast('أدخل الاسم والبريد', 'err');
-    
+    if (!password || password.length < 6) return this.toast('كلمة السر 6+ أحرف', 'err');
+
     try {
-        // البحث عن المستخدم في Auth (أو إنشائه)
-        var userRecord;
-        try {
-            userRecord = await auth.getUserByEmail(email);
-        } catch(e) {
-            userRecord = await auth.createUser({ email: email, password: 'Chizen@' + Math.floor(Math.random()*10000) });
-        }
-        
-        await FB.db.collection('admins').doc(userRecord.uid).set({
-            name: name, email: email, whatsapp: wa, role: 'employee',
-            permissions: perms, employeeCategory: perms.includes('products') ? cat : null,
-            active: true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        
-        this.toast('✅ تم حفظ الموظف بنجاح. كلمة المرور: Chizen@XXXX (اطلب منه تغييرها)', 'suc');
-        this.renderEmployees();
-    } catch(e) { this.toast('فشل: ' + e.message, 'err'); }
+      var cfg = firebase.app().options || firebase.apps[0].options;
+      var secApp;
+      try { secApp = firebase.app('admin_secondary'); }
+      catch(e) { secApp = firebase.initializeApp(cfg, 'admin_secondary'); }
+
+      var cred = await secApp.auth().createUserWithEmailAndPassword(email, password);
+      var uid = cred.user.uid;
+      try { await cred.user.updateProfile({ displayName: name }); } catch(e){}
+      await secApp.auth().signOut();
+
+      await FB.db.collection('users').doc(uid).set({
+        name: name,
+        email: email,
+        whatsapp: wa,
+        role: role,
+        assignedCategory: role === 'cat_manager' ? cat : null,
+        active: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdBy: FB.currentUser ? FB.currentUser.uid : ''
+      }, { merge: true });
+
+      this.toast('✅ تم الإنشاء. كلمة السر: ' + password, 'suc');
+      document.getElementById('emp-name').value = '';
+      document.getElementById('emp-email').value = '';
+      document.getElementById('emp-password').value = '';
+      document.getElementById('emp-wa').value = '';
+      this.renderEmployees();
+    } catch(e) {
+      if (e.code === 'auth/email-already-in-use') return this.toast('البريد مسجل بالفعل', 'err');
+      this.toast('فشل: ' + e.message, 'err');
+    }
+  },
+  toggleEmpCat: function() {
+    var r = document.getElementById('emp-role').value;
+    var w = document.getElementById('emp-cat-wrap');
+    if (w) w.style.display = (r === 'cat_manager') ? 'block' : 'none';
   },
   deleteEmployee: async function(uid) {
     var self = this;
-    this.confirm('حذف الموظف؟', 'سيتم منع وصوله للوحة', async function() {
-        await FB.db.collection('admins').doc(uid).delete();
+    this.confirm('حذف الموظف؟', 'سيتم منع وصوله للوحة فوراً', async function() {
+      try {
+        await FB.db.collection('users').doc(uid).delete();
+        try { await FB.db.collection('admins').doc(uid).delete(); } catch(e){}
         self.renderEmployees();
         self.toast('تم الحذف', 'suc');
+      } catch(e) { self.toast('فشل: ' + e.message, 'err'); }
     });
   },
 
