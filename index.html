@@ -4127,22 +4127,25 @@ document.addEventListener('click', function(e) {
   waitForA();
 })();
 </script>
-<script id="chz-dedicated-delivery">
+
+<script id="chz-dedicated-delivery-v2">
 (function(){
   'use strict';
-  console.log('[DELIVERY-UI] loading...');
+  console.log('[DELIVERY-V2] loading...');
 
-  // ═══ الحالة ═══
   window.CD = {
     tab: 'ready',
     orders: [],
+    search: '',
     listener: null,
+    knownIds: new Set(),
+    initialized: false,
+    audioCtx: null,
     lastDriver: (function() {
       try { return JSON.parse(localStorage.getItem('chizen_last_driver') || '{}'); } catch(e) { return {}; }
     })()
   };
 
-  // ═══ أدوات ═══
   function esc(x) {
     return String(x == null ? '' : x).replace(/[&<>"']/g, function(c) {
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -4159,9 +4162,13 @@ document.addEventListener('click', function(e) {
     return 'not_ready';
   }
 
+  function getTs(o) {
+    if (!o.createdAt) return 0;
+    return o.createdAt.seconds ? o.createdAt.seconds * 1000 : 0;
+  }
+
   function timeAgo(o) {
-    if (!o.createdAt) return '';
-    var ts = o.createdAt.seconds ? o.createdAt.seconds * 1000 : 0;
+    var ts = getTs(o);
     if (!ts) return '';
     var diff = Math.floor((Date.now() - ts) / 60000);
     if (diff < 1) return 'الآن';
@@ -4171,62 +4178,196 @@ document.addEventListener('click', function(e) {
     return new Date(ts).toLocaleDateString('ar');
   }
 
-  // ═══ CSS ═══
+  function isLate(o) {
+    var ts = getTs(o);
+    if (!ts) return false;
+    var diff = (Date.now() - ts) / 60000;
+    return diff > 120; // أكثر من ساعتين
+  }
+
+  function lateDuration(o) {
+    var ts = getTs(o);
+    if (!ts) return '';
+    var diff = Math.floor((Date.now() - ts) / 60000);
+    var hours = Math.floor(diff / 60);
+    var mins = diff % 60;
+    return hours + 'س ' + mins + 'د';
+  }
+
+  // ═══ صوت الإشعار ═══
+  function playNotifySound() {
+    try {
+      if (!window.CD.audioCtx) {
+        window.CD.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      var ctx = window.CD.audioCtx;
+      if (ctx.state === 'suspended') ctx.resume();
+      
+      var now = ctx.currentTime;
+      // نغمة مزدوجة
+      [0, 0.15].forEach(function(offset) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = offset === 0 ? 880 : 1100;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0, now + offset);
+        gain.gain.linearRampToValueAtTime(0.2, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.3);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.3);
+      });
+    } catch(e) { console.warn('[DELIVERY] sound error:', e.message); }
+  }
+
+  // ═══ إشعار المتصفح ═══
+  function browserNotify(title, body) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+      try { new Notification(title, { body: body, icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚚</text></svg>', tag: 'delivery-new' }); } catch(e) {}
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  }
+
+  // ═══ CSS متعدد الأوضاع ═══
   var style = document.createElement('style');
-  style.id = 'delivery-ui-css';
+  style.id = 'delivery-v2-css';
   style.textContent = 
-    '.dlv-app{position:fixed;inset:0;z-index:9000;background:radial-gradient(circle at 50% 0%,#151b3a 0%,#07091d 80%);display:none;flex-direction:column;font-family:Tajawal,sans-serif;direction:rtl;color:#fff;}' +
+    // ═══ Dark theme (default) ═══
+    '.dlv-app{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;font-family:Tajawal,sans-serif;direction:rtl;' +
+      'background:radial-gradient(circle at 50% 0%,#151b3a 0%,#07091d 80%);color:#fff;' +
+      '--dlv-bg:#07091d;--dlv-header-bg:rgba(10,8,30,0.95);--dlv-card-bg:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));' +
+      '--dlv-card-border:rgba(16,185,129,0.25);--dlv-text:#fff;--dlv-text-sub:#b8c0d8;--dlv-text-muted:#6b7591;' +
+      '--dlv-nav-bg:rgba(10,8,30,0.98);--dlv-input-bg:rgba(15,10,35,0.9);--dlv-input-border:rgba(168,85,247,0.4);' +
+      '--dlv-divider:rgba(168,85,247,0.25);--dlv-late:#ef4444;' +
+    '}' +
     '.dlv-app.active{display:flex;}' +
-    '.dlv-header{padding:14px 18px;background:rgba(10,8,30,0.95);border-bottom:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;}' +
-    '.dlv-main{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;}' +
-    '.dlv-nav{display:flex;background:rgba(10,8,30,0.98);border-top:1px solid rgba(168,85,247,0.25);flex-shrink:0;}' +
-    '.dlv-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;background:transparent;border:none;color:rgba(255,255,255,0.55);font-family:inherit;cursor:pointer;font-weight:700;position:relative;transition:all 0.2s;}' +
-    '.dlv-nav-btn.active{color:#10b981;background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.1));}' +
-    '.dlv-nav-btn.active::after{content:"";position:absolute;bottom:6px;left:35%;right:35%;height:3px;background:#10b981;border-radius:2px;box-shadow:0 0 8px #10b981;}' +
-    '.dlv-nav-btn .icon{font-size:22px;}' +
+    // Light theme
+    '.dlv-app[data-theme="light"]{' +
+      'background:linear-gradient(135deg,#f5f7fb,#eef2ff);color:#1a1a2e;' +
+      '--dlv-bg:#f5f7fb;--dlv-header-bg:#ffffff;--dlv-card-bg:#ffffff;' +
+      '--dlv-card-border:#e5e7eb;--dlv-text:#1a1a2e;--dlv-text-sub:#6b7280;--dlv-text-muted:#9ca3af;' +
+      '--dlv-nav-bg:#ffffff;--dlv-input-bg:#f9fafb;--dlv-input-border:#e5e7eb;' +
+      '--dlv-divider:#e5e7eb;--dlv-late:#dc2626;' +
+    '}' +
+    // Header
+    '.dlv-header{padding:12px 16px;background:var(--dlv-header-bg);border-bottom:1px solid var(--dlv-divider);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;flex-wrap:wrap;}' +
+    // Main
+    '.dlv-main{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;background:var(--dlv-bg);}' +
+    // Stats row
+    '.dlv-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}' +
+    '.dlv-stat{background:var(--dlv-card-bg);border:1px solid var(--dlv-card-border);border-radius:12px;padding:10px 6px;text-align:center;}' +
+    '.dlv-stat-icon{font-size:18px;margin-bottom:2px;}' +
+    '.dlv-stat-label{font-size:9px;color:var(--dlv-text-muted);margin-bottom:4px;font-weight:700;}' +
+    '.dlv-stat-value{font-size:17px;font-weight:900;}' +
+    // Search
+    '.dlv-search-wrap{position:relative;margin-bottom:12px;}' +
+    '.dlv-search{width:100%;padding:11px 40px 11px 14px;border-radius:10px;border:1.5px solid var(--dlv-input-border);' +
+      'background:var(--dlv-input-bg);color:var(--dlv-text);font-family:Tajawal,sans-serif;font-size:13px;box-sizing:border-box;outline:none;}' +
+    '.dlv-search::placeholder{color:var(--dlv-text-muted);}' +
+    '.dlv-search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;opacity:0.6;}' +
+    // Toggle theme button
+    '.dlv-theme-btn{background:var(--dlv-input-bg);border:1.5px solid var(--dlv-input-border);color:var(--dlv-text);' +
+      'width:38px;height:38px;border-radius:10px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}' +
+    // Nav
+    '.dlv-nav{display:flex;background:var(--dlv-nav-bg);border-top:1px solid var(--dlv-divider);flex-shrink:0;}' +
+    '.dlv-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;' +
+      'background:transparent;border:none;color:var(--dlv-text-muted);font-family:inherit;cursor:pointer;font-weight:700;position:relative;}' +
+    '.dlv-nav-btn.active{color:#10b981;background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(5,150,105,0.05));}' +
+    '.dlv-nav-btn.active::after{content:"";position:absolute;bottom:4px;left:35%;right:35%;height:3px;background:#10b981;border-radius:2px;}' +
+    '.dlv-nav-btn .icon{font-size:20px;}' +
     '.dlv-nav-btn .label{font-size:10px;}' +
-    '.dlv-nav-btn .count{position:absolute;top:6px;right:calc(50% - 24px);background:#ef4444;color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:10px;min-width:16px;text-align:center;}' +
-    '.dlv-card{background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:14px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;}' +
+    '.dlv-nav-btn .count{position:absolute;top:4px;right:calc(50% - 22px);background:#ef4444;color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:10px;min-width:14px;text-align:center;}' +
+    // Card
+    '.dlv-card{background:var(--dlv-card-bg);border:1px solid var(--dlv-card-border);border-radius:14px;padding:14px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;}' +
+    '.dlv-card.is-late{border-color:var(--dlv-late);background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(239,68,68,0.02));}' +
     '.dlv-card:active{transform:scale(0.98);}' +
+    '.dlv-late-badge{background:var(--dlv-late);color:#fff;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:900;animation:dlvPulse 1.5s infinite;}' +
+    '@keyframes dlvPulse{0%,100%{opacity:1;}50%{opacity:0.6;}}' +
+    // Empty
     '.dlv-empty{text-align:center;padding:60px 20px;}' +
+    // Modal
     '.dlv-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9500;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}' +
     '.dlv-modal.active{display:flex;}' +
-    '.dlv-modal-content{background:#0a0e1a;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:20px;}' +
-    '@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}';
+    '.dlv-modal-content{background:var(--dlv-bg);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:20px;color:var(--dlv-text);}' +
+    '.dlv-modal-content input,.dlv-modal-content textarea{background:var(--dlv-input-bg);color:var(--dlv-text);border:1.5px solid var(--dlv-input-border);}' +
+    '.dlv-modal-content input::placeholder,.dlv-modal-content textarea::placeholder{color:var(--dlv-text-muted);}' +
+    // Utilities for light mode text fixes
+    '.dlv-app[data-theme="light"] .dlv-card-name{color:#1a1a2e;}' +
+    '.dlv-app[data-theme="light"] .dlv-header-title{color:#1a1a2e;}';
   document.head.appendChild(style);
 
   // ═══ بناء الهيكل ═══
   function buildShell() {
-    var D = window.CD;
     return '' +
       '<header class="dlv-header">' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
-          '<div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 12px rgba(16,185,129,0.4);">🚚</div>' +
+          '<div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 3px 10px rgba(16,185,129,0.4);">🚚</div>' +
           '<div>' +
-            '<div style="color:#fff;font-weight:900;font-size:15px;">لوحة المندوب</div>' +
-            '<div style="color:#10b981;font-size:11px;margin-top:2px;">إدارة التوصيل والطلبات</div>' +
+            '<div class="dlv-header-title" style="font-weight:900;font-size:14px;color:var(--dlv-text);">لوحة المندوب</div>' +
+            '<div style="color:#10b981;font-size:10px;margin-top:1px;">إدارة التوصيل</div>' +
           '</div>' +
         '</div>' +
-        '<button onclick="window.__dlvLogout()" style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;padding:8px 14px;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🚪 خروج</button>' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<button class="dlv-theme-btn" onclick="window.__dlvToggleTheme()" id="dlv-theme-icon">🌙</button>' +
+          '<button onclick="window.__dlvLogout()" style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;padding:8px 12px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;">🚪 خروج</button>' +
+        '</div>' +
       '</header>' +
       '<main class="dlv-main" id="dlv-main"></main>' +
       '<nav class="dlv-nav">' +
         '<button class="dlv-nav-btn active" data-tab="ready" onclick="window.__dlvSwitchTab(\'ready\',this)">' +
-          '<span class="icon">✅</span>' +
-          '<span class="label">جاهزة</span>' +
+          '<span class="icon">✅</span><span class="label">جاهزة</span>' +
           '<span class="count" id="dlv-count-ready" style="display:none;">0</span>' +
         '</button>' +
         '<button class="dlv-nav-btn" data-tab="shipping" onclick="window.__dlvSwitchTab(\'shipping\',this)">' +
-          '<span class="icon">🚚</span>' +
-          '<span class="label">في التوصيل</span>' +
+          '<span class="icon">🚚</span><span class="label">توصيل</span>' +
           '<span class="count" id="dlv-count-shipping" style="display:none;">0</span>' +
         '</button>' +
         '<button class="dlv-nav-btn" data-tab="delivered" onclick="window.__dlvSwitchTab(\'delivered\',this)">' +
-          '<span class="icon">📦</span>' +
-          '<span class="label">تم التسليم</span>' +
+          '<span class="icon">📦</span><span class="label">تم التسليم</span>' +
           '<span class="count" id="dlv-count-delivered" style="display:none;">0</span>' +
         '</button>' +
       '</nav>';
+  }
+
+  // ═══ إحصائيات اليوم ═══
+  function buildStats() {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var todayTs = today.getTime();
+    var todayOrders = window.CD.orders.filter(function(o) {
+      return getTs(o) >= todayTs;
+    });
+    var todayRevenue = 0;
+    var todayDelivered = 0;
+    todayOrders.forEach(function(o) {
+      var p = o.payment || {};
+      if (p.status === 'verified') {
+        todayRevenue += parseFloat(o.total) || 0;
+      }
+      if (o.status === 'completed' || (o.workflowStatus === 'delivered')) {
+        todayDelivered++;
+      }
+    });
+    
+    return '<div class="dlv-stats">' +
+      '<div class="dlv-stat" style="border-color:rgba(59,130,246,0.4);">' +
+        '<div class="dlv-stat-icon">📦</div>' +
+        '<div class="dlv-stat-label">طلبات اليوم</div>' +
+        '<div class="dlv-stat-value" style="color:#3b82f6;">' + todayOrders.length + '</div>' +
+      '</div>' +
+      '<div class="dlv-stat" style="border-color:rgba(236,72,153,0.4);">' +
+        '<div class="dlv-stat-icon">💰</div>' +
+        '<div class="dlv-stat-label">إيرادات اليوم</div>' +
+        '<div class="dlv-stat-value" style="color:#ec4899;">' + todayRevenue.toFixed(0) + '</div>' +
+      '</div>' +
+      '<div class="dlv-stat" style="border-color:rgba(16,185,129,0.4);">' +
+        '<div class="dlv-stat-icon">✅</div>' +
+        '<div class="dlv-stat-label">تم التسليم</div>' +
+        '<div class="dlv-stat-value" style="color:#10b981;">' + todayDelivered + '</div>' +
+      '</div>' +
+    '</div>';
   }
 
   // ═══ رسم المحتوى ═══
@@ -4235,21 +4376,34 @@ document.addEventListener('click', function(e) {
     var main = document.getElementById('dlv-main');
     if (!main) return;
     
-    // فلترة
+    // فلترة حسب التبويب
     var filtered = D.orders.filter(function(o) { return categorize(o) === D.tab; });
+    
+    // بحث
+    if (D.search) {
+      var q = D.search.toLowerCase().trim();
+      filtered = filtered.filter(function(o) {
+        return (o.id || '').toLowerCase().indexOf(q) > -1 ||
+               (o.name || '').toLowerCase().indexOf(q) > -1 ||
+               (o.phone || '').toLowerCase().indexOf(q) > -1 ||
+               (o.pickup || '').toLowerCase().indexOf(q) > -1;
+      });
+    }
+    
+    // ترتيب: الطلبات المتأخرة أولاً ثم الأحدث
     filtered.sort(function(a, b) {
-      var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-      var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-      return tb - ta;
+      var la = isLate(a), lb = isLate(b);
+      if (la && !lb) return -1;
+      if (!la && lb) return 1;
+      return getTs(b) - getTs(a);
     });
 
-    // إحصاء
+    // عدادات
     var counts = { ready: 0, shipping: 0, delivered: 0 };
     D.orders.forEach(function(o) {
       var cat = categorize(o);
       if (counts[cat] !== undefined) counts[cat]++;
     });
-    
     ['ready', 'shipping', 'delivered'].forEach(function(k) {
       var badge = document.getElementById('dlv-count-' + k);
       if (badge) {
@@ -4258,25 +4412,31 @@ document.addEventListener('click', function(e) {
       }
     });
 
-    // محتوى
+    // بناء HTML
+    var html = buildStats();
+    
+    // بحث
+    html += '<div class="dlv-search-wrap">' +
+      '<input type="text" class="dlv-search" placeholder="🔍 ابحث برقم / اسم / هاتف / عنوان..." value="' + esc(D.search) + '" oninput="window.__dlvSearch(this.value)">' +
+      '<span class="dlv-search-icon">🔍</span>' +
+    '</div>';
+    
+    // قائمة
     if (filtered.length === 0) {
-      var msgs = {
-        ready: { icon: '🎉', title: 'لا توجد طلبات جاهزة', sub: 'كل الطلبات تم إرسالها' },
-        shipping: { icon: '🚚', title: 'لا توجد طلبات في التوصيل', sub: 'كل التوصيلات مكتملة' },
-        delivered: { icon: '📦', title: 'لا توجد طلبات مسلّمة', sub: 'لم يتم تسليم طلبات بعد' }
-      };
-      var m = msgs[D.tab];
-      main.innerHTML = '<div class="dlv-empty">' +
-        '<div style="font-size:72px;margin-bottom:16px;">' + m.icon + '</div>' +
-        '<div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:6px;">' + m.title + '</div>' +
-        '<div style="font-size:12px;color:#6b7591;">' + m.sub + '</div>' +
+      var emptyMsg = D.search 
+        ? 'لا نتائج للبحث "' + esc(D.search) + '"'
+        : (D.tab === 'ready' ? '🎉 لا طلبات جاهزة حالياً' :
+           D.tab === 'shipping' ? '🚚 لا توجد توصيلات نشطة' :
+           '📦 لا توجد طلبات مسلّمة');
+      html += '<div class="dlv-empty">' +
+        '<div style="font-size:72px;margin-bottom:16px;">' + (D.search ? '🔍' : '📭') + '</div>' +
+        '<div style="font-size:15px;font-weight:800;color:var(--dlv-text);">' + emptyMsg + '</div>' +
       '</div>';
-      return;
+    } else {
+      html += filtered.map(function(o) { return buildCard(o); }).join('');
     }
-
-    main.innerHTML = filtered.map(function(o) {
-      return buildCard(o);
-    }).join('');
+    
+    main.innerHTML = html;
   }
 
   // ═══ بطاقة طلب ═══
@@ -4284,6 +4444,10 @@ document.addEventListener('click', function(e) {
     var oid = o.id || '';
     var di = o.deliveryInfo || {};
     var date = timeAgo(o);
+    var late = isLate(o);
+    var lateBadge = late 
+      ? '<span class="dlv-late-badge">⚠️ متأخر ' + lateDuration(o) + '</span>'
+      : '';
     
     var actions = '';
     if (window.CD.tab === 'ready') {
@@ -4291,7 +4455,7 @@ document.addEventListener('click', function(e) {
     } else if (window.CD.tab === 'shipping') {
       actions = '<div style="margin-top:10px;padding:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;font-size:11px;">' +
         '<div style="color:#10b981;font-weight:800;margin-bottom:3px;">🚚 ' + esc(di.driverName || '—') + '</div>' +
-        '<div style="color:#b8c0d8;direction:ltr;text-align:right;">' + esc(di.driverPhone || '—') + '</div>' +
+        '<div style="color:var(--dlv-text-sub);direction:ltr;text-align:right;">' + esc(di.driverPhone || '—') + '</div>' +
       '</div>' +
       '<div style="display:flex;gap:6px;margin-top:8px;">' +
         '<button onclick="event.stopPropagation();window.__dlvMarkDelivered(\'' + oid + '\')" style="flex:1;padding:10px;background:rgba(16,185,129,0.15);border:1.5px solid #10b981;color:#10b981;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;font-family:inherit;">✅ تم التسليم</button>' +
@@ -4299,25 +4463,53 @@ document.addEventListener('click', function(e) {
       '</div>';
     }
 
-    return '<div class="dlv-card" onclick="window.__dlvOpenDetails(\'' + oid + '\')">' +
+    return '<div class="dlv-card' + (late ? ' is-late' : '') + '" onclick="window.__dlvOpenDetails(\'' + oid + '\')">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">' +
             '<span style="font-weight:900;color:#10b981;font-size:13px;">#' + esc(oid.substring(0, 10)) + '</span>' +
-            '<span style="font-size:10px;color:#666;">' + esc(date) + '</span>' +
+            '<span style="font-size:10px;color:var(--dlv-text-muted);">' + esc(date) + '</span>' +
+            lateBadge +
           '</div>' +
-          '<div style="font-size:13px;color:#fff;font-weight:700;">' + esc(o.name || 'عميل') + '</div>' +
-          '<div style="font-size:11px;color:#888;">📱 ' + esc(o.phone || '—') + '</div>' +
+          '<div class="dlv-card-name" style="font-size:13px;color:var(--dlv-text);font-weight:700;">' + esc(o.name || 'عميل') + '</div>' +
+          '<div style="font-size:11px;color:var(--dlv-text-muted);">📱 ' + esc(o.phone || '—') + '</div>' +
         '</div>' +
         '<div style="text-align:left;">' +
           '<div style="font-weight:900;color:#ff4d94;font-size:15px;">' + (o.total || 0) + '</div>' +
-          '<div style="font-size:9px;color:#666;">ر.س</div>' +
+          '<div style="font-size:9px;color:var(--dlv-text-muted);">ر.س</div>' +
         '</div>' +
       '</div>' +
-      '<div style="font-size:11px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:8px;">📍 ' + esc(o.pickup || 'غير محدد') + '</div>' +
+      '<div style="font-size:11px;color:var(--dlv-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 8px;background:var(--dlv-input-bg);border-radius:8px;">📍 ' + esc(o.pickup || 'غير محدد') + '</div>' +
       actions +
     '</div>';
   }
+
+  // ═══ بحث ═══
+  window.__dlvSearch = function(q) {
+    window.CD.search = q || '';
+    clearTimeout(window.__dlvSearchTimer);
+    window.__dlvSearchTimer = setTimeout(renderContent, 200);
+  };
+
+  // ═══ تبديل التبويبات ═══
+  window.__dlvSwitchTab = function(tab, btn) {
+    window.CD.tab = tab;
+    document.querySelectorAll('.dlv-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    renderContent();
+  };
+
+  // ═══ تبديل الثيم ═══
+  window.__dlvToggleTheme = function() {
+    var app = document.getElementById('delivery-mgr-app');
+    if (!app) return;
+    var current = app.getAttribute('data-theme') || 'dark';
+    var next = current === 'dark' ? 'light' : 'dark';
+    app.setAttribute('data-theme', next);
+    try { localStorage.setItem('chizen_dlv_theme', next); } catch(e) {}
+    var icon = document.getElementById('dlv-theme-icon');
+    if (icon) icon.textContent = next === 'light' ? '☀️' : '🌙';
+  };
 
   // ═══ تفاصيل الطلب ═══
   window.__dlvOpenDetails = function(orderId) {
@@ -4327,7 +4519,6 @@ document.addEventListener('click', function(e) {
     var cats = order.categories || {};
     var catKeys = Object.keys(cats);
     var catNames = {electronics:'إلكترونيات', fashion:'أزياء', home:'منزل', beauty:'جمال', kids:'أطفال', sports:'رياضة', tools:'أدوات'};
-    
     var itemsHtml = '';
     catKeys.forEach(function(k) {
       var c = cats[k];
@@ -4336,48 +4527,33 @@ document.addEventListener('click', function(e) {
       itemsHtml += '<div style="margin-bottom:10px;">' +
         '<div style="font-size:11px;color:#10b981;font-weight:800;margin-bottom:4px;">📦 ' + (catNames[k] || k) + '</div>' +
         items.map(function(it) {
-          return '<div style="display:flex;justify-content:space-between;padding:4px 8px;background:rgba(255,255,255,0.03);border-radius:6px;margin-bottom:3px;font-size:11px;">' +
-            '<span style="color:#fff;">' + esc(it.name || '—') + ' × ' + (it.qty || 1) + '</span>' +
-            '<span style="color:#ff4d94;">' + ((it.qty || 1) * (it.price || 0)) + ' ر.س</span>' +
+          return '<div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--dlv-input-bg);border-radius:6px;margin-bottom:3px;font-size:11px;">' +
+            '<span style="color:var(--dlv-text);">' + esc(it.name || '—') + ' × ' + (it.qty || 1) + '</span>' +
+            '<span style="color:#ff4d94;">' + ((it.qty || 1) * (it.price || 0)) + '</span>' +
           '</div>';
         }).join('') +
       '</div>';
     });
     
-    var body = '<div class="dlv-modal" onclick="if(event.target===this)this.classList.remove(\'active\')">' +
+    var body = '<div class="dlv-modal active" onclick="if(event.target===this)this.classList.remove(&quot;active&quot;)">' +
       '<div class="dlv-modal-content">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
           '<div style="font-weight:900;color:#10b981;font-size:14px;">📋 تفاصيل الطلب</div>' +
-          '<button onclick="this.closest(\'.dlv-modal\').classList.remove(\'active\')" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>' +
+          '<button onclick="this.closest(&quot;.dlv-modal&quot;).classList.remove(&quot;active&quot;)" style="background:var(--dlv-input-bg);border:none;color:var(--dlv-text);width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>' +
         '</div>' +
         '<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;margin-bottom:14px;">' +
           '<div style="font-size:11px;color:#10b981;margin-bottom:4px;">رقم الطلب</div>' +
-          '<div style="font-weight:900;color:#fff;font-family:monospace;font-size:13px;">#' + esc(orderId) + '</div>' +
+          '<div style="font-weight:900;color:var(--dlv-text);font-family:monospace;font-size:13px;">#' + esc(orderId) + '</div>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">' +
-          '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;">' +
-            '<div style="font-size:10px;color:#888;margin-bottom:2px;">العميل</div>' +
-            '<div style="font-size:12px;color:#fff;font-weight:700;">' + esc(order.name || '—') + '</div>' +
-          '</div>' +
-          '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;">' +
-            '<div style="font-size:10px;color:#888;margin-bottom:2px;">الهاتف</div>' +
-            '<div style="font-size:12px;color:#fff;direction:ltr;">' + esc(order.phone || '—') + '</div>' +
-          '</div>' +
+          '<div style="background:var(--dlv-input-bg);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--dlv-text-muted);margin-bottom:2px;">العميل</div><div style="font-size:12px;color:var(--dlv-text);font-weight:700;">' + esc(order.name || '—') + '</div></div>' +
+          '<div style="background:var(--dlv-input-bg);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--dlv-text-muted);margin-bottom:2px;">الهاتف</div><div style="font-size:12px;color:var(--dlv-text);direction:ltr;">' + esc(order.phone || '—') + '</div></div>' +
         '</div>' +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px;">' +
-          '<div style="font-size:10px;color:#888;margin-bottom:2px;">📍 العنوان</div>' +
-          '<div style="font-size:12px;color:#fff;">' + esc(order.pickup || '—') + '</div>' +
-        '</div>' +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px;">' +
-          '<div style="font-size:10px;color:#888;margin-bottom:6px;">📦 المنتجات</div>' +
-          (itemsHtml || '<div style="color:#666;font-size:11px;">لا منتجات</div>') +
-        '</div>' +
-        '<div style="background:linear-gradient(135deg,rgba(236,72,153,0.1),rgba(168,85,247,0.05));border:1px solid rgba(236,72,153,0.3);border-radius:12px;padding:12px;text-align:center;">' +
-          '<div style="font-size:11px;color:#888;margin-bottom:2px;">الإجمالي</div>' +
-          '<div style="font-size:20px;font-weight:900;color:#ff4d94;">' + (order.total || 0) + ' ر.س</div>' +
-        '</div>' +
+        '<div style="background:var(--dlv-input-bg);border-radius:10px;padding:10px;margin-bottom:12px;"><div style="font-size:10px;color:var(--dlv-text-muted);margin-bottom:2px;">📍 العنوان</div><div style="font-size:12px;color:var(--dlv-text);">' + esc(order.pickup || '—') + '</div></div>' +
+        '<div style="background:var(--dlv-input-bg);border-radius:10px;padding:10px;margin-bottom:12px;"><div style="font-size:10px;color:var(--dlv-text-muted);margin-bottom:6px;">📦 المنتجات</div>' + (itemsHtml || '<div style="color:var(--dlv-text-muted);font-size:11px;">لا منتجات</div>') + '</div>' +
+        '<div style="background:linear-gradient(135deg,rgba(236,72,153,0.1),rgba(168,85,247,0.05));border:1px solid rgba(236,72,153,0.3);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--dlv-text-muted);margin-bottom:2px;">الإجمالي</div><div style="font-size:20px;font-weight:900;color:#ff4d94;">' + (order.total || 0) + ' ر.س</div></div>' +
         '<div style="margin-top:14px;display:flex;gap:8px;">' +
-          '<button onclick="this.closest(\'.dlv-modal\').classList.remove(\'active\')" style="flex:1;padding:12px;background:rgba(255,255,255,0.08);border:none;color:#fff;border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer;">إغلاق</button>' +
+          '<button onclick="this.closest(&quot;.dlv-modal&quot;).classList.remove(&quot;active&quot;)" style="flex:1;padding:12px;background:var(--dlv-input-bg);border:none;color:var(--dlv-text);border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer;">إغلاق</button>' +
           (order.phone ? '<a href="https://wa.me/' + String(order.phone).replace(/\D/g, '') + '" target="_blank" style="flex:1;padding:12px;background:#25D366;color:#fff;border-radius:10px;font-weight:800;text-align:center;text-decoration:none;font-family:inherit;">💬 واتساب</a>' : '') +
         '</div>' +
       '</div>' +
@@ -4385,65 +4561,47 @@ document.addEventListener('click', function(e) {
     
     var existing = document.querySelector('.dlv-modal');
     if (existing) existing.remove();
-    
     var wrapper = document.createElement('div');
     wrapper.innerHTML = body;
     document.body.appendChild(wrapper.firstElementChild);
-    setTimeout(function() {
-      document.querySelector('.dlv-modal').classList.add('active');
-    }, 10);
   };
 
-  // ═══ فتح تعيين السائق ═══
+  // ═══ تعيين سائق ═══
   window.__dlvOpenAssign = function(orderId) {
     var order = window.CD.orders.find(function(o) { return o.id === orderId; });
     if (!order) return;
-    
     var last = window.CD.lastDriver || {};
     
-    var body = '<div class="dlv-modal" onclick="if(event.target===this)this.classList.remove(\'active\')">' +
+    var body = '<div class="dlv-modal active" onclick="if(event.target===this)this.classList.remove(&quot;active&quot;)">' +
       '<div class="dlv-modal-content">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
           '<div style="font-weight:900;color:#10b981;font-size:14px;">🚚 تعيين سائق</div>' +
-          '<button onclick="this.closest(\'.dlv-modal\').classList.remove(\'active\')" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>' +
+          '<button onclick="this.closest(&quot;.dlv-modal&quot;).classList.remove(&quot;active&quot;)" style="background:var(--dlv-input-bg);border:none;color:var(--dlv-text);width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>' +
         '</div>' +
         '<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;margin-bottom:14px;">' +
           '<div style="font-size:11px;color:#10b981;font-weight:900;">📦 #' + esc(orderId.substring(0, 10)) + '</div>' +
-          '<div style="font-size:11px;color:#fff;margin-top:4px;">' + esc(order.name || '—') + ' • ' + esc(order.phone || '—') + '</div>' +
-          '<div style="font-size:11px;color:#888;margin-top:2px;">📍 ' + esc(order.pickup || '—') + '</div>' +
+          '<div style="font-size:11px;color:var(--dlv-text);margin-top:4px;">' + esc(order.name || '—') + ' • ' + esc(order.phone || '—') + '</div>' +
+          '<div style="font-size:11px;color:var(--dlv-text-muted);margin-top:2px;">📍 ' + esc(order.pickup || '—') + '</div>' +
         '</div>' +
-        '<div style="margin-bottom:12px;">' +
-          '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">اسم السائق *</label>' +
-          '<input id="dlv-driver-name" value="' + esc(last.name || '') + '" placeholder="أحمد علي" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;">' +
-        '</div>' +
-        '<div style="margin-bottom:12px;">' +
-          '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">رقم واتساب *</label>' +
-          '<input id="dlv-driver-phone" type="tel" value="' + esc(last.phone || '') + '" placeholder="967771234567" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;direction:ltr;box-sizing:border-box;outline:none;">' +
-        '</div>' +
+        '<div style="margin-bottom:12px;"><label style="display:block;font-size:11px;color:var(--dlv-text-sub);margin-bottom:4px;font-weight:700;">اسم السائق *</label><input id="dlv-driver-name" value="' + esc(last.name || '') + '" placeholder="أحمد علي" style="width:100%;padding:12px;border-radius:10px;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;"></div>' +
+        '<div style="margin-bottom:12px;"><label style="display:block;font-size:11px;color:var(--dlv-text-sub);margin-bottom:4px;font-weight:700;">رقم واتساب *</label><input id="dlv-driver-phone" type="tel" value="' + esc(last.phone || '') + '" placeholder="967771234567" style="width:100%;padding:12px;border-radius:10px;font-family:inherit;font-size:13px;direction:ltr;box-sizing:border-box;outline:none;"></div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">' +
-          '<div><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">المنطقة</label><input id="dlv-region" placeholder="صنعاء" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;"></div>' +
-          '<div><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">رسوم التوصيل</label><input id="dlv-fee" type="number" value="0" placeholder="0" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;"></div>' +
+          '<div><label style="display:block;font-size:11px;color:var(--dlv-text-sub);margin-bottom:4px;font-weight:700;">المنطقة</label><input id="dlv-region" placeholder="صنعاء" style="width:100%;padding:12px;border-radius:10px;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;"></div>' +
+          '<div><label style="display:block;font-size:11px;color:var(--dlv-text-sub);margin-bottom:4px;font-weight:700;">رسوم التوصيل</label><input id="dlv-fee" type="number" value="0" placeholder="0" style="width:100%;padding:12px;border-radius:10px;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;"></div>' +
         '</div>' +
-        '<div style="margin-bottom:14px;">' +
-          '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">ملاحظة للسائق (اختياري)</label>' +
-          '<textarea id="dlv-note" placeholder="اتصل قبل الوصول..." style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;height:60px;resize:none;box-sizing:border-box;outline:none;"></textarea>' +
-        '</div>' +
+        '<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--dlv-text-sub);margin-bottom:4px;font-weight:700;">ملاحظة (اختياري)</label><textarea id="dlv-note" placeholder="اتصل قبل الوصول..." style="width:100%;padding:12px;border-radius:10px;font-family:inherit;font-size:13px;height:60px;resize:none;box-sizing:border-box;outline:none;"></textarea></div>' +
         '<div style="display:flex;gap:8px;">' +
-          '<button onclick="this.closest(\'.dlv-modal\').classList.remove(\'active\')" style="flex:1;padding:14px;background:rgba(255,255,255,0.08);border:none;color:#fff;border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer;">إلغاء</button>' +
-          '<button onclick="window.__dlvAssign(\'' + orderId + '\')" style="flex:2;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);">📤 إرسال واتساب</button>' +
+          '<button onclick="this.closest(&quot;.dlv-modal&quot;).classList.remove(&quot;active&quot;)" style="flex:1;padding:14px;background:var(--dlv-input-bg);border:none;color:var(--dlv-text);border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer;">إلغاء</button>' +
+          '<button onclick="window.__dlvAssign(&quot;' + orderId + '&quot;)" style="flex:2;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);">📤 إرسال واتساب</button>' +
         '</div>' +
       '</div>' +
     '</div>';
     
     var existing = document.querySelector('.dlv-modal');
     if (existing) existing.remove();
-    
     var wrapper = document.createElement('div');
     wrapper.innerHTML = body;
     document.body.appendChild(wrapper.firstElementChild);
-    setTimeout(function() {
-      document.querySelector('.dlv-modal').classList.add('active');
-    }, 10);
   };
 
   // ═══ تنفيذ الإرسال ═══
@@ -4481,11 +4639,9 @@ document.addEventListener('click', function(e) {
         }
       });
       
-      // حفظ السائق
       localStorage.setItem('chizen_last_driver', JSON.stringify({ name: driverName, phone: cleanPhone }));
       window.CD.lastDriver = { name: driverName, phone: cleanPhone };
       
-      // رسالة واتساب
       var items = order.items || [];
       var itemsList = items.map(function(it) { return '• ' + (it.name || 'منتج') + ' × ' + (it.qty || 1); }).join('\n');
       
@@ -4501,7 +4657,6 @@ document.addEventListener('click', function(e) {
       if (note) waMsg += '\n\n📝 *ملاحظة:* ' + note;
       waMsg += '\n\nشكراً 🌟';
       
-      // إشعار للعميل
       if (order.customerId && FB.addUserNotification) {
         try {
           await FB.addUserNotification(order.customerId, {
@@ -4512,14 +4667,10 @@ document.addEventListener('click', function(e) {
         } catch(e) {}
       }
       
-      document.querySelector('.dlv-modal').classList.remove('active');
-      setTimeout(function() { document.querySelector('.dlv-modal').remove(); }, 300);
+      var modal = document.querySelector('.dlv-modal');
+      if (modal) modal.remove();
       
       window.open('https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(waMsg), '_blank');
-      
-      // إعادة تحميل
-      setTimeout(function() { loadOrders(); }, 500);
-      
     } catch(e) {
       alert('فشل: ' + e.message);
     }
@@ -4536,20 +4687,7 @@ document.addEventListener('click', function(e) {
         status: 'completed',
         deliveredAt: new Date()
       });
-      loadOrders();
-    } catch(e) {
-      alert('فشل: ' + e.message);
-    }
-  };
-
-  // ═══ تبديل التبويبات ═══
-  window.__dlvSwitchTab = function(tab, btn) {
-    window.CD.tab = tab;
-    document.querySelectorAll('.dlv-nav-btn').forEach(function(b) {
-      b.classList.remove('active');
-    });
-    if (btn) btn.classList.add('active');
-    renderContent();
+    } catch(e) { alert('فشل: ' + e.message); }
   };
 
   // ═══ خروج ═══
@@ -4557,27 +4695,8 @@ document.addEventListener('click', function(e) {
     if (!confirm('تسجيل الخروج؟')) return;
     try { firebase.auth().signOut(); } catch(e) {}
     try { localStorage.clear(); } catch(e) {}
-    setTimeout(function() {
-      window.location.replace(window.location.pathname + '?logout=' + Date.now());
-    }, 300);
+    setTimeout(function() { window.location.replace(window.location.pathname + '?logout=' + Date.now()); }, 300);
   };
-
-  // ═══ تحميل الطلبات ═══
-  async function loadOrders() {
-    try {
-      var snap = await FB.db.collection('orders').orderBy('createdAt', 'desc').limit(100).get();
-      var orders = [];
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        d.id = d.id || doc.id;
-        orders.push(d);
-      });
-      window.CD.orders = orders;
-      renderContent();
-    } catch(e) {
-      console.warn('[DELIVERY-UI] load orders error:', e.message);
-    }
-  }
 
   // ═══ onSnapshot ═══
   function setupListener() {
@@ -4590,49 +4709,81 @@ document.addEventListener('click', function(e) {
         .limit(100)
         .onSnapshot(function(snap) {
           var orders = [];
+          var newReadyCount = 0;
+          var isFirstLoad = window.CD.knownIds.size === 0;
+          
           snap.forEach(function(doc) {
             var d = doc.data();
             d.id = d.id || doc.id;
             orders.push(d);
+            
+            if (!window.CD.knownIds.has(d.id)) {
+              window.CD.knownIds.add(d.id);
+              if (!isFirstLoad && categorize(d) === 'ready') {
+                newReadyCount++;
+              }
+            }
           });
+          
           window.CD.orders = orders;
-          renderContent();
+          
+          // إذا اللوحة مفتوحة
+          var app = document.getElementById('delivery-mgr-app');
+          if (app && app.classList.contains('active')) {
+            renderContent();
+          }
+          
+          // إشعار إذا وصل طلب جديد
+          if (newReadyCount > 0) {
+            playNotifySound();
+            browserNotify('🔔 طلب جديد جاهز', 'لديك ' + newReadyCount + ' طلب جاهز للإرسال');
+          }
         }, function(err) {
-          console.warn('[DELIVERY-UI] listener error:', err.message);
+          console.warn('[DELIVERY-V2] listener error:', err.message);
         });
     } catch(e) {}
   }
 
   // ═══ التنشيط ═══
   window.activateDeliveryUI = async function() {
-    console.log('[DELIVERY-UI] activating...');
+    console.log('[DELIVERY-V2] activating...');
     
-    // إخفاء الأدمن
     var gs = document.getElementById('gs'); if (gs) gs.style.display = 'none';
     var am = document.getElementById('am'); if (am) am.style.display = 'none';
     
-    // إنشاء أو عرض اللوحة
     var app = document.getElementById('delivery-mgr-app');
     if (!app) {
       app = document.createElement('div');
       app.id = 'delivery-mgr-app';
       app.className = 'dlv-app active';
+      // استرجاع الثيم
+      var savedTheme = 'dark';
+      try { savedTheme = localStorage.getItem('chizen_dlv_theme') || 'dark'; } catch(e) {}
+      app.setAttribute('data-theme', savedTheme);
       app.innerHTML = buildShell();
       document.body.appendChild(app);
+      
+      // تحديث أيقونة الثيم
+      var icon = document.getElementById('dlv-theme-icon');
+      if (icon) icon.textContent = savedTheme === 'light' ? '☀️' : '🌙';
     } else {
       app.classList.add('active');
     }
     
-    // تحميل الطلبات
-    await loadOrders();
+    renderContent();
     setupListener();
+    
+    // طلب إذن الإشعارات
+    if ('Notification' in window && Notification.permission === 'default') {
+      setTimeout(function() { Notification.requestPermission(); }, 3000);
+    }
   };
 
   // ═══ Hook applyPermissions ═══
   function hook() {
     if (!window.A || !A.applyPermissions) { setTimeout(hook, 200); return; }
-    if (A.__deliveryUIHooked) return;
-    A.__deliveryUIHooked = true;
+    if (A.__deliveryV2Hooked) return;
+    A.__deliveryV2Hooked = true;
     
     var origApply = A.applyPermissions;
     A.applyPermissions = function(role, category) {
@@ -4642,12 +4793,10 @@ document.addEventListener('click', function(e) {
       }
       if (origApply) return origApply.call(this, role, category);
     };
-    
-    console.log('[DELIVERY-UI] hooked');
   }
   hook();
 
-  console.log('[DELIVERY-UI] ready');
+  console.log('[DELIVERY-V2] ready');
 })();
 </script>
 </body>
