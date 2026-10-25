@@ -5587,5 +5587,561 @@ document.addEventListener('click', function(e) {
   setTimeout(function() { enhanceDoLogin(); enhanceCheckAdmin(); }, 2000);
 })();
 </script>
+<script id="chz-bookings-mgr">
+(function(){
+  'use strict';
+  console.log('[BOOKINGS-MGR] loading...');
+
+  window.CB = {
+    tab: 'all',
+    period: 'month',
+    bookings: [],
+    search: '',
+    loading: true,
+    listener: null
+  };
+
+  function esc(x) {
+    return String(x == null ? '' : x).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function getTs(b) {
+    if (!b.createdAt) return 0;
+    return b.createdAt.seconds ? b.createdAt.seconds * 1000 : (b.createdAt.toMillis ? b.createdAt.toMillis() : 0);
+  }
+
+  function timeAgo(b) {
+    var ts = getTs(b);
+    if (!ts) return '';
+    var diff = Math.floor((Date.now() - ts) / 60000);
+    if (diff < 60) return 'منذ ' + diff + ' د';
+    if (diff < 1440) return 'منذ ' + Math.floor(diff/60) + ' س';
+    if (diff < 10080) return 'منذ ' + Math.floor(diff/1440) + ' ي';
+    return new Date(ts).toLocaleDateString('ar');
+  }
+
+  function getPeriodStart() {
+    var p = window.CB.period;
+    if (p === 'today') { var d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+    if (p === 'week') return Date.now() - 7*24*60*60*1000;
+    if (p === 'month') return Date.now() - 30*24*60*60*1000;
+    return 0;
+  }
+
+  var TYPE_INFO = {
+    'flight': { icon: '✈️', name: 'طيران', color: '#3b82f6' },
+    'hotel': { icon: '🏨', name: 'فندق', color: '#a855f7' },
+    'bus': { icon: '🚌', name: 'باص', color: '#f59e0b' },
+    'hajj': { icon: '🕋', name: 'حج وعمرة', color: '#10b981' }
+  };
+
+  // ═══ CSS ═══
+  var style = document.createElement('style');
+  style.id = 'bookings-mgr-css';
+  style.textContent = 
+    '.cb-app{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;font-family:Tajawal,sans-serif;direction:rtl;' +
+      'background:radial-gradient(circle at 50% 0%,#151b3a 0%,#07091d 80%);color:#fff;' +
+      '--cb-bg:#07091d;--cb-header-bg:rgba(10,8,30,0.95);--cb-card-bg:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));' +
+      '--cb-card-border:rgba(59,130,246,0.25);--cb-text:#fff;--cb-text-sub:#b8c0d8;--cb-text-muted:#6b7591;' +
+      '--cb-nav-bg:rgba(10,8,30,0.98);--cb-input-bg:rgba(15,10,35,0.9);--cb-input-border:rgba(59,130,246,0.4);' +
+      '--cb-divider:rgba(59,130,246,0.25);' +
+    '}' +
+    '.cb-app.active{display:flex;}' +
+    '.cb-app[data-theme="light"]{' +
+      'background:linear-gradient(135deg,#f5f7fb,#eef2ff);color:#1a1a2e;' +
+      '--cb-bg:#f5f7fb;--cb-header-bg:#ffffff;--cb-card-bg:#ffffff;' +
+      '--cb-card-border:#e5e7eb;--cb-text:#1a1a2e;--cb-text-sub:#6b7280;--cb-text-muted:#9ca3af;' +
+      '--cb-nav-bg:#ffffff;--cb-input-bg:#f9fafb;--cb-input-border:#e5e7eb;--cb-divider:#e5e7eb;' +
+    '}' +
+    '.cb-header{padding:12px 16px;background:var(--cb-header-bg);border-bottom:1px solid var(--cb-divider);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;}' +
+    '.cb-main{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;background:var(--cb-bg);}' +
+    '.cb-nav{display:flex;background:var(--cb-nav-bg);border-top:1px solid var(--cb-divider);flex-shrink:0;overflow-x:auto;scrollbar-width:none;}' +
+    '.cb-nav-btn{flex-shrink:0;min-width:70px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px;' +
+      'background:transparent;border:none;color:var(--cb-text-muted);font-family:inherit;cursor:pointer;font-weight:700;position:relative;}' +
+    '.cb-nav-btn.active{color:#3b82f6;background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(37,99,235,0.05));}' +
+    '.cb-nav-btn.active::after{content:"";position:absolute;bottom:4px;left:25%;right:25%;height:3px;background:#3b82f6;border-radius:2px;}' +
+    '.cb-nav-btn .icon{font-size:20px;}' +
+    '.cb-nav-btn .label{font-size:9px;}' +
+    '.cb-nav-btn .count{position:absolute;top:4px;right:calc(50% - 22px);background:#ef4444;color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:10px;min-width:14px;text-align:center;}' +
+    '.cb-card{background:var(--cb-card-bg);border:1px solid var(--cb-card-border);border-radius:14px;padding:14px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;}' +
+    '.cb-card:active{transform:scale(0.98);}' +
+    '.cb-stat{background:var(--cb-card-bg);border:1px solid var(--cb-card-border);border-radius:12px;padding:12px;text-align:center;}' +
+    '.cb-stat-icon{font-size:20px;margin-bottom:3px;}' +
+    '.cb-stat-label{font-size:10px;color:var(--cb-text-muted);margin-bottom:4px;font-weight:700;}' +
+    '.cb-stat-value{font-size:16px;font-weight:900;}' +
+    '.cb-search{width:100%;padding:11px 40px 11px 14px;border-radius:10px;border:1.5px solid var(--cb-input-border);' +
+      'background:var(--cb-input-bg);color:var(--cb-text);font-family:Tajawal,sans-serif;font-size:13px;box-sizing:border-box;outline:none;}' +
+    '.cb-period-btn{padding:6px 12px;border-radius:8px;border:1.5px solid var(--cb-input-border);background:var(--cb-input-bg);' +
+      'color:var(--cb-text-sub);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;}' +
+    '.cb-period-btn.active{background:#3b82f6;color:#fff;border-color:#3b82f6;}' +
+    '.cb-theme-btn{background:var(--cb-input-bg);border:1.5px solid var(--cb-input-border);color:var(--cb-text);' +
+      'width:38px;height:38px;border-radius:10px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}' +
+    '.cb-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9500;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}' +
+    '.cb-modal.active{display:flex;}' +
+    '.cb-modal-content{background:var(--cb-bg);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:20px;color:var(--cb-text);}' +
+    '.cb-modal-content input,.cb-modal-content textarea,.cb-modal-content select{background:var(--cb-input-bg);color:var(--cb-text);border:1.5px solid var(--cb-input-border);}' +
+    '.cb-modal-content input::placeholder,.cb-modal-content textarea::placeholder{color:var(--cb-text-muted);}';
+  document.head.appendChild(style);
+
+  // ═══ الهيكل ═══
+  function buildShell() {
+    return '' +
+      '<header class="cb-header">' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 3px 10px rgba(59,130,246,0.4);">✈️</div>' +
+          '<div>' +
+            '<div style="font-weight:900;font-size:14px;color:var(--cb-text);">لوحة الحجوزات</div>' +
+            '<div style="color:#3b82f6;font-size:10px;margin-top:1px;">إدارة كاملة</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<button class="cb-theme-btn" onclick="window.__cbToggleTheme()" id="cb-theme-icon">🌙</button>' +
+          '<button onclick="window.__cbLogout()" style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;padding:8px 12px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;">🚪 خروج</button>' +
+        '</div>' +
+      '</header>' +
+      '<main class="cb-main" id="cb-main"></main>' +
+      '<nav class="cb-nav">' +
+        '<button class="cb-nav-btn active" data-tab="all" onclick="window.__cbSwitchTab(\'all\',this)"><span class="icon">📋</span><span class="label">الكل</span></button>' +
+        '<button class="cb-nav-btn" data-tab="flight" onclick="window.__cbSwitchTab(\'flight\',this)"><span class="icon">✈️</span><span class="label">طيران</span><span class="count" id="cb-cnt-flight" style="display:none;">0</span></button>' +
+        '<button class="cb-nav-btn" data-tab="hotel" onclick="window.__cbSwitchTab(\'hotel\',this)"><span class="icon">🏨</span><span class="label">فنادق</span><span class="count" id="cb-cnt-hotel" style="display:none;">0</span></button>' +
+        '<button class="cb-nav-btn" data-tab="bus" onclick="window.__cbSwitchTab(\'bus\',this)"><span class="icon">🚌</span><span class="label">باصات</span><span class="count" id="cb-cnt-bus" style="display:none;">0</span></button>' +
+        '<button class="cb-nav-btn" data-tab="hajj" onclick="window.__cbSwitchTab(\'hajj\',this)"><span class="icon">🕋</span><span class="label">حج</span><span class="count" id="cb-cnt-hajj" style="display:none;">0</span></button>' +
+      '</nav>';
+  }
+
+  // ═══ إحصائيات ═══
+  function buildStats() {
+    var startTs = getPeriodStart();
+    var bookings = window.CB.bookings.filter(function(b) { return getTs(b) >= startTs; });
+    
+    var pending = bookings.filter(function(b) { return (b.status || 'pending') === 'pending'; });
+    var confirmed = bookings.filter(function(b) { return b.status === 'confirmed'; });
+    var completed = bookings.filter(function(b) { return b.status === 'completed'; });
+    var cancelled = bookings.filter(function(b) { return b.status === 'cancelled'; });
+    
+    var revenue = 0;
+    confirmed.forEach(function(b) { revenue += parseFloat((b.data && b.data.total) || b.total || 0); });
+    completed.forEach(function(b) { revenue += parseFloat((b.data && b.data.total) || b.total || 0); });
+    
+    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">' +
+      statCard('⏳', 'بانتظار التأكيد', pending.length, '#f59e0b') +
+      statCard('✅', 'مؤكدة', confirmed.length, '#10b981') +
+      statCard('📦', 'مكتملة', completed.length, '#3b82f6') +
+      statCard('💵', 'الإيرادات', revenue.toFixed(0) + ' ر.س', '#10b981') +
+    '</div>';
+  }
+
+  function statCard(icon, label, value, color) {
+    return '<div class="cb-stat" style="border-color:' + color + '40;">' +
+      '<div class="cb-stat-icon">' + icon + '</div>' +
+      '<div class="cb-stat-label">' + label + '</div>' +
+      '<div class="cb-stat-value" style="color:' + color + ';">' + value + '</div>' +
+    '</div>';
+  }
+
+  // ═══ المحتوى ═══
+  function renderContent() {
+    var main = document.getElementById('cb-main');
+    if (!main) return;
+    
+    if (window.CB.loading) {
+      main.innerHTML = '<div style="text-align:center;padding:60px 20px;"><div style="font-size:48px;margin-bottom:12px;">⏳</div><div style="color:var(--cb-text-muted);">جاري التحميل...</div></div>';
+      return;
+    }
+    
+    var html = '';
+    
+    // فترات
+    var periods = [
+      { key: 'today', label: 'اليوم' },
+      { key: 'week', label: 'الأسبوع' },
+      { key: 'month', label: 'الشهر' },
+      { key: 'all', label: 'الكل' }
+    ];
+    html += '<div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;">';
+    periods.forEach(function(p) {
+      html += '<button class="cb-period-btn' + (window.CB.period === p.key ? ' active' : '') + '" onclick="window.__cbSetPeriod(&quot;' + p.key + '&quot;)">' + p.label + '</button>';
+    });
+    html += '</div>';
+    
+    // إحصائيات
+    html += buildStats();
+    
+    // بحث
+    html += '<div style="position:relative;margin-bottom:12px;">' +
+      '<input class="cb-search" placeholder="🔍 بحث بالاسم / الهاتف / الوجهة..." value="' + esc(window.CB.search) + '" oninput="window.__cbSearch(this.value)">' +
+      '<span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;opacity:0.6;">🔍</span>' +
+    '</div>';
+    
+    // الحجوزات
+    var bookings = window.CB.bookings.filter(function(b) { return getTs(b) >= getPeriodStart(); });
+    
+    // فلترة حسب النوع
+    if (window.CB.tab !== 'all') {
+      bookings = bookings.filter(function(b) { return (b.type || '') === window.CB.tab; });
+    }
+    
+    // بحث
+    if (window.CB.search) {
+      var q = window.CB.search.toLowerCase();
+      bookings = bookings.filter(function(b) {
+        var d = b.data || {};
+        return (b.userName || '').toLowerCase().indexOf(q) > -1 ||
+               (b.userEmail || '').toLowerCase().indexOf(q) > -1 ||
+               (d.name || '').toLowerCase().indexOf(q) > -1 ||
+               (d.phone || '').toLowerCase().indexOf(q) > -1 ||
+               (d.from || '').toLowerCase().indexOf(q) > -1 ||
+               (d.to || '').toLowerCase().indexOf(q) > -1 ||
+               (d.city || '').toLowerCase().indexOf(q) > -1;
+      });
+    }
+    
+    bookings.sort(function(a, b) { return getTs(b) - getTs(a); });
+    
+    // عدادات
+    var counts = { flight: 0, hotel: 0, bus: 0, hajj: 0 };
+    window.CB.bookings.forEach(function(b) {
+      if (counts[b.type] !== undefined && (b.status || 'pending') === 'pending') counts[b.type]++;
+    });
+    ['flight', 'hotel', 'bus', 'hajj'].forEach(function(k) {
+      var el = document.getElementById('cb-cnt-' + k);
+      if (el) {
+        el.textContent = counts[k];
+        el.style.display = counts[k] > 0 ? 'inline-block' : 'none';
+      }
+    });
+    
+    // قائمة
+    if (bookings.length === 0) {
+      html += '<div style="text-align:center;padding:60px 20px;">' +
+        '<div style="font-size:64px;margin-bottom:12px;">✈️</div>' +
+        '<div style="color:var(--cb-text-muted);">لا توجد حجوزات</div>' +
+      '</div>';
+    } else {
+      html += bookings.map(function(b) { return buildCard(b); }).join('');
+    }
+    
+    main.innerHTML = html;
+  }
+
+  // ═══ بطاقة ═══
+  function buildCard(b) {
+    var type = b.type || 'flight';
+    var t = TYPE_INFO[type] || TYPE_INFO.flight;
+    var d = b.data || {};
+    var status = b.status || 'pending';
+    var statusColor = status === 'confirmed' ? '#10b981' : (status === 'cancelled' ? '#ef4444' : (status === 'completed' ? '#3b82f6' : '#f59e0b'));
+    var statusText = { pending: '⏳ معلق', confirmed: '✅ مؤكد', completed: '📦 مكتمل', cancelled: '❌ ملغي' }[status] || status;
+    var total = parseFloat(d.total || b.total || 0);
+    
+    var detail = '';
+    if (type === 'flight') detail = (d.from || '—') + ' → ' + (d.to || '—');
+    else if (type === 'hotel') detail = (d.city || '—') + ' • ' + (d.checkin || '—') + ' → ' + (d.checkout || '—');
+    else if (type === 'bus') detail = (d.from || '—') + ' → ' + (d.to || '—') + ' • ' + (d.date || '—');
+    else if (type === 'hajj') detail = (d.type || 'عمرة') + ' • ' + (d.date || '—');
+    
+    var actions = '';
+    if (status === 'pending') {
+      actions = '<div style="display:flex;gap:6px;margin-top:10px;">' +
+        '<button onclick="event.stopPropagation();window.__cbConfirm(&quot;' + esc(b.id) + '&quot;)" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;font-family:inherit;">✅ تأكيد</button>' +
+        '<button onclick="event.stopPropagation();window.__cbCancel(&quot;' + esc(b.id) + '&quot;)" style="padding:10px 14px;background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;font-family:inherit;">❌</button>' +
+      '</div>';
+    } else if (status === 'confirmed') {
+      actions = '<div style="display:flex;gap:6px;margin-top:10px;">' +
+        '<button onclick="event.stopPropagation();window.__cbComplete(&quot;' + esc(b.id) + '&quot;)" style="flex:1;padding:10px;background:rgba(59,130,246,0.15);border:1.5px solid #3b82f6;color:#3b82f6;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;font-family:inherit;">📦 مكتمل</button>' +
+        '<button onclick="event.stopPropagation();window.__cbSendWA(&quot;' + esc(b.id) + '&quot;)" style="padding:10px 14px;background:#25D366;border:none;color:#fff;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;font-family:inherit;">💬</button>' +
+      '</div>';
+    }
+    
+    return '<div class="cb-card" onclick="window.__cbOpenDetails(&quot;' + esc(b.id) + '&quot;)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+        '<div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">' +
+          '<div style="width:44px;height:44px;border-radius:12px;background:' + t.color + '22;border:1.5px solid ' + t.color + '55;display:flex;align-items:center;justify-content:center;font-size:20px;">' + t.icon + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:900;color:' + t.color + ';font-size:13px;">' + t.name + '</div>' +
+            '<div style="font-size:11px;color:var(--cb-text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(b.userName || d.name || 'عميل') + '</div>' +
+            '<div style="font-size:10px;color:var(--cb-text-muted);">' + esc(detail) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="text-align:left;">' +
+          '<div style="font-size:10px;color:' + statusColor + ';font-weight:900;">' + statusText + '</div>' +
+          '<div style="font-weight:900;color:#ff4d94;font-size:14px;margin-top:4px;">' + total.toFixed(0) + '</div>' +
+          '<div style="font-size:9px;color:var(--cb-text-muted);">ر.س</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:10px;color:var(--cb-text-muted);display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--cb-divider);">' +
+        '<span>📱 ' + esc(d.phone || b.userPhone || '—') + '</span>' +
+        '<span>' + timeAgo(b) + '</span>' +
+      '</div>' +
+      actions +
+    '</div>';
+  }
+
+  // ═══ تبديل ═══
+  window.__cbSwitchTab = function(tab, btn) {
+    window.CB.tab = tab;
+    window.CB.search = '';
+    document.querySelectorAll('.cb-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    renderContent();
+  };
+
+  window.__cbSetPeriod = function(p) {
+    window.CB.period = p;
+    renderContent();
+  };
+
+  window.__cbSearch = function(q) {
+    window.CB.search = q || '';
+    clearTimeout(window.__cbSearchTimer);
+    window.__cbSearchTimer = setTimeout(renderContent, 200);
+  };
+
+  window.__cbToggleTheme = function() {
+    var app = document.getElementById('bookings-mgr-app');
+    if (!app) return;
+    var cur = app.getAttribute('data-theme') || 'dark';
+    var next = cur === 'dark' ? 'light' : 'dark';
+    app.setAttribute('data-theme', next);
+    try { localStorage.setItem('chizen_cb_theme', next); } catch(e) {}
+    var icon = document.getElementById('cb-theme-icon');
+    if (icon) icon.textContent = next === 'light' ? '☀️' : '🌙';
+  };
+
+  window.__cbLogout = function() {
+    if (!confirm('تسجيل الخروج؟')) return;
+    try { firebase.auth().signOut(); } catch(e) {}
+    try { localStorage.clear(); } catch(e) {}
+    setTimeout(function() { window.location.replace(window.location.pathname + '?logout=' + Date.now()); }, 300);
+  };
+
+  // ═══ تفاصيل ═══
+  window.__cbOpenDetails = function(id) {
+    var b = window.CB.bookings.find(function(x) { return x.id === id; });
+    if (!b) return;
+    var d = b.data || {};
+    var type = b.type || 'flight';
+    var t = TYPE_INFO[type] || TYPE_INFO.flight;
+    var status = b.status || 'pending';
+    
+    var detailsHtml = '';
+    Object.keys(d).forEach(function(k) {
+      if (k === 'total' || k === 'name' || k === 'phone') return;
+      var label = {
+        from: 'من', to: 'إلى', date: 'التاريخ', type: 'النوع',
+        checkin: 'دخول', checkout: 'خروج', city: 'المدينة',
+        hotel: 'الفندق', airline: 'الخطوط', passengers: 'المسافرون',
+        guests: 'الضيوف', rooms: 'الغرف', notes: 'ملاحظات'
+      }[k] || k;
+      var val = d[k];
+      if (typeof val === 'object') val = JSON.stringify(val);
+      if (!val) return;
+      detailsHtml += '<div style="display:flex;justify-content:space-between;padding:8px;background:var(--cb-input-bg);border-radius:8px;margin-bottom:4px;font-size:12px;">' +
+        '<span style="color:var(--cb-text-sub);">' + esc(label) + '</span>' +
+        '<span style="color:var(--cb-text);font-weight:800;">' + esc(val) + '</span>' +
+      '</div>';
+    });
+    
+    var modal = document.createElement('div');
+    modal.className = 'cb-modal active';
+    modal.onclick = function(e) { if (e.target === this) this.remove(); };
+    modal.innerHTML = '<div class="cb-modal-content">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:16px;">' +
+        '<div style="font-weight:900;color:' + t.color + ';font-size:14px;">' + t.icon + ' تفاصيل الحجز</div>' +
+        '<button onclick="this.closest(&quot;.cb-modal&quot;).remove()" style="background:var(--cb-input-bg);border:none;color:var(--cb-text);width:32px;height:32px;border-radius:50%;cursor:pointer;">✕</button>' +
+      '</div>' +
+      '<div style="background:' + t.color + '15;border:1px solid ' + t.color + '40;border-radius:10px;padding:12px;margin-bottom:14px;">' +
+        '<div style="font-size:11px;color:' + t.color + ';margin-bottom:4px;">رقم الحجز</div>' +
+        '<div style="font-weight:900;color:var(--cb-text);font-family:monospace;font-size:13px;">#' + esc(id) + '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">' +
+        '<div style="background:var(--cb-input-bg);border-radius:10px;padding:10px;">' +
+          '<div style="font-size:10px;color:var(--cb-text-muted);margin-bottom:2px;">العميل</div>' +
+          '<div style="font-size:12px;color:var(--cb-text);font-weight:700;">' + esc(b.userName || d.name || '—') + '</div>' +
+        '</div>' +
+        '<div style="background:var(--cb-input-bg);border-radius:10px;padding:10px;">' +
+          '<div style="font-size:10px;color:var(--cb-text-muted);margin-bottom:2px;">الهاتف</div>' +
+          '<div style="font-size:12px;color:var(--cb-text);direction:ltr;">' + esc(d.phone || b.userPhone || '—') + '</div>' +
+        '</div>' +
+      '</div>' +
+      detailsHtml +
+      '<div style="background:linear-gradient(135deg,rgba(236,72,153,0.1),rgba(168,85,247,0.05));border:1px solid rgba(236,72,153,0.3);border-radius:12px;padding:12px;margin-top:12px;text-align:center;">' +
+        '<div style="font-size:11px;color:var(--cb-text-muted);margin-bottom:2px;">الإجمالي</div>' +
+        '<div style="font-size:20px;font-weight:900;color:#ff4d94;">' + parseFloat(d.total || b.total || 0).toFixed(0) + ' ر.س</div>' +
+      '</div>' +
+      '<div style="margin-top:14px;display:flex;gap:8px;">' +
+        '<button onclick="this.closest(&quot;.cb-modal&quot;).remove()" style="flex:1;padding:12px;background:var(--cb-input-bg);border:none;color:var(--cb-text);border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer;">إغلاق</button>' +
+        (d.phone ? '<a href="https://wa.me/' + String(d.phone).replace(/\D/g, '') + '" target="_blank" style="flex:1;padding:12px;background:#25D366;color:#fff;border-radius:10px;font-weight:800;text-align:center;text-decoration:none;font-family:inherit;">💬 واتساب</a>' : '') +
+      '</div>' +
+    '</div>';
+    document.body.appendChild(modal);
+  };
+
+  // ═══ تأكيد ═══
+  window.__cbConfirm = async function(id) {
+    if (!confirm('تأكيد هذا الحجز؟')) return;
+    try {
+      await FB.db.collection('bookings').doc(id).update({
+        status: 'confirmed',
+        confirmedAt: new Date(),
+        confirmedBy: FB.currentUser ? FB.currentUser.uid : ''
+      });
+      var b = window.CB.bookings.find(function(x) { return x.id === id; });
+      if (b && b.userId && FB.addUserNotification) {
+        await FB.addUserNotification(b.userId, {
+          title: '✅ تم تأكيد حجزك',
+          body: 'حجزك #' + id.substring(0, 8) + ' جاهز',
+          type: 'booking'
+        }).catch(function(){});
+      }
+      await loadBookings();
+    } catch(e) { alert('فشل: ' + e.message); }
+  };
+
+  // ═══ إلغاء ═══
+  window.__cbCancel = async function(id) {
+    var reason = prompt('سبب الإلغاء (اختياري):');
+    if (reason === null) return;
+    try {
+      await FB.db.collection('bookings').doc(id).update({
+        status: 'cancelled',
+        cancelReason: reason || '',
+        cancelledAt: new Date(),
+        cancelledBy: FB.currentUser ? FB.currentUser.uid : ''
+      });
+      await loadBookings();
+    } catch(e) { alert('فشل: ' + e.message); }
+  };
+
+  // ═══ مكتمل ═══
+  window.__cbComplete = async function(id) {
+    if (!confirm('تم إكمال الحجز؟')) return;
+    try {
+      await FB.db.collection('bookings').doc(id).update({
+        status: 'completed',
+        completedAt: new Date()
+      });
+      await loadBookings();
+    } catch(e) { alert('فشل: ' + e.message); }
+  };
+
+  // ═══ واتساب ═══
+  window.__cbSendWA = function(id) {
+    var b = window.CB.bookings.find(function(x) { return x.id === id; });
+    if (!b) return;
+    var d = b.data || {};
+    var phone = (d.phone || b.userPhone || '').replace(/\D/g, '');
+    if (!phone) return alert('رقم الهاتف غير متوفر');
+    if (phone.length === 9 && phone.startsWith('7')) phone = '967' + phone;
+    
+    var msg = '✈️ *تأكيد حجزك*\n\n' +
+      'أهلاً ' + (b.userName || d.name || 'عزيزي العميل') + ',\n' +
+      'تم تأكيد حجزك بنجاح ✅\n\n' +
+      '📋 تفاصيل الحجز:\n';
+    
+    ['from', 'to', 'city', 'hotel', 'airline', 'date', 'checkin', 'checkout', 'passengers', 'guests', 'rooms'].forEach(function(k) {
+      if (d[k]) {
+        var label = { from: 'من', to: 'إلى', city: 'المدينة', hotel: 'الفندق', airline: 'الخطوط', date: 'التاريخ', checkin: 'دخول', checkout: 'خروج', passengers: 'المسافرون', guests: 'الضيوف', rooms: 'الغرف' }[k];
+        msg += label + ': ' + d[k] + '\n';
+      }
+    });
+    
+    msg += '\n💰 الإجمالي: ' + parseFloat(d.total || b.total || 0).toFixed(0) + ' ر.س';
+    msg += '\n\nشكراً لثقتك بنا 🌟';
+    
+    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+  };
+
+  // ═══ تحميل البيانات ═══
+  async function loadBookings() {
+    if (!window.FB || !FB.db) { setTimeout(loadBookings, 500); return; }
+    try {
+      var snap = await FB.db.collection('bookings').orderBy('createdAt', 'desc').limit(200).get();
+      var bookings = [];
+      snap.forEach(function(doc) {
+        var d = doc.data(); d.id = d.id || doc.id;
+        bookings.push(d);
+      });
+      window.CB.bookings = bookings;
+      window.CB.loading = false;
+      renderContent();
+    } catch(e) {
+      console.warn('[BOOKINGS-MGR] load error:', e.message);
+      window.CB.loading = false;
+      renderContent();
+    }
+  }
+
+  // ═══ onSnapshot ═══
+  function setupListener() {
+    if (!window.FB || !FB.db) return;
+    try {
+      window.CB.listener = FB.db.collection('bookings').orderBy('createdAt', 'desc').limit(200)
+        .onSnapshot(function(snap) {
+          var bookings = [];
+          snap.forEach(function(doc) {
+            var d = doc.data(); d.id = d.id || doc.id;
+            bookings.push(d);
+          });
+          window.CB.bookings = bookings;
+          window.CB.loading = false;
+          var app = document.getElementById('bookings-mgr-app');
+          if (app && app.classList.contains('active')) renderContent();
+        }, function(err) {
+          console.warn('[BOOKINGS-MGR] listener:', err.message);
+        });
+    } catch(e) {}
+  }
+
+  // ═══ التنشيط ═══
+  window.activateBookingsUI = async function() {
+    console.log('[BOOKINGS-MGR] activating...');
+    
+    var gs = document.getElementById('gs'); if (gs) gs.style.display = 'none';
+    var am = document.getElementById('am'); if (am) am.style.display = 'none';
+    
+    var app = document.getElementById('bookings-mgr-app');
+    if (!app) {
+      app = document.createElement('div');
+      app.id = 'bookings-mgr-app';
+      app.className = 'cb-app active';
+      var savedTheme = 'dark';
+      try { savedTheme = localStorage.getItem('chizen_cb_theme') || 'dark'; } catch(e) {}
+      app.setAttribute('data-theme', savedTheme);
+      app.innerHTML = buildShell();
+      document.body.appendChild(app);
+      var icon = document.getElementById('cb-theme-icon');
+      if (icon) icon.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+    } else {
+      app.classList.add('active');
+    }
+    
+    renderContent();
+    await loadBookings();
+    setupListener();
+  };
+
+  // ═══ Hook applyPermissions ═══
+  function hook() {
+    if (!window.A || !A.applyPermissions) { setTimeout(hook, 200); return; }
+    if (A.__bookingsHooked) return;
+    A.__bookingsHooked = true;
+    
+    var origApply = A.applyPermissions;
+    A.applyPermissions = function(role, category) {
+      if (role === 'bookings_mgr') {
+        window.activateBookingsUI();
+        return;
+      }
+      if (origApply) return origApply.call(this, role, category);
+    };
+  }
+  hook();
+
+  console.log('[BOOKINGS-MGR] ready');
+})();
+</script>
 </body>
 </html>
