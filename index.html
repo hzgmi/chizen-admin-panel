@@ -3319,5 +3319,318 @@ document.addEventListener('click', function(e) {
   install();
 })();
 </script>
+<script id="chz-settings-complete">
+(function(){
+  'use strict';
+  console.log('[SETTINGS-COMPLETE] loading...');
+
+  function waitForA() {
+    if (!window.A) { setTimeout(waitForA, 200); return; }
+    if (A.__settingsCompleteInstalled) return;
+    A.__settingsCompleteInstalled = true;
+
+    // ═══ حالة الإعدادات ═══
+    A.settingsCache = {};
+
+    // ═══ بناء الـ HTML الكامل ═══
+    A.buildSettingsHTML = function() {
+      var S = this.settingsCache || {};
+      
+      // helper: أيقونة + بطاقة قسم
+      function section(icon, title, color, content) {
+        return '<div class="cd" style="margin-bottom:14px;border-right:4px solid ' + color + ';">' +
+          '<div class="cti" style="margin-bottom:12px;">' +
+            '<div class="ctl">' + icon + ' ' + title + '</div>' +
+          '</div>' +
+          content +
+        '</div>';
+      }
+      
+      // helper: حقل إدخال
+      function field(id, label, value, type, placeholder, hint) {
+        type = type || 'text';
+        return '<div class="fl">' +
+          '<label class="fll">' + label + '</label>' +
+          '<input class="fi" id="' + id + '" type="' + type + '" value="' + (value || '') + '" placeholder="' + (placeholder || '') + '">' +
+          (hint ? '<div style="font-size:10px;color:#888;margin-top:4px;">' + hint + '</div>' : '') +
+        '</div>';
+      }
+      
+      // helper: toggle
+      function toggle(id, label, checked, hint) {
+        return '<div class="fl" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">' +
+          '<div>' +
+            '<div style="font-size:13px;color:#fff;font-weight:700;">' + label + '</div>' +
+            (hint ? '<div style="font-size:10px;color:#888;margin-top:2px;">' + hint + '</div>' : '') +
+          '</div>' +
+          '<label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">' +
+            '<input type="checkbox" id="' + id + '" ' + (checked ? 'checked' : '') + ' style="opacity:0;width:0;height:0;position:absolute;">' +
+            '<span style="position:absolute;top:0;left:0;right:0;bottom:0;background:' + (checked ? '#10b981' : '#3d4557') + ';border-radius:26px;transition:0.3s;" ' +
+              'onclick="this.previousElementSibling.checked = !this.previousElementSibling.checked;this.style.background=this.previousElementSibling.checked?&quot;#10b981&quot;:&quot;#3d4557&quot;;"></span>' +
+            '<span style="position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:0.3s;transform:' + (checked ? 'translateX(22px)' : 'translateX(0)') + ';" ' +
+              'onclick="this.previousElementSibling.previousElementSibling.checked = !this.previousElementSibling.previousElementSibling.checked;this.style.transform=this.previousElementSibling.previousElementSibling.checked?&quot;translateX(22px)&quot;:&quot;translateX(0)&quot;;this.previousElementSibling.style.background=this.previousElementSibling.previousElementSibling.checked?&quot;#10b981&quot;:&quot;#3d4557&quot;;"></span>' +
+          '</label>' +
+        '</div>';
+      }
+      
+      // helper: select
+      function selectField(id, label, value, options) {
+        var opts = '';
+        for (var k in options) {
+          opts += '<option value="' + k + '"' + (value === k ? ' selected' : '') + '>' + options[k] + '</option>';
+        }
+        return '<div class="fl">' +
+          '<label class="fll">' + label + '</label>' +
+          '<select class="fi" id="' + id + '">' + opts + '</select>' +
+        '</div>';
+      }
+      
+      return '' +
+        '<div style="padding:4px;">' +
+          '<div style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(236,72,153,0.1));border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:14px;margin-bottom:16px;text-align:center;">' +
+            '<div style="font-size:22px;font-weight:900;color:#a855f7;margin-bottom:4px;">⚙️ إعدادات التطبيق الشاملة</div>' +
+            '<div style="font-size:11px;color:#888;">تحكم كامل بكل ميزات التطبيق من مكان واحد</div>' +
+          '</div>' +
+          
+          // ═══ 1) التواصل ═══
+          section('📞', 'معلومات التواصل', '#3b82f6',
+            field('s-phone', 'رقم الهاتف', S.phone, 'tel', '+967...') +
+            field('s-wa', 'رقم واتساب', S.whatsapp, 'tel', '967...') +
+            field('s-email', 'البريد الإلكتروني', S.email, 'email', 'info@chizen.com') +
+            field('s-address', 'العنوان', S.address, 'text', 'صنعاء - شارع حدة') +
+            field('s-hours', 'ساعات العمل', S.workingHours, 'text', '9 صباحاً - 9 مساءً')
+          ) +
+          
+          // ═══ 2) الشحن ═══
+          section('🚚', 'الشحن والتوصيل', '#10b981',
+            field('s-shipfee', 'رسوم التوصيل الافتراضية', S.shippingFee, 'number', '0', 'الرسوم التي تُضاف لكل طلب') +
+            field('s-free', 'حد الشحن المجاني', S.freeShippingAbove, 'number', '0', 'الطلبات فوق هذا المبلغ توصيلها مجاني') +
+            field('s-delivery-time', 'مدة التوصيل المتوقعة', S.deliveryTime, 'text', '2-4 ساعات') +
+            toggle('s-ship-enabled', 'تفعيل خدمة التوصيل', S.shippingEnabled !== false, 'إيقافه يمنع أي طلب من الوصول')
+          ) +
+          
+          // ═══ 3) العملة والنقاط ═══
+          section('💰', 'العملة والنقاط والولاء', '#f59e0b',
+            selectField('s-currency', 'العملة', S.currency || 'SAR', {
+              'SAR': 'ريال سعودي (ر.س)',
+              'YER': 'ريال يمني (ر.ي)',
+              'USD': 'دولار أمريكي ($)',
+              'AED': 'درهم إماراتي (د.إ)'
+            }) +
+            field('s-points-value', 'قيمة النقطة (بالعملة)', S.pointValue || 0.1, 'number', '0.1', 'مثال: 0.1 = 10 نقاط = 1 ر.س') +
+            field('s-daily-bonus', 'مكافأة التسجيل اليومي', S.dailyBonus || 1, 'number', '1', 'عدد النقاط عند فتح التطبيق يومياً') +
+            field('s-referral-bonus', 'مكافأة الإحالة', S.referralBonus || 10, 'number', '10', 'نقاط لكل طرف عند استخدام كود إحالة') +
+            field('s-min-order', 'الحد الأدنى لقيمة الطلب', S.minOrder || 0, 'number', '0') +
+            field('s-min-points-redeem', 'الحد الأدنى للنقاط للاستخدام', S.minPointsRedeem || 100, 'number', '100')
+          ) +
+          
+          // ═══ 4) الخدمات ═══
+          section('✈️', 'تفعيل الخدمات', '#3b82f6',
+            toggle('s-serv-flight', 'تفعيل حجز الطيران', S.servFlight !== false) +
+            toggle('s-serv-hotel', 'تفعيل حجز الفنادق', S.servHotel !== false) +
+            toggle('s-serv-bus', 'تفعيل حجز الباصات', S.servBus !== false) +
+            toggle('s-serv-hajj', 'تفعيل الحج والعمرة', S.servHajj !== false) +
+            toggle('s-serv-shop', 'تفعيل التسوق (المنتجات)', S.servShop !== false, 'إيقافه يخفي الأقسام والمنتجات') +
+            '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:10px;margin-top:10px;">' +
+              toggle('s-maintenance', '🚨 وضع الصيانة (إيقاف التطبيق مؤقتاً)', S.maintenance === true, 'يظهر للعملاء رسالة صيانة فقط') +
+            '</div>'
+          ) +
+          
+          // ═══ 5) الهوية ═══
+          section('🎨', 'المظهر والهوية', '#a855f7',
+            field('s-app-name', 'اسم التطبيق', S.appName || 'CHIZEN', 'text', 'CHIZEN') +
+            field('s-app-tagline', 'الشعار (Tagline)', S.tagline || 'تسوق ذكي.. لحياة أجمل', 'text', 'تسوق ذكي.. لحياة أجمل') +
+            field('s-logo-url', 'رابط الشعار', S.logoUrl, 'url', 'https://...') +
+            field('s-slogan', 'رسالة الترحيب', S.welcomeMessage || 'مرحباً بك في CHIZEN', 'text', '') +
+            selectField('s-default-theme', 'الوضع الافتراضي', S.defaultTheme || 'dark', {
+              'dark': '🌙 داكن',
+              'light': '☀️ فاتح'
+            })
+          ) +
+          
+          // ═══ 6) الإشعارات ═══
+          section('🔔', 'الإشعارات والتنبيهات', '#ec4899',
+            toggle('s-push-enabled', 'تفعيل إشعارات Push', S.pushEnabled !== false, 'إشعارات النظام الفورية') +
+            toggle('s-wa-orders', 'إرسال WhatsApp للعملاء عند الطلب', S.waOrders === true) +
+            toggle('s-notify-new-order', 'إشعار الأدمن بطلب جديد', S.notifyNewOrder !== false) +
+            toggle('s-notify-payment', 'إشعار عند تأكيد الدفع', S.notifyPayment !== false) +
+            toggle('s-notify-delivery', 'إشعار عند التوصيل', S.notifyDelivery !== false) +
+            field('s-welcome-title', 'عنوان رسالة الترحيب', S.welcomeTitle || '🎉 أهلاً بك في CHIZEN!', 'text', '') +
+            field('s-welcome-body', 'نص رسالة الترحيب', S.welcomeBody || 'شكراً لانضمامك. استمتع بتجربة تسوق ذكية!', 'text', '')
+          ) +
+          
+          // ═══ 7) الكوبونات ═══
+          section('🎁', 'الكوبونات والعروض', '#10b981',
+            toggle('s-coupons-enabled', 'تفعيل الكوبونات', S.couponsEnabled !== false) +
+            field('s-welcome-coupon', 'قيمة كوبون الترحيب (%)', S.welcomeCoupon || 15, 'number', '15') +
+            field('s-min-coupon', 'الحد الأدنى لقيمة الطلب لاستخدام الكوبون', S.minCouponOrder || 0, 'number', '0') +
+            toggle('s-first-order-coupon', 'كوبون تلقائي لأول طلب', S.firstOrderCoupon === true, 'يُطبق على أول طلب لكل عميل جديد')
+          ) +
+          
+          // ═══ 8) الأمان ═══
+          section('🛡️', 'الأمان والخصوصية', '#f59e0b',
+            toggle('s-pin-enabled', 'تفعيل قفل PIN', S.pinEnabled === true, 'قفل التطبيق بكلمة سر') +
+            toggle('s-biometric', 'تفعيل البصمة', S.biometricEnabled !== false, 'فتح التطبيق بالبصمة') +
+            field('s-session-timeout', 'مدة انتهاء الجلسة (دقائق)', S.sessionTimeout || 30, 'number', '30', '0 = لا انتهاء') +
+            toggle('s-login-required', 'إجبار تسجيل الدخول قبل التصفح', S.loginRequired === true, 'منع تصفح التطبيق دون حساب')
+          ) +
+          
+          // ═══ 9) متقدم ═══
+          section('⚙️', 'إعدادات متقدمة', '#6b7280',
+            field('s-default-driver', 'اسم السائق الافتراضي', S.defaultDriver, 'text', '') +
+            field('s-default-driver-phone', 'رقم السائق الافتراضي', S.defaultDriverPhone, 'tel', '967...') +
+            field('s-support-msg', 'نص زر الدعم', S.supportMessage || 'تواصل معنا', 'text', '') +
+            field('s-version', 'إصدار التطبيق (للعرض فقط)', S.appVersion || '1.0.0', 'text', '1.0.0') +
+            '<div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:12px;margin-top:12px;font-size:11px;color:#3b82f6;">' +
+              '💡 <b>ملاحظة:</b> كل هذه الإعدادات تُحفظ في Firestore وتُطبق على التطبيق تلقائياً بعد إعادة تحميله.' +
+            '</div>'
+          ) +
+          
+          // ═══ زر الحفظ ═══
+          '<div style="position:sticky;bottom:0;background:linear-gradient(180deg,transparent,#0a0a15 30%);padding:16px 0;margin-top:20px;">' +
+            '<button class="btn bp" onclick="A.saveAllSettings()" style="width:100%;padding:16px;font-size:15px;font-weight:900;box-shadow:0 8px 24px rgba(236,72,153,0.4);">💾 حفظ كل الإعدادات</button>' +
+            '<div id="settings-save-msg" style="text-align:center;font-size:11px;margin-top:8px;"></div>' +
+          '</div>' +
+        '</div>';
+    };
+
+    // ═══ renderSettings الجديدة ═══
+    A.renderSettings = async function() {
+      var sc = document.getElementById('sc-settings');
+      if (!sc) {
+        var ct = document.getElementById('ct');
+        if (!ct) return;
+        sc = document.createElement('div');
+        sc.className = 'sc';
+        sc.id = 'sc-settings';
+        ct.appendChild(sc);
+      }
+      
+      sc.innerHTML = '<div class="cd" style="padding:20px;text-align:center;">⏳ جاري تحميل الإعدادات...</div>';
+      
+      try {
+        // حمل من Firestore
+        var doc = await FB.db.collection('config').doc('settings').get();
+        this.settingsCache = doc.exists ? (doc.data() || {}) : {};
+        
+        // طبّق الافتراضيات
+        sc.innerHTML = this.buildSettingsHTML();
+        
+        // ربط أحداث التحديث الفوري للـ toggles
+        this.bindSettingsEvents();
+        
+        console.log('[SETTINGS] loaded with', Object.keys(this.settingsCache).length, 'fields');
+      } catch(e) {
+        console.error('[SETTINGS] load error:', e);
+        sc.innerHTML = '<div class="cd" style="padding:20px;text-align:center;color:#ef4444;">❌ ' + e.message + '<br><button class="btn bp" onclick="A.renderSettings()" style="margin-top:10px;">🔄 إعادة المحاولة</button></div>';
+      }
+    };
+
+    // ═══ ربط الأحداث ═══
+    A.bindSettingsEvents = function() {
+      // لا حاجة - كل شيء يُقرأ عند الحفظ
+    };
+
+    // ═══ حفظ كل الإعدادات ═══
+    A.saveAllSettings = async function() {
+      try {
+        var msg = document.getElementById('settings-save-msg');
+        if (msg) msg.innerHTML = '<span style="color:#f59e0b;">⏳ جاري الحفظ...</span>';
+        
+        var g = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+        var gc = function(id) { var el = document.getElementById(id); return el ? el.checked : false; };
+        
+        var settings = {
+          // 1) التواصل
+          phone: g('s-phone').trim(),
+          whatsapp: g('s-wa').trim(),
+          email: g('s-email').trim(),
+          address: g('s-address').trim(),
+          workingHours: g('s-hours').trim(),
+          
+          // 2) الشحن
+          shippingFee: parseFloat(g('s-shipfee')) || 0,
+          freeShippingAbove: parseFloat(g('s-free')) || 0,
+          deliveryTime: g('s-delivery-time').trim(),
+          shippingEnabled: gc('s-ship-enabled'),
+          
+          // 3) العملة والنقاط
+          currency: g('s-currency'),
+          pointValue: parseFloat(g('s-points-value')) || 0.1,
+          dailyBonus: parseInt(g('s-daily-bonus')) || 1,
+          referralBonus: parseInt(g('s-referral-bonus')) || 10,
+          minOrder: parseFloat(g('s-min-order')) || 0,
+          minPointsRedeem: parseInt(g('s-min-points-redeem')) || 100,
+          
+          // 4) الخدمات
+          servFlight: gc('s-serv-flight'),
+          servHotel: gc('s-serv-hotel'),
+          servBus: gc('s-serv-bus'),
+          servHajj: gc('s-serv-hajj'),
+          servShop: gc('s-serv-shop'),
+          maintenance: gc('s-maintenance'),
+          
+          // 5) الهوية
+          appName: g('s-app-name').trim() || 'CHIZEN',
+          tagline: g('s-app-tagline').trim(),
+          logoUrl: g('s-logo-url').trim(),
+          welcomeMessage: g('s-slogan').trim(),
+          defaultTheme: g('s-default-theme'),
+          
+          // 6) الإشعارات
+          pushEnabled: gc('s-push-enabled'),
+          waOrders: gc('s-wa-orders'),
+          notifyNewOrder: gc('s-notify-new-order'),
+          notifyPayment: gc('s-notify-payment'),
+          notifyDelivery: gc('s-notify-delivery'),
+          welcomeTitle: g('s-welcome-title').trim(),
+          welcomeBody: g('s-welcome-body').trim(),
+          
+          // 7) الكوبونات
+          couponsEnabled: gc('s-coupons-enabled'),
+          welcomeCoupon: parseFloat(g('s-welcome-coupon')) || 15,
+          minCouponOrder: parseFloat(g('s-min-coupon')) || 0,
+          firstOrderCoupon: gc('s-first-order-coupon'),
+          
+          // 8) الأمان
+          pinEnabled: gc('s-pin-enabled'),
+          biometricEnabled: gc('s-biometric'),
+          sessionTimeout: parseInt(g('s-session-timeout')) || 30,
+          loginRequired: gc('s-login-required'),
+          
+          // 9) متقدم
+          defaultDriver: g('s-default-driver').trim(),
+          defaultDriverPhone: g('s-default-driver-phone').trim(),
+          supportMessage: g('s-support-msg').trim(),
+          appVersion: g('s-version').trim() || '1.0.0',
+          
+          // metadata
+          updatedAt: new Date(),
+          updatedBy: FB.currentUser ? FB.currentUser.uid : ''
+        };
+        
+        await FB.db.collection('config').doc('settings').set(settings, { merge: true });
+        
+        // حدّث الـ cache
+        this.settingsCache = settings;
+        
+        if (msg) msg.innerHTML = '<span style="color:#10b981;font-weight:900;">✅ تم الحفظ بنجاح - ' + new Date().toLocaleTimeString('ar') + '</span>';
+        this.toast('✅ حُفظت كل الإعدادات', 'suc');
+        
+        console.log('[SETTINGS] saved:', Object.keys(settings).length, 'fields');
+      } catch(e) {
+        console.error('[SETTINGS] save error:', e);
+        var msg = document.getElementById('settings-save-msg');
+        if (msg) msg.innerHTML = '<span style="color:#ef4444;">❌ فشل الحفظ: ' + e.message + '</span>';
+        this.toast('فشل: ' + e.message, 'err');
+      }
+    };
+
+    console.log('[SETTINGS-COMPLETE] installed');
+  }
+
+  waitForA();
+})();
+</script>
 </body>
 </html>
