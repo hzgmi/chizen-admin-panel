@@ -2968,348 +2968,7 @@ document.addEventListener('click', function(e) {
   waitForA();
 })();
 </script>
-<script id="dispatch-v1">
-(function(){
-  'use strict';
-  console.log('[DISPATCH] loading...');
 
-  function waitForA() {
-    if (!window.A) { setTimeout(waitForA, 200); return; }
-    if (A.__dispatchInstalled) return;
-    A.__dispatchInstalled = true;
-
-    A.currentDispatchFilter = 'ready';
-
-    function getOrderCategory(o) {
-      var payment = o.payment || {};
-      var workflow = o.workflowStatus || '';
-      if (o.sentToCustomer === true || workflow === 'sent_to_customer' || o.status === 'shipped') return 'shipping';
-      if (workflow === 'delivered' || o.status === 'completed') return 'delivered';
-      if (workflow === 'ready_to_send') return 'ready';
-      if (payment.status === 'verified' && o.allCategoriesConfirmed === true) return 'ready';
-      if (payment.status === 'verified' && o.allCategoriesConfirmed !== true) return 'awaiting_categories';
-      if (payment.status === 'pending' || !payment.status) return 'awaiting_payment';
-      if (payment.status === 'rejected') return 'rejected';
-      return 'awaiting_payment';
-    }
-
-    A.renderDispatcher = function() {
-      var ct = document.getElementById('ct');
-      if (!ct) return;
-
-      if (!document.getElementById('sc-dispatcher')) {
-        var sc = document.createElement('div');
-        sc.className = 'sc';
-        sc.id = 'sc-dispatcher';
-        ct.appendChild(sc);
-      }
-
-      document.querySelectorAll('.sc').forEach(function(x) { x.classList.remove('active'); });
-      var sc = document.getElementById('sc-dispatcher');
-      sc.classList.add('active');
-
-      var orders = this.orders || [];
-      var buckets = { awaiting_payment: [], awaiting_categories: [], ready: [], shipping: [], delivered: [], rejected: [] };
-      
-      orders.forEach(function(o) {
-        var cat = getOrderCategory(o);
-        if (buckets[cat]) buckets[cat].push(o);
-      });
-
-      var stats = '<div class="sg" style="margin-bottom:16px;">' +
-        '<div class="scd" style="border-left:3px solid #f59e0b;"><div class="sl">⏳ بانتظار الدفع</div><div class="sv" style="color:#f59e0b;">' + buckets.awaiting_payment.length + '</div></div>' +
-        '<div class="scd" style="border-left:3px solid #3b82f6;"><div class="sl">⏳ بانتظار الأقسام</div><div class="sv" style="color:#3b82f6;">' + buckets.awaiting_categories.length + '</div></div>' +
-        '<div class="scd" style="border-left:3px solid #10b981;"><div class="sl">✅ جاهز للإرسال</div><div class="sv" style="color:#10b981;">' + buckets.ready.length + '</div></div>' +
-        '<div class="scd" style="border-left:3px solid #a855f7;"><div class="sl">🚚 في التوصيل</div><div class="sv" style="color:#a855f7;">' + buckets.shipping.length + '</div></div>' +
-      '</div>';
-
-      var filters = [
-        { key: 'awaiting_payment', label: '⏳ بانتظار الدفع', count: buckets.awaiting_payment.length },
-        { key: 'awaiting_categories', label: '⏳ بانتظار الأقسام', count: buckets.awaiting_categories.length },
-        { key: 'ready', label: '✅ جاهز للإرسال', count: buckets.ready.length },
-        { key: 'shipping', label: '🚚 في التوصيل', count: buckets.shipping.length },
-        { key: 'delivered', label: '📦 تم التسليم', count: buckets.delivered.length }
-      ];
-      
-      var self = this;
-      var filtersHtml = '<div class="ch" style="margin-bottom:16px;">';
-      filters.forEach(function(f) {
-        var active = (self.currentDispatchFilter || 'ready') === f.key;
-        filtersHtml += '<span class="cp' + (active ? ' active' : '') + '" onclick="A.setDispatchFilter(\'' + f.key + '\',this)" style="cursor:pointer;display:inline-flex;gap:6px;align-items:center;">' + f.label + ' <span style="background:' + (active ? 'rgba(255,255,255,0.25)' : 'rgba(168,85,247,0.15)') + ';padding:1px 8px;border-radius:10px;font-size:10px;font-weight:900;">' + f.count + '</span></span>';
-      });
-      filtersHtml += '</div>';
-
-      var current = this.currentDispatchFilter || 'ready';
-      var filtered = buckets[current] || [];
-
-      var listHtml = '';
-      if (filtered.length === 0) {
-        var emptyMsgs = {
-          awaiting_payment: 'لا توجد طلبات بانتظار مراجعة الدفع',
-          awaiting_categories: 'لا توجد طلبات بانتظار تأكيد الأقسام',
-          ready: '✅ رائع! لا توجد طلبات معلقة',
-          shipping: 'لا توجد طلبات في التوصيل حالياً',
-          delivered: 'لا توجد طلبات مسلّمة بعد'
-        };
-        listHtml = '<div style="text-align:center;padding:60px 20px;background:rgba(255,255,255,0.02);border-radius:16px;"><div style="font-size:64px;margin-bottom:16px;">📭</div><div style="font-size:14px;color:#888;">' + (emptyMsgs[current] || 'لا توجد طلبات') + '</div></div>';
-      } else {
-        filtered.sort(function(a, b) {
-          var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-          var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-          return tb - ta;
-        });
-        listHtml = filtered.map(function(o) { return self.buildDispatchCard(o, current); }).join('');
-      }
-
-      sc.innerHTML = '<div class="cd" style="padding:20px;">' +
-        '<div class="cti" style="margin-bottom:16px;"><div class="ctl">🚚 إدارة التوصيل والطلبات</div><button class="btn bg2 bsm" onclick="A.renderDispatcher()">🔄 تحديث</button></div>' +
-        stats + filtersHtml + '<div id="dispatch-list">' + listHtml + '</div>' +
-      '</div>';
-    };
-
-    A.setDispatchFilter = function(f, el) {
-      this.currentDispatchFilter = f;
-      this.renderDispatcher();
-    };
-
-    A.buildDispatchCard = function(o, state) {
-      var payment = o.payment || {};
-      var paymentStatus = payment.status || 'pending';
-      var categories = o.categories || {};
-      var categoriesList = Object.keys(categories);
-      var confirmedCount = categoriesList.filter(function(k) { return categories[k] && categories[k].status === 'confirmed'; }).length;
-      var totalCats = categoriesList.length;
-      
-      var dateStr = '';
-      if (o.createdAt && o.createdAt.seconds) {
-        var d = new Date(o.createdAt.seconds * 1000);
-        dateStr = d.toLocaleDateString('ar') + ' ' + d.toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
-      }
-      
-      var badges = '';
-      if (paymentStatus === 'pending') badges += '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">⏳ دفع معلق</span>';
-      else if (paymentStatus === 'verified') badges += '<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">✅ دفع مؤكد</span>';
-      else if (paymentStatus === 'rejected') badges += '<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">❌ دفع مرفوض</span>';
-      
-      if (totalCats > 0) {
-        var catColor = confirmedCount === totalCats ? '#10b981' : '#3b82f6';
-        badges += ' <span style="background:rgba(59,130,246,0.15);color:' + catColor + ';padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">📦 ' + confirmedCount + '/' + totalCats + ' أقسام</span>';
-      }
-      
-      var actions = '';
-      var oid = o.id;
-      
-      if (state === 'awaiting_payment') {
-        actions = '<div style="display:flex;gap:8px;margin-top:12px;">' +
-          '<button onclick="A.verifyPayment(\'' + oid + '\')" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">✅ تأكيد الدفع</button>' +
-          '<button onclick="A.rejectPayment(\'' + oid + '\')" style="flex:1;padding:10px;background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">❌ رفض</button>' +
-        '</div>';
-        if (payment.receiptUrl) {
-          actions += '<a href="' + payment.receiptUrl + '" target="_blank" style="display:block;margin-top:8px;padding:8px;background:rgba(59,130,246,0.15);color:#3b82f6;border-radius:8px;text-align:center;font-size:11px;font-weight:800;text-decoration:none;">📸 عرض الإيصال</a>';
-        }
-      } else if (state === 'awaiting_categories') {
-        actions = '<div style="margin-top:12px;padding:10px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:10px;text-align:center;font-size:11px;color:#3b82f6;font-weight:800;">⏳ بانتظار تأكيد الأقسام</div>';
-        var catNames = {electronics:'إلكترونيات', fashion:'أزياء', home:'منزل', beauty:'جمال', kids:'أطفال', sports:'رياضة', tools:'أدوات'};
-        categoriesList.forEach(function(catKey) {
-          var cat = categories[catKey] || {};
-          var status = cat.status || 'pending';
-          var emoji = status === 'confirmed' ? '✅' : (status === 'rejected' ? '❌' : '⏳');
-          var color = status === 'confirmed' ? '#10b981' : (status === 'rejected' ? '#ef4444' : '#f59e0b');
-          actions += '<div style="display:flex;justify-content:space-between;padding:6px 10px;font-size:11px;color:' + color + ';margin-top:4px;"><span>' + emoji + ' ' + (catNames[catKey] || catKey) + '</span><span>' + (cat.items || []).length + ' منتج</span></div>';
-        });
-      } else if (state === 'ready') {
-        actions = '<button onclick="A.openAssignDriver(\'' + oid + '\')" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:12px;font-weight:900;font-size:13px;cursor:pointer;">🚚 تعيين سائق وإرسال</button>';
-      } else if (state === 'shipping') {
-        var di = o.deliveryInfo || {};
-        actions = '<div style="margin-top:12px;padding:10px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;font-size:11px;color:#a855f7;">' +
-          '<div style="font-weight:900;margin-bottom:4px;">🚚 في التوصيل</div>' +
-          '<div>السائق: ' + (di.driverName || '—') + '</div>' +
-          '<div>الهاتف: ' + (di.driverPhone || '—') + '</div>' +
-          '<div>المنطقة: ' + (di.region || '—') + '</div>' +
-        '</div>' +
-        '<button onclick="A.markDelivered(\'' + oid + '\')" style="width:100%;margin-top:8px;padding:10px;background:rgba(16,185,129,0.15);border:1.5px solid #10b981;color:#10b981;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">✅ تم التسليم</button>';
-      }
-
-      return '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(168,85,247,0.2);border-radius:14px;padding:14px;margin-bottom:12px;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
-          '<div><div style="font-weight:900;color:#a855f7;font-size:13px;">#' + (oid || '').substring(0, 14) + '</div>' +
-          '<div style="font-size:11px;color:#888;margin-top:2px;">' + (o.name || 'عميل') + ' • ' + (o.phone || '') + '</div></div>' +
-          '<div style="font-weight:900;color:#ff4d94;font-size:14px;">' + (o.total || 0) + ' ر.س</div>' +
-        '</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">' + badges + '</div>' +
-        '<div style="font-size:10px;color:#666;">📍 ' + (o.pickup || 'غير محدد') + ' • ' + dateStr + '</div>' +
-        actions +
-      '</div>';
-    };
-
-    A.verifyPayment = async function(orderId) {
-      try {
-        var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
-        if (snap.empty) return this.toast('الطلب غير موجود', 'err');
-        await snap.docs[0].ref.update({
-          'payment.status': 'verified',
-          'payment.verifiedBy': FB.currentUser ? FB.currentUser.uid : '',
-          'payment.verifiedAt': new Date(),
-          workflowStatus: 'awaiting_categories'
-        });
-        var order = snap.docs[0].data();
-        if (order.customerId && FB.addUserNotification) {
-          await FB.addUserNotification(order.customerId, {
-            title: '✅ تم تأكيد الدفع',
-            body: 'طلبك #' + orderId.substring(0, 8) + ' جاري تجهيزه',
-            type: 'order'
-          });
-        }
-        this.toast('✅ تم تأكيد الدفع', 'suc');
-        await this.loadData();
-        this.renderDispatcher();
-      } catch(e) {
-        this.toast('فشل: ' + e.message, 'err');
-      }
-    };
-
-    A.rejectPayment = function(orderId) {
-      var self = this;
-      this.confirm('رفض الدفع؟', 'سيتم إعلام العميل بالرفض', async function() {
-        try {
-          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
-          if (snap.empty) return;
-          await snap.docs[0].ref.update({
-            'payment.status': 'rejected',
-            'payment.verifiedBy': FB.currentUser ? FB.currentUser.uid : '',
-            'payment.verifiedAt': new Date(),
-            workflowStatus: 'payment_rejected'
-          });
-          self.toast('تم رفض الدفع', 'suc');
-          await self.loadData();
-          self.renderDispatcher();
-        } catch(e) {
-          self.toast('فشل: ' + e.message, 'err');
-        }
-      });
-    };
-
-    A.openAssignDriver = function(orderId) {
-      var order = null;
-      (this.orders || []).forEach(function(o) { if (o.id === orderId) order = o; });
-      if (!order) return this.toast('الطلب غير موجود', 'err');
-      
-      var body = '<div style="padding:4px;">' +
-        '<div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:12px;margin-bottom:14px;">' +
-          '<div style="font-size:12px;color:#a855f7;font-weight:900;margin-bottom:4px;">📦 طلب #' + order.id.substring(0, 10) + '</div>' +
-          '<div style="font-size:11px;color:#fff;">' + (order.name || 'عميل') + ' • ' + (order.phone || '') + '</div>' +
-          '<div style="font-size:12px;color:#ff4d94;font-weight:900;margin-top:4px;">' + (order.total || 0) + ' ر.س</div>' +
-        '</div>' +
-        '<div style="margin-bottom:10px;"><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">اسم السائق</label><input class="fi" id="disp-driver-name" placeholder="مثال: أحمد علي" style="width:100%;"></div>' +
-        '<div style="margin-bottom:10px;"><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">رقم واتساب السائق</label><input class="fi" id="disp-driver-phone" type="tel" placeholder="967771234567" style="width:100%;"></div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
-          '<div><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">المنطقة</label><input class="fi" id="disp-region" placeholder="مثال: صنعاء" style="width:100%;"></div>' +
-          '<div><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">رسوم التوصيل</label><input class="fi" id="disp-fee" type="number" placeholder="0" style="width:100%;"></div>' +
-        '</div>' +
-        '<div style="margin-bottom:10px;"><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">ملاحظة (اختياري)</label><textarea class="fi" id="disp-note" placeholder="اتصل قبل الوصول" style="width:100%;height:60px;resize:none;"></textarea></div>' +
-      '</div>';
-      
-      var actions = '<button class="btn bg2" onclick="A.cm()">إلغاء</button>' +
-        '<button class="btn bp" onclick="A.assignDriverAndSend(\'' + orderId + '\')">📤 إرسال للعميل</button>';
-      
-      this.modal('🚚 تعيين سائق', body, actions);
-    };
-
-    A.assignDriverAndSend = async function(orderId) {
-      var driverName = (document.getElementById('disp-driver-name').value || '').trim();
-      var driverPhone = (document.getElementById('disp-driver-phone').value || '').trim();
-      var region = (document.getElementById('disp-region').value || '').trim();
-      var fee = parseFloat(document.getElementById('disp-fee').value) || 0;
-      var note = (document.getElementById('disp-note').value || '').trim();
-      
-      if (!driverName) return this.toast('أدخل اسم السائق', 'err');
-      if (!driverPhone) return this.toast('أدخل رقم واتساب السائق', 'err');
-      
-      var phoneClean = driverPhone.replace(/\D/g, '');
-      if (phoneClean.length === 9 && phoneClean.startsWith('7')) phoneClean = '967' + phoneClean;
-      else if (phoneClean.length === 10 && phoneClean.startsWith('0')) phoneClean = '967' + phoneClean.slice(1);
-      
-      try {
-        var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
-        if (snap.empty) return this.toast('الطلب غير موجود', 'err');
-        
-        var order = snap.docs[0].data();
-        await snap.docs[0].ref.update({
-          sentToCustomer: true,
-          workflowStatus: 'sent_to_customer',
-          status: 'shipped',
-          deliveryInfo: {
-            driverName: driverName,
-            driverPhone: phoneClean,
-            region: region,
-            deliveryFee: fee,
-            note: note,
-            assignedAt: new Date(),
-            assignedBy: FB.currentUser ? FB.currentUser.uid : ''
-          }
-        });
-        
-        var waMsg = '🚚 *طلب توصيل جديد*' + '\n\n' +
-          '*رقم الطلب:* #' + orderId.substring(0, 10) + '\n' +
-          '*العميل:* ' + (order.name || '') + '\n' +
-          '*الهاتف:* ' + (order.phone || '') + '\n' +
-          '*العنوان:* ' + (order.pickup || '') + '\n\n' +
-          '📦 *المنتجات:*\n';
-        
-        (order.items || []).forEach(function(it) {
-          waMsg += '• ' + (it.name || 'منتج') + ' × ' + (it.qty || 1) + '\n';
-        });
-        
-        waMsg += '\n💰 *المجموع:* ' + (order.total || 0) + ' ر.س';
-        if (fee > 0) waMsg += '\n🚗 *رسوم التوصيل:* ' + fee + ' ر.س';
-        waMsg += '\n💵 *المستلم:* ' + ((order.total || 0) + fee) + ' ر.س';
-        if (note) waMsg += '\n\n📝 *ملاحظة:* ' + note;
-        waMsg += '\n\nشكراً 🌟';
-        
-        if (order.customerId && FB.addUserNotification) {
-          await FB.addUserNotification(order.customerId, {
-            title: '🚚 طلبك في الطريق!',
-            body: 'السائق ' + driverName + ' (' + phoneClean + ') سيصل قريباً',
-            type: 'order'
-          });
-        }
-        
-        this.cm();
-        this.toast('✅ تم الإرسال', 'suc');
-        window.open('https://wa.me/' + phoneClean + '?text=' + encodeURIComponent(waMsg), '_blank');
-        await this.loadData();
-        this.renderDispatcher();
-      } catch(e) {
-        this.toast('فشل: ' + e.message, 'err');
-      }
-    };
-
-    A.markDelivered = async function(orderId) {
-      var self = this;
-      this.confirm('تم التسليم؟', 'سيتم تحديث حالة الطلب', async function() {
-        try {
-          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
-          if (snap.empty) return;
-          await snap.docs[0].ref.update({
-            workflowStatus: 'delivered',
-            status: 'completed',
-            deliveredAt: new Date()
-          });
-          self.toast('✅ تم التسليم', 'suc');
-          await self.loadData();
-          self.renderDispatcher();
-        } catch(e) {
-          self.toast('فشل: ' + e.message, 'err');
-        }
-      });
-    };
-
-    console.log('[DISPATCH] installed');
-  }
-
-  waitForA();
-})();
-</script>
 <script id="chz-simple-logout">
 (function(){
   console.log('[SIMPLE-LOGOUT] installing...');
@@ -3765,6 +3424,707 @@ document.addEventListener('click', function(e) {
     init();
   }
   setInterval(init, 2000);
+})();
+</script>
+<script id="dispatch-v2">
+(function(){
+  'use strict';
+  console.log('[DISPATCH-V2] loading...');
+
+  function waitForA() {
+    if (!window.A) { setTimeout(waitForA, 200); return; }
+    if (A.__dispatchV2Installed) return;
+    A.__dispatchV2Installed = true;
+
+    // ═══ الحالة ═══
+    A.dispatch = {
+      filter: 'ready',
+      search: '',
+      orders: [],
+      listener: null,
+      initialized: false,
+      knownOrderIds: new Set(),
+      lastDriver: (function() {
+        try { return JSON.parse(localStorage.getItem('chizen_last_driver') || '{}'); } catch(e) { return {}; }
+      })()
+    };
+
+    // ═══ تصنيف الطلب ═══
+    function categorize(o) {
+      var p = o.payment || {};
+      var w = o.workflowStatus || '';
+      if (o.sentToCustomer === true || w === 'sent_to_customer' || o.status === 'shipped') return 'shipping';
+      if (w === 'delivered' || o.status === 'completed') return 'delivered';
+      if (w === 'ready_to_send') return 'ready';
+      if (p.status === 'verified' && o.allCategoriesConfirmed === true) return 'ready';
+      if (p.status === 'verified' && o.allCategoriesConfirmed !== true) return 'awaiting_categories';
+      if (p.status === 'rejected') return 'rejected';
+      return 'awaiting_payment';
+    }
+
+    // ═══ وقت منذ ═══
+    function timeAgo(o) {
+      if (!o.createdAt) return '';
+      var ts = o.createdAt.seconds ? o.createdAt.seconds * 1000 : (o.createdAt.toMillis ? o.createdAt.toMillis() : 0);
+      if (!ts) return '';
+      var diff = Math.floor((Date.now() - ts) / 60000);
+      if (diff < 1) return 'الآن';
+      if (diff < 60) return 'منذ ' + diff + ' د';
+      if (diff < 1440) return 'منذ ' + Math.floor(diff/60) + ' س';
+      if (diff < 10080) return 'منذ ' + Math.floor(diff/1440) + ' ي';
+      return new Date(ts).toLocaleDateString('ar');
+    }
+
+    // ═══ إشعار صوتي ═══
+    function playNotifySound() {
+      try {
+        // أنشئ نغمة بسيطة بـ Web Audio API
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+      } catch(e) {}
+    }
+
+    // ═══ إشعار المتصفح ═══
+    function browserNotify(title, body) {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
+        try { new Notification(title, { body: body, icon: '/favicon.ico' }); } catch(e) {}
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission();
+      }
+    }
+
+    // ═══ skeleton ═══
+    function skeleton() {
+      var html = '';
+      for (var i = 0; i < 3; i++) {
+        html += '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(168,85,247,0.1);border-radius:14px;padding:14px;margin-bottom:12px;opacity:0.5;">' +
+          '<div style="height:12px;background:rgba(168,85,247,0.2);border-radius:6px;width:40%;margin-bottom:8px;"></div>' +
+          '<div style="height:10px;background:rgba(168,85,247,0.15);border-radius:6px;width:70%;margin-bottom:6px;"></div>' +
+          '<div style="height:10px;background:rgba(168,85,247,0.15);border-radius:6px;width:50%;"></div>' +
+        '</div>';
+      }
+      return html;
+    }
+
+    // ═══ رأس اللوحة (إحصائيات + بحث) ═══
+    function buildHeader() {
+      var D = this.dispatch;
+      var orders = D.orders;
+      var buckets = { awaiting_payment: 0, awaiting_categories: 0, ready: 0, shipping: 0, delivered: 0, rejected: 0 };
+      orders.forEach(function(o) { buckets[categorize(o)]++; });
+
+      // إيرادات اليوم
+      var today = new Date(); today.setHours(0,0,0,0);
+      var todayOrders = orders.filter(function(o) {
+        var ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds * 1000 : 0;
+        return ts >= today.getTime();
+      });
+      var todayRevenue = todayOrders.reduce(function(s, o) { return s + (o.total || 0); }, 0);
+      var todayDelivered = todayOrders.filter(function(o) { return o.status === 'completed'; }).length;
+
+      // إحصائيات ملوّنة
+      var stats = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">' +
+        buildStatCard('⏳', 'بانتظار الدفع', buckets.awaiting_payment, '#f59e0b') +
+        buildStatCard('📦', 'بانتظار الأقسام', buckets.awaiting_categories, '#3b82f6') +
+        buildStatCard('✅', 'جاهز للإرسال', buckets.ready, '#10b981') +
+        buildStatCard('🚚', 'في التوصيل', buckets.shipping, '#a855f7') +
+      '</div>';
+
+      // إحصائيات اليوم
+      var todayStats = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">' +
+        '<div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:12px;text-align:center;">' +
+          '<div style="font-size:11px;color:#10b981;margin-bottom:4px;">طلبات اليوم</div>' +
+          '<div style="font-size:20px;font-weight:900;color:#10b981;">' + todayOrders.length + '</div>' +
+        '</div>' +
+        '<div style="background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.3);border-radius:12px;padding:12px;text-align:center;">' +
+          '<div style="font-size:11px;color:#ec4899;margin-bottom:4px;">إيرادات اليوم</div>' +
+          '<div style="font-size:20px;font-weight:900;color:#ec4899;">' + todayRevenue.toFixed(0) + '</div>' +
+        '</div>' +
+        '<div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:12px;text-align:center;">' +
+          '<div style="font-size:11px;color:#a855f7;margin-bottom:4px;">تم التسليم</div>' +
+          '<div style="font-size:20px;font-weight:900;color:#a855f7;">' + todayDelivered + '</div>' +
+        '</div>' +
+      '</div>';
+
+      // بحث
+      var search = '<div style="position:relative;margin-bottom:12px;">' +
+        '<input type="text" id="disp-search" placeholder="🔍 ابحث برقم الطلب / اسم / هاتف..." value="' + (D.search || '') + '" oninput="A.setDispatchSearch(this.value)" ' +
+          'style="width:100%;padding:12px 16px 12px 44px;border-radius:12px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(15,10,35,0.9);color:#fff;font-family:Tajawal,sans-serif;font-size:13px;box-sizing:border-box;outline:none;">' +
+        '<span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">🔍</span>' +
+      '</div>';
+
+      // فلاتر
+      var filters = [
+        { key: 'awaiting_payment', label: '⏳ الدفع', count: buckets.awaiting_payment, color: '#f59e0b' },
+        { key: 'awaiting_categories', label: '📦 الأقسام', count: buckets.awaiting_categories, color: '#3b82f6' },
+        { key: 'ready', label: '✅ جاهز', count: buckets.ready, color: '#10b981' },
+        { key: 'shipping', label: '🚚 توصيل', count: buckets.shipping, color: '#a855f7' },
+        { key: 'delivered', label: '📬 مسلّم', count: buckets.delivered, color: '#6b7280' }
+      ];
+      var filtersHtml = '<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;scrollbar-width:none;">';
+      var self = this;
+      filters.forEach(function(f) {
+        var active = D.filter === f.key;
+        filtersHtml += '<button onclick="A.setDispatchFilter(\'' + f.key + '\')" style="' +
+          'flex-shrink:0;padding:8px 12px;border-radius:20px;' +
+          'border:1.5px solid ' + (active ? f.color : 'rgba(168,85,247,0.2)') + ';' +
+          'background:' + (active ? f.color + '22' : 'rgba(255,255,255,0.02)') + ';' +
+          'color:' + (active ? f.color : '#888') + ';' +
+          'font-family:Tajawal,sans-serif;font-weight:800;font-size:11px;cursor:pointer;' +
+          'white-space:nowrap;display:flex;align-items:center;gap:5px;' +
+        '">' + f.label + ' <span style="background:' + (active ? f.color : 'rgba(168,85,247,0.15)') + ';color:' + (active ? '#000' : '#888') + ';padding:1px 7px;border-radius:10px;font-size:10px;font-weight:900;">' + f.count + '</span></button>';
+      });
+      filtersHtml += '</div>';
+
+      return stats + todayStats + search + filtersHtml;
+    }
+
+    function buildStatCard(icon, label, value, color) {
+      return '<div style="background:linear-gradient(135deg,' + color + '15,' + color + '05);border:1px solid ' + color + '40;border-radius:12px;padding:10px 6px;text-align:center;">' +
+        '<div style="font-size:18px;margin-bottom:2px;">' + icon + '</div>' +
+        '<div style="font-size:9px;color:' + color + ';font-weight:700;margin-bottom:4px;">' + label + '</div>' +
+        '<div style="font-size:18px;font-weight:900;color:' + color + ';">' + value + '</div>' +
+      '</div>';
+    }
+
+    // ═══ بطاقة الطلب ═══
+    function buildOrderCard(o) {
+      var payment = o.payment || {};
+      var pStatus = payment.status || 'pending';
+      var cats = o.categories || {};
+      var catKeys = Object.keys(cats);
+      var confirmed = catKeys.filter(function(k) { return cats[k] && cats[k].status === 'confirmed'; }).length;
+      var totalCats = catKeys.length;
+      var progress = totalCats > 0 ? (confirmed / totalCats) * 100 : 0;
+      var isNew = !this.dispatch.knownOrderIds.has(o.id);
+      var orderTime = timeAgo(o);
+      var oid = o.id || '';
+
+      // شارات
+      var badges = '';
+      if (pStatus === 'pending') badges += '<span style="background:rgba(245,158,11,0.2);color:#f59e0b;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;">⏳ دفع</span>';
+      else if (pStatus === 'verified') badges += '<span style="background:rgba(16,185,129,0.2);color:#10b981;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;">✅ دفع</span>';
+      else if (pStatus === 'rejected') badges += '<span style="background:rgba(239,68,68,0.2);color:#ef4444;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;">❌ دفع</span>';
+
+      if (totalCats > 0) {
+        var catColor = confirmed === totalCats ? '#10b981' : '#3b82f6';
+        badges += '<span style="background:rgba(59,130,246,0.15);color:' + catColor + ';padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;">📦 ' + confirmed + '/' + totalCats + '</span>';
+      }
+
+      if (isNew) badges += '<span style="background:#ef4444;color:#fff;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:900;animation:pulse 1.5s infinite;">● جديد</span>';
+
+      // أزرار حسب الحالة
+      var actions = '';
+      var state = categorize(o);
+
+      if (state === 'awaiting_payment') {
+        actions = '<div style="display:flex;gap:6px;margin-top:12px;">' +
+          '<button onclick="event.stopPropagation();A.verifyPayment(\'' + oid + '\')" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">✅ تأكيد الدفع</button>' +
+          '<button onclick="event.stopPropagation();A.rejectPayment(\'' + oid + '\')" style="padding:10px 14px;background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">❌</button>' +
+        '</div>';
+        if (payment.receiptUrl) {
+          actions += '<a href="' + payment.receiptUrl + '" target="_blank" onclick="event.stopPropagation()" style="display:block;margin-top:6px;padding:8px;background:rgba(59,130,246,0.15);color:#3b82f6;border-radius:8px;text-align:center;font-size:11px;font-weight:800;text-decoration:none;">📸 عرض الإيصال</a>';
+        }
+      } else if (state === 'awaiting_categories') {
+        actions = '<div style="margin-top:10px;padding:10px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:10px;">' +
+          '<div style="font-size:11px;color:#3b82f6;font-weight:800;margin-bottom:6px;text-align:center;">⏳ بانتظار تأكيد الأقسام</div>' +
+          '<div style="background:rgba(59,130,246,0.2);height:6px;border-radius:3px;overflow:hidden;">' +
+            '<div style="width:' + progress + '%;height:100%;background:linear-gradient(90deg,#3b82f6,#10b981);transition:width 0.3s;"></div>' +
+          '</div>' +
+        '</div>';
+      } else if (state === 'ready') {
+        actions = '<button onclick="event.stopPropagation();A.openAssignDriver(\'' + oid + '\')" style="width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.3);">🚚 تعيين سائق وإرسال</button>';
+      } else if (state === 'shipping') {
+        var di = o.deliveryInfo || {};
+        actions = '<div style="margin-top:10px;padding:10px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;font-size:11px;color:#a855f7;">' +
+          '<div style="font-weight:800;margin-bottom:4px;">🚚 ' + (di.driverName || 'سائق') + '</div>' +
+          '<div style="color:#b8c0d8;">📱 ' + (di.driverPhone || '—') + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;margin-top:6px;">' +
+          '<button onclick="event.stopPropagation();A.markDelivered(\'' + oid + '\')" style="flex:1;padding:10px;background:rgba(16,185,129,0.15);border:1.5px solid #10b981;color:#10b981;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">✅ تم التسليم</button>' +
+          (di.driverPhone ? '<a href="https://wa.me/' + di.driverPhone + '" target="_blank" onclick="event.stopPropagation()" style="padding:10px 14px;background:#25D366;color:#fff;border-radius:10px;font-weight:900;font-size:12px;text-decoration:none;">💬</a>' : '') +
+        '</div>';
+      } else if (state === 'delivered') {
+        actions = '<div style="margin-top:10px;padding:8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;text-align:center;font-size:11px;color:#10b981;font-weight:800;">✅ تم التسليم</div>';
+      }
+
+      // زر WhatsApp للعميل
+      var clientWa = o.phone ? '<a href="https://wa.me/' + (o.phone || '').replace(/\D/g, '') + '" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:rgba(37,211,102,0.15);color:#25D366;border-radius:6px;font-size:10px;font-weight:800;text-decoration:none;">💬 عميل</a>' : '';
+
+      return '<div onclick="A.openOrderDetails(\'' + oid + '\')" style="' +
+        'background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));' +
+        'border:1px solid ' + (isNew ? 'rgba(239,68,68,0.5)' : 'rgba(168,85,247,0.2)') + ';' +
+        'border-radius:14px;padding:14px;margin-bottom:12px;cursor:pointer;' +
+        'transition:all 0.2s;' +
+      '" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(168,85,247,0.15)\';" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\';">' +
+        
+        // Header
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+              '<span style="font-weight:900;color:#a855f7;font-size:13px;">#' + oid.substring(0, 10) + '</span>' +
+              '<span style="font-size:10px;color:#666;">' + orderTime + '</span>' +
+            '</div>' +
+            '<div style="font-size:12px;color:#fff;font-weight:700;">' + (o.name || 'عميل') + '</div>' +
+            '<div style="font-size:11px;color:#888;">📱 ' + (o.phone || '—') + '</div>' +
+          '</div>' +
+          '<div style="text-align:left;">' +
+            '<div style="font-weight:900;color:#ff4d94;font-size:15px;">' + (o.total || 0) + '</div>' +
+            '<div style="font-size:9px;color:#666;">ر.س</div>' +
+          '</div>' +
+        '</div>' +
+        
+        // Badges
+        '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">' + badges + '</div>' +
+        
+        // Address + WhatsApp
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
+          '<div style="font-size:10px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ' + (o.pickup || 'غير محدد') + '</div>' +
+          clientWa +
+        '</div>' +
+        
+        actions +
+      '</div>';
+    }
+
+    // ═══ renderDispatcher ═══
+    A.renderDispatcher = function() {
+      var ct = document.getElementById('ct');
+      if (!ct) return;
+
+      if (!document.getElementById('sc-dispatcher')) {
+        var sc = document.createElement('div');
+        sc.className = 'sc';
+        sc.id = 'sc-dispatcher';
+        ct.appendChild(sc);
+      }
+
+      document.querySelectorAll('.sc').forEach(function(x) { x.classList.remove('active'); });
+      var sc = document.getElementById('sc-dispatcher');
+      sc.classList.add('active');
+
+      // Header
+      var html = '<div style="padding:16px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+          '<div style="font-size:20px;font-weight:900;color:#a855f7;">🚚 إدارة التوصيل</div>' +
+          '<button onclick="A.refreshDispatch()" style="padding:8px 14px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#a855f7;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;">🔄 تحديث</button>' +
+        '</div>' +
+        buildHeader.call(this) +
+        '<div id="disp-list">' + skeleton() + '</div>' +
+      '</div>';
+
+      sc.innerHTML = html;
+
+      // ارسم القائمة
+      this.renderDispatchList();
+    };
+
+    // ═══ رسم القائمة ═══
+    A.renderDispatchList = function() {
+      var list = document.getElementById('disp-list');
+      if (!list) return;
+
+      var D = this.dispatch;
+      var orders = D.orders.filter(function(o) { return categorize(o) === D.filter; });
+
+      // بحث
+      if (D.search) {
+        var q = D.search.toLowerCase();
+        orders = orders.filter(function(o) {
+          return (o.id || '').toLowerCase().indexOf(q) > -1 ||
+                 (o.name || '').toLowerCase().indexOf(q) > -1 ||
+                 (o.phone || '').toLowerCase().indexOf(q) > -1 ||
+                 (o.pickup || '').toLowerCase().indexOf(q) > -1;
+        });
+      }
+
+      // ترتيب
+      orders.sort(function(a, b) {
+        var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+        var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+        return tb - ta;
+      });
+
+      if (orders.length === 0) {
+        var emptyMsg = D.search 
+          ? 'لا توجد نتائج للبحث "' + D.search + '"'
+          : 'لا توجد طلبات في هذا التصنيف';
+        var emptyIcon = D.search ? '🔍' : '📭';
+        list.innerHTML = '<div style="text-align:center;padding:60px 20px;background:rgba(255,255,255,0.02);border-radius:16px;">' +
+          '<div style="font-size:64px;margin-bottom:16px;">' + emptyIcon + '</div>' +
+          '<div style="font-size:14px;color:#888;">' + emptyMsg + '</div>' +
+        '</div>';
+        return;
+      }
+
+      var self = this;
+      list.innerHTML = orders.map(function(o) { return buildOrderCard.call(self, o); }).join('');
+
+      // بعد الرسم - حدّث known IDs
+      orders.forEach(function(o) { D.knownOrderIds.add(o.id); });
+    };
+
+    // ═══ بحث ═══
+    A.setDispatchSearch = function(q) {
+      this.dispatch.search = q || '';
+      clearTimeout(this.dispatch._searchTimer);
+      var self = this;
+      this.dispatch._searchTimer = setTimeout(function() {
+        self.renderDispatchList();
+      }, 200);
+    };
+
+    // ═══ فلترة ═══
+    A.setDispatchFilter = function(f) {
+      this.dispatch.filter = f;
+      this.renderDispatcher();
+    };
+
+    // ═══ تحديث يدوي ═══
+    A.refreshDispatch = async function() {
+      this.toast('جاري التحديث...');
+      try {
+        await this.loadData();
+        this.dispatch.orders = this.orders || [];
+        this.renderDispatcher();
+        this.toast('✅ محدّث', 'suc');
+      } catch(e) {
+        this.toast('فشل', 'err');
+      }
+    };
+
+    // ═══ تفاصيل الطلب (modal) ═══
+    A.openOrderDetails = function(orderId) {
+      var order = this.dispatch.orders.find(function(o) { return o.id === orderId; });
+      if (!order) return;
+      
+      var p = order.payment || {};
+      var cats = order.categories || {};
+      var catKeys = Object.keys(cats);
+      var di = order.deliveryInfo || {};
+      
+      var catNames = {electronics:'إلكترونيات', fashion:'أزياء', home:'منزل', beauty:'جمال', kids:'أطفال', sports:'رياضة', tools:'أدوات'};
+      
+      var body = 
+        '<div style="background:linear-gradient(135deg,rgba(168,85,247,0.1),rgba(236,72,153,0.05));border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:14px;margin-bottom:14px;">' +
+          '<div style="font-size:11px;color:#888;margin-bottom:4px;">رقم الطلب</div>' +
+          '<div style="font-weight:900;color:#a855f7;font-size:14px;font-family:monospace;">#' + orderId + '</div>' +
+        '</div>' +
+        
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">' +
+          '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;">' +
+            '<div style="font-size:10px;color:#888;margin-bottom:2px;">العميل</div>' +
+            '<div style="font-size:12px;color:#fff;font-weight:700;">' + (order.name || '—') + '</div>' +
+          '</div>' +
+          '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;">' +
+            '<div style="font-size:10px;color:#888;margin-bottom:2px;">الهاتف</div>' +
+            '<div style="font-size:12px;color:#fff;font-weight:700;direction:ltr;">' + (order.phone || '—') + '</div>' +
+          '</div>' +
+        '</div>' +
+        
+        '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:14px;">' +
+          '<div style="font-size:10px;color:#888;margin-bottom:2px;">📍 العنوان</div>' +
+          '<div style="font-size:12px;color:#fff;">' + (order.pickup || '—') + '</div>' +
+        '</div>' +
+        
+        '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:14px;">' +
+          '<div style="font-size:10px;color:#888;margin-bottom:6px;">📦 الأقسام</div>' +
+          (catKeys.length > 0 ? catKeys.map(function(k) {
+            var c = cats[k];
+            var status = c.status === 'confirmed' ? '✅' : (c.status === 'rejected' ? '❌' : '⏳');
+            return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;"><span style="color:#b8c0d8;">' + status + ' ' + (catNames[k] || k) + '</span><span style="color:#888;">' + (c.items || []).length + ' منتج</span></div>';
+          }).join('') : '<div style="color:#666;font-size:11px;">—</div>') +
+        '</div>' +
+        
+        (di.driverName ? 
+          '<div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:10px;margin-bottom:14px;">' +
+            '<div style="font-size:10px;color:#a855f7;margin-bottom:4px;">🚚 السائق</div>' +
+            '<div style="font-size:12px;color:#fff;">' + di.driverName + ' • <span style="direction:ltr;display:inline-block;">' + (di.driverPhone || '') + '</span></div>' +
+          '</div>' : '') +
+        
+        '<div style="background:linear-gradient(135deg,rgba(236,72,153,0.1),rgba(168,85,247,0.05));border:1px solid rgba(236,72,153,0.3);border-radius:12px;padding:14px;text-align:center;">' +
+          '<div style="font-size:11px;color:#888;margin-bottom:4px;">الإجمالي</div>' +
+          '<div style="font-size:22px;font-weight:900;color:#ff4d94;">' + (order.total || 0) + ' ر.س</div>' +
+        '</div>';
+      
+      var actions = '<button class="btn bg2" onclick="A.cm()">إغلاق</button>';
+      if (order.phone) {
+        actions += '<a href="https://wa.me/' + order.phone.replace(/\D/g, '') + '" target="_blank" class="btn bg2" style="background:#25D366;color:#fff;">💬 واتساب</a>';
+      }
+      
+      this.modal('📋 تفاصيل الطلب', body, actions);
+    };
+
+    // ═══ فتح تعيين السائق (محسّن) ═══
+    A.openAssignDriver = function(orderId) {
+      var order = this.dispatch.orders.find(function(o) { return o.id === orderId; });
+      if (!order) return this.toast('الطلب غير موجود', 'err');
+      
+      var D = this.dispatch;
+      var last = D.lastDriver || {};
+      
+      var body = 
+        '<div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:12px;margin-bottom:14px;">' +
+          '<div style="font-size:12px;color:#a855f7;font-weight:900;">📦 #' + orderId.substring(0, 10) + '</div>' +
+          '<div style="font-size:11px;color:#fff;margin-top:4px;">' + (order.name || '—') + ' • ' + (order.phone || '—') + '</div>' +
+          '<div style="font-size:11px;color:#888;margin-top:2px;">📍 ' + (order.pickup || '—') + '</div>' +
+        '</div>' +
+        
+        '<div style="margin-bottom:10px;"><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">اسم السائق *</label>' +
+          '<input class="fi" id="disp-driver-name" value="' + (last.name || '') + '" placeholder="مثال: أحمد علي" style="width:100%;"></div>' +
+        
+        '<div style="margin-bottom:10px;"><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">رقم واتساب *</label>' +
+          '<input class="fi" id="disp-driver-phone" type="tel" value="' + (last.phone || '') + '" placeholder="967771234567" style="width:100%;direction:ltr;"></div>' +
+        
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+          '<div><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">المنطقة</label><input class="fi" id="disp-region" placeholder="صنعاء" style="width:100%;"></div>' +
+          '<div><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">رسوم التوصيل</label><input class="fi" id="disp-fee" type="number" value="0" placeholder="0" style="width:100%;"></div>' +
+        '</div>' +
+        
+        '<div style="margin-bottom:10px;"><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">ملاحظة للسائق</label>' +
+          '<textarea class="fi" id="disp-note" placeholder="اتصل قبل الوصول..." style="width:100%;height:60px;resize:none;"></textarea></div>';
+      
+      var actions = '<button class="btn bg2" onclick="A.cm()">إلغاء</button>' +
+        '<button class="btn bp" onclick="A.assignDriverAndSend(\'' + orderId + '\')">📤 إرسال واتساب</button>';
+      
+      this.modal('🚚 تعيين سائق', body, actions);
+    };
+
+    // ═══ تنفيذ الإرسال ═══
+    A.assignDriverAndSend = async function(orderId) {
+      var driverName = (document.getElementById('disp-driver-name').value || '').trim();
+      var driverPhone = (document.getElementById('disp-driver-phone').value || '').trim();
+      var region = (document.getElementById('disp-region').value || '').trim();
+      var fee = parseFloat(document.getElementById('disp-fee').value) || 0;
+      var note = (document.getElementById('disp-note').value || '').trim();
+      
+      if (!driverName) return this.toast('أدخل اسم السائق', 'err');
+      if (!driverPhone) return this.toast('أدخل رقم السائق', 'err');
+      
+      var cleanPhone = driverPhone.replace(/\D/g, '');
+      if (cleanPhone.length === 9 && cleanPhone.startsWith('7')) cleanPhone = '967' + cleanPhone;
+      if (cleanPhone.length === 10 && cleanPhone.startsWith('0')) cleanPhone = '967' + cleanPhone.slice(1);
+      
+      try {
+        var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+        if (snap.empty) return this.toast('الطلب غير موجود', 'err');
+        
+        var order = snap.docs[0].data();
+        await snap.docs[0].ref.update({
+          sentToCustomer: true,
+          workflowStatus: 'sent_to_customer',
+          status: 'shipped',
+          deliveryInfo: {
+            driverName: driverName,
+            driverPhone: cleanPhone,
+            region: region,
+            deliveryFee: fee,
+            note: note,
+            assignedAt: new Date(),
+            assignedBy: FB.currentUser ? FB.currentUser.uid : ''
+          }
+        });
+        
+        // احفظ آخر سائق
+        localStorage.setItem('chizen_last_driver', JSON.stringify({ name: driverName, phone: cleanPhone }));
+        this.dispatch.lastDriver = { name: driverName, phone: cleanPhone };
+        
+        // رسالة WhatsApp
+        var items = order.items || [];
+        var itemsList = items.map(function(it) { return '• ' + (it.name || 'منتج') + ' × ' + (it.qty || 1); }).join('\n');
+        
+        var waMsg = '🚚 *طلب توصيل جديد*' + '\n\n' +
+          '*رقم الطلب:* #' + orderId.substring(0, 10) + '\n' +
+          '*العميل:* ' + (order.name || '') + '\n' +
+          '*الهاتف:* ' + (order.phone || '') + '\n' +
+          '*العنوان:* ' + (order.pickup || '') + '\n\n' +
+          '📦 *المنتجات:*\n' + itemsList + '\n\n' +
+          '💰 *المجموع:* ' + (order.total || 0) + ' ر.س';
+        if (fee > 0) waMsg += '\n🚗 *رسوم التوصيل:* ' + fee + ' ر.س';
+        waMsg += '\n💵 *المستلم:* ' + ((order.total || 0) + fee) + ' ر.س';
+        if (note) waMsg += '\n\n📝 *ملاحظة:* ' + note;
+        waMsg += '\n\nشكراً 🌟';
+        
+        // إشعار للعميل
+        if (order.customerId && FB.addUserNotification) {
+          await FB.addUserNotification(order.customerId, {
+            title: '🚚 طلبك في الطريق!',
+            body: 'السائق ' + driverName + ' سيصل قريباً',
+            type: 'order'
+          });
+        }
+        
+        this.cm();
+        this.toast('✅ تم الإرسال', 'suc');
+        window.open('https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(waMsg), '_blank');
+        await this.loadData();
+        this.dispatch.orders = this.orders || [];
+        this.renderDispatcher();
+      } catch(e) {
+        this.toast('فشل: ' + e.message, 'err');
+      }
+    };
+
+    // ═══ تأكيد الدفع ═══
+    A.verifyPayment = async function(orderId) {
+      var self = this;
+      this.confirm('تأكيد الدفع؟', 'سيبدأ تجهيز الطلب', async function() {
+        try {
+          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+          if (snap.empty) return;
+          await snap.docs[0].ref.update({
+            'payment.status': 'verified',
+            'payment.verifiedBy': FB.currentUser ? FB.currentUser.uid : '',
+            'payment.verifiedAt': new Date(),
+            workflowStatus: 'awaiting_categories'
+          });
+          var order = snap.docs[0].data();
+          if (order.customerId && FB.addUserNotification) {
+            await FB.addUserNotification(order.customerId, {
+              title: '✅ تم تأكيد الدفع',
+              body: 'طلبك جاري تجهيزه الآن',
+              type: 'order'
+            });
+          }
+          self.toast('✅ تم', 'suc');
+          await self.loadData();
+          self.dispatch.orders = self.orders || [];
+          self.renderDispatcher();
+        } catch(e) { self.toast('فشل', 'err'); }
+      }, 'primary');
+    };
+
+    // ═══ رفض الدفع ═══
+    A.rejectPayment = function(orderId) {
+      var self = this;
+      this.confirm('رفض الدفع؟', 'سيتم إعلام العميل', async function() {
+        try {
+          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+          if (snap.empty) return;
+          await snap.docs[0].ref.update({
+            'payment.status': 'rejected',
+            'payment.verifiedBy': FB.currentUser ? FB.currentUser.uid : '',
+            'payment.verifiedAt': new Date(),
+            workflowStatus: 'payment_rejected'
+          });
+          self.toast('تم الرفض', 'suc');
+          await self.loadData();
+          self.dispatch.orders = self.orders || [];
+          self.renderDispatcher();
+        } catch(e) { self.toast('فشل', 'err'); }
+      });
+    };
+
+    // ═══ تم التسليم ═══
+    A.markDelivered = async function(orderId) {
+      var self = this;
+      this.confirm('تم التسليم؟', 'سيتم إغلاق الطلب', async function() {
+        try {
+          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+          if (snap.empty) return;
+          await snap.docs[0].ref.update({
+            workflowStatus: 'delivered',
+            status: 'completed',
+            deliveredAt: new Date()
+          });
+          self.toast('✅ تم', 'suc');
+          await self.loadData();
+          self.dispatch.orders = self.orders || [];
+          self.renderDispatcher();
+        } catch(e) { self.toast('فشل', 'err'); }
+      }, 'primary');
+    };
+
+    // ═══ onSnapshot للتحديث الفوري ═══
+    function setupListener() {
+      if (!window.FB || !FB.db) { setTimeout(setupListener, 500); return; }
+      if (A.dispatch.listener) return;
+      
+      try {
+        A.dispatch.listener = FB.db.collection('orders')
+          .orderBy('createdAt', 'desc')
+          .limit(100)
+          .onSnapshot(function(snap) {
+            var newOrders = [];
+            var hasNew = false;
+            snap.forEach(function(doc) {
+              var d = doc.data();
+              d.id = d.id || doc.id;
+              newOrders.push(d);
+              if (!A.dispatch.knownOrderIds.has(d.id)) {
+                hasNew = true;
+              }
+            });
+            
+            A.dispatch.orders = newOrders;
+            if (window.A && A.orders) {
+              A.orders = newOrders;
+            }
+            
+            // إذا كانت اللوحة مفتوحة — أعد الرسم
+            var disp = document.getElementById('sc-dispatcher');
+            if (disp && disp.classList.contains('active')) {
+              A.renderDispatcher();
+            }
+            
+            // إذا وصل طلب جديد أثناء التصفح
+            if (hasNew && A.dispatch.knownOrderIds.size > 0) {
+              playNotifySound();
+              var readyCount = newOrders.filter(function(o) { return categorize(o) === 'ready'; }).length;
+              if (readyCount > 0) {
+                browserNotify('🔔 طلبات جديدة', 'لديك ' + readyCount + ' طلب جاهز للإرسال');
+              }
+            }
+            
+            // حدّث known
+            newOrders.forEach(function(o) { A.dispatch.knownOrderIds.add(o.id); });
+          }, function(err) {
+            console.warn('[DISPATCH-V2] listener error:', err.message);
+          });
+          
+        console.log('[DISPATCH-V2] listener active');
+      } catch(e) {
+        console.warn('[DISPATCH-V2] setup error:', e.message);
+      }
+    }
+
+    // ═══ التهيئة ═══
+    function init() {
+      A.dispatch.orders = A.orders || [];
+      setupListener();
+    }
+
+    // ربط A.tab('dispatcher')
+    if (A.tab) {
+      var origTab = A.tab;
+      A.tab = function(tab, el) {
+        origTab.call(this, tab, el);
+        if (tab === 'dispatcher') {
+          // تأكد من تحميل البيانات
+          if (!A.dispatch.initialized) {
+            A.dispatch.initialized = true;
+            A.dispatch.orders = A.orders || [];
+            init();
+          }
+          setTimeout(function() { A.renderDispatcher(); }, 100);
+        }
+      };
+    }
+
+    console.log('[DISPATCH-V2] installed');
+  }
+
+  waitForA();
 })();
 </script>
 </body>
