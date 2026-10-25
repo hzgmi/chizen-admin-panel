@@ -260,6 +260,97 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
     
 
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style id="chz-login-btn-css">
+/* ═══ تأثيرات زر الدخول ═══ */
+.gbtn {
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 6px 20px rgba(236,72,153,0.35);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gbtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(236,72,153,0.5);
+}
+
+.gbtn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 2px 8px rgba(236,72,153,0.4);
+}
+
+.gbtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Ripple effect */
+.gbtn .ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  transform: scale(0);
+  animation: rippleAnim 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes rippleAnim {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Secondary button */
+.gbtn.sec {
+  background: rgba(168,85,247,0.15);
+  border: 1.5px solid rgba(168,85,247,0.4);
+  color: #b8c0d8;
+  box-shadow: none;
+}
+
+.gbtn.sec:hover {
+  background: rgba(168,85,247,0.25);
+  color: #fff;
+}
+
+/* Loading spinner */
+.gbtn.loading::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Inputs focus */
+#login-email:focus, #login-pass:focus {
+  border-color: #ec4899 !important;
+  box-shadow: 0 0 0 3px rgba(236,72,153,0.2);
+  background: rgba(20,15,45,0.95) !important;
+}
+</style>
 </head>
 <body>
 
@@ -267,7 +358,38 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 <noscript><div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0A0515;color:#fff;font-family:sans-serif;text-align:center;z-index:1;"><div><h2>⚠️ JavaScript مطلوب</h2><p>يرجى تفعيل JavaScript لعرض هذه الصفحة</p></div></div></noscript>
 
 <div id="app">
-<div class="gs" id="gs"><div class="gb" id="gb"><div class="gl">CHIZEN</div><div class="gt">Admin Panel</div><button class="gbtn" onclick="forceLogin()">🔓 تسجيل الدخول للإدارة</button><button class="gbtn sec" onclick="location.reload()">🔄 إعادة</button></div></div>
+<div class="gs" id="gs">
+<div class="gb" id="gb">
+  <div class="gl">CHIZEN</div>
+  <div class="gt">ADMIN PANEL</div>
+  <div style="font-size:36px;margin:8px 0 16px;">🔐</div>
+  <div style="font-size:14px;color:#b8c0d8;margin-bottom:20px;">سجّل دخول بحساب المسؤول</div>
+  
+  <div style="width:100%;max-width:320px;margin:0 auto;">
+    <div style="position:relative;margin-bottom:12px;">
+      <input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="username"
+        style="width:100%;padding:14px 42px 14px 16px;border-radius:12px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:Tajawal,sans-serif;font-size:14px;box-sizing:border-box;outline:none;transition:all 0.2s;">
+      <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#6b7591;font-size:16px;pointer-events:none;">📧</span>
+    </div>
+    
+    <div style="position:relative;margin-bottom:12px;">
+      <input id="login-pass" type="password" placeholder="كلمة السر" autocomplete="current-password"
+        style="width:100%;padding:14px 42px 14px 16px;border-radius:12px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:Tajawal,sans-serif;font-size:14px;box-sizing:border-box;outline:none;transition:all 0.2s;">
+      <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#6b7591;font-size:16px;pointer-events:none;">🔒</span>
+    </div>
+    
+    <div id="login-err" style="color:#ef4444;font-size:12px;text-align:center;min-height:18px;margin-bottom:10px;font-weight:700;"></div>
+    
+    <button id="btn-do-login" class="gbtn" onclick="doLogin()" style="width:100%;position:relative;overflow:hidden;">
+      <span style="position:relative;z-index:2;">🔓 تسجيل الدخول</span>
+    </button>
+    
+    <button class="gbtn sec" onclick="location.reload()" style="width:100%;margin-top:8px;">
+      🔄 إعادة
+    </button>
+  </div>
+</div>
+</div>
 <div id="am" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;">
 <div class="hd"><div><div class="ht">CHIZEN</div><div class="hs">ADMIN PANEL</div></div>
 <div class="ha">
@@ -3536,6 +3658,113 @@ document.addEventListener('click', function(e) {
   }
 
   waitForA();
+})();
+</script>
+<script id="chz-login-enhance">
+(function(){
+  'use strict';
+  console.log('[LOGIN-ENHANCE] ready');
+  
+  // ═══ Ripple Effect ═══
+  function addRipple(button, event) {
+    var rect = button.getBoundingClientRect();
+    var size = Math.max(rect.width, rect.height);
+    var x = (event.clientX || event.touches && event.touches[0].clientX || rect.left + rect.width/2) - rect.left - size/2;
+    var y = (event.clientY || event.touches && event.touches[0].clientY || rect.top + rect.height/2) - rect.top - size/2;
+    
+    var ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    button.appendChild(ripple);
+    setTimeout(function() { ripple.remove(); }, 600);
+  }
+  
+  // ربط ripple بكل الأزرار
+  function attachRipple() {
+    document.querySelectorAll('.gbtn').forEach(function(btn) {
+      if (btn.__rippled) return;
+      btn.__rippled = true;
+      btn.addEventListener('click', function(e) { addRipple(this, e); });
+    });
+  }
+  
+  // ═══ Enter key في الحقول ═══
+  function attachEnterKey() {
+    var pass = document.getElementById('login-pass');
+    var email = document.getElementById('login-email');
+    if (pass && !pass.__entered) {
+      pass.__entered = true;
+      pass.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
+      });
+    }
+    if (email && !email.__entered) {
+      email.__entered = true;
+      email.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') { 
+          e.preventDefault(); 
+          if (pass) pass.focus();
+        }
+      });
+    }
+  }
+  
+  // ═══ تحسين دالة doLogin ═══
+  function enhanceDoLogin() {
+    if (!window.doLogin) { setTimeout(enhanceDoLogin, 200); return; }
+    if (window.doLogin.__enhanced) return;
+    
+    var orig = window.doLogin;
+    window.doLogin = async function() {
+      var btn = document.getElementById('btn-do-login');
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('loading');
+        var span = btn.querySelector('span');
+        if (span) span.textContent = 'جاري الدخول...';
+      }
+      
+      try {
+        var result = await orig.apply(this, arguments);
+        // إذا فشل — إعادة الزر
+        setTimeout(function() {
+          if (btn && btn.disabled) {
+            btn.disabled = false;
+            btn.classList.remove('loading');
+            var sp = btn.querySelector('span');
+            if (sp) sp.textContent = '🔓 تسجيل الدخول';
+          }
+        }, 3000);
+        return result;
+      } catch(e) {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('loading');
+          var sp = btn.querySelector('span');
+          if (sp) sp.textContent = '🔓 تسجيل الدخول';
+        }
+        throw e;
+      }
+    };
+    window.doLogin.__enhanced = true;
+    window.forceLogin = window.doLogin;
+  }
+  
+  // تشغيل
+  function init() {
+    attachRipple();
+    attachEnterKey();
+    enhanceDoLogin();
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  setInterval(init, 2000);
 })();
 </script>
 </body>
