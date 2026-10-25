@@ -282,6 +282,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 <button class="tb" onclick="A.tab('cats',this)">🗂️ الأقسام</button>
 <button class="tb" onclick="A.tab('pays',this)">💳 الدفع</button>
 <button class="tb" onclick="A.tab('orders',this)">🛒 الطلبات</button>
+<button class="tb" onclick="A.tab('dispatcher',this)">🚚 مندوب الطلبات</button>
 <button class="tb" onclick="A.tab('push',this)">🔔 الإشعارات</button>
 <button class="tb" onclick="A.tab('flights',this)">✈️ الحجوزات</button>
 <button class="tb" onclick="A.tab('sups',this)">🏢 الموردين</button>
@@ -729,7 +730,7 @@ var A={
     if(el)el.classList.add('active');
     document.getElementById('ct').scrollTop=0;
     this.currentTab=n;
-    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,flights:this.renderFlights,push:function(){},pickup:this.renderPickupAdmin,sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,employees:this.renderEmployees,admins:this.renderAdmins,settings:this.renderSettings,banners:this.loadBanners}[n];
+    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,dispatcher:this.renderDispatcher,flights:this.renderFlights,push:function(){},pickup:this.renderPickupAdmin,sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,employees:this.renderEmployees,admins:this.renderAdmins,settings:this.renderSettings,banners:this.loadBanners}[n];
     if(f)try{f.call(this);}catch(e){console.warn(e);}
   },
 
@@ -2842,6 +2843,480 @@ document.addEventListener('click', function(e) {
     console.log('[PICKUP-ADMIN] installed');
   }
   
+  waitForA();
+})();
+</script>
+<script id="dispatch-v1">
+(function(){
+  'use strict';
+  console.log('[DISPATCH] loading...');
+
+  function waitForA() {
+    if (!window.A) { setTimeout(waitForA, 200); return; }
+    if (A.__dispatchInstalled) return;
+    A.__dispatchInstalled = true;
+
+    A.currentDispatchFilter = 'ready';
+    A.dispatchOrders = [];
+
+    // ═══ حالة الطلب → تصنيف ═══
+    function getOrderCategory(o) {
+      // ترتيب الأولوية:
+      // 1. legacy (لا يوجد payment) → awaiting
+      var payment = o.payment || {};
+      var workflow = o.workflowStatus || '';
+      
+      if (o.sentToCustomer === true || workflow === 'sent_to_customer' || o.status === 'shipped') {
+        return 'shipping';
+      }
+      if (workflow === 'delivered' || o.status === 'completed') {
+        return 'delivered';
+      }
+      if (workflow === 'ready_to_send') {
+        return 'ready';
+      }
+      if (payment.status === 'verified' && o.allCategoriesConfirmed === true) {
+        return 'ready';
+      }
+      if (payment.status === 'verified' && o.allCategoriesConfirmed !== true) {
+        return 'awaiting_categories';
+      }
+      if (payment.status === 'pending' || !payment.status) {
+        return 'awaiting_payment';
+      }
+      if (payment.status === 'rejected') {
+        return 'rejected';
+      }
+      return 'awaiting_payment';
+    }
+
+    // ═══ renderDispatcher ═══
+    A.renderDispatcher = function() {
+      var ct = document.getElementById('ct');
+      if (!ct) return;
+
+      // إنشاء القسم إذا لم يكن موجوداً
+      if (!document.getElementById('sc-dispatcher')) {
+        var sc = document.createElement('div');
+        sc.className = 'sc';
+        sc.id = 'sc-dispatcher';
+        ct.appendChild(sc);
+      }
+
+      // إخفاء بقية الأقسام
+      document.querySelectorAll('.sc').forEach(function(x) { x.classList.remove('active'); });
+      var sc = document.getElementById('sc-dispatcher');
+      sc.classList.add('active');
+
+      // جلب الطلبات من هذا.orders
+      var orders = this.orders || [];
+      
+      // تصنيف
+      var buckets = {
+        awaiting_payment: [],
+        awaiting_categories: [],
+        ready: [],
+        shipping: [],
+        delivered: [],
+        rejected: []
+      };
+      
+      orders.forEach(function(o) {
+        var cat = getOrderCategory(o);
+        if (buckets[cat]) buckets[cat].push(o);
+      });
+      
+      // إحصائيات
+      var stats = 
+        '<div class="sg" style="margin-bottom:16px;">' +
+          '<div class="scd" style="border-left:3px solid #f59e0b;">' +
+            '<div class="sl">⏳ بانتظار الدفع</div>' +
+            '<div class="sv" style="color:#f59e0b;">' + buckets.awaiting_payment.length + '</div>' +
+          '</div>' +
+          '<div class="scd" style="border-left:3px solid #3b82f6;">' +
+            '<div class="sl">⏳ بانتظار الأقسام</div>' +
+            '<div class="sv" style="color:#3b82f6;">' + buckets.awaiting_categories.length + '</div>' +
+          '</div>' +
+          '<div class="scd" style="border-left:3px solid #10b981;">' +
+            '<div class="sl">✅ جاهز للإرسال</div>' +
+            '<div class="sv" style="color:#10b981;">' + buckets.ready.length + '</div>' +
+          '</div>' +
+          '<div class="scd" style="border-left:3px solid #a855f7;">' +
+            '<div class="sl">🚚 في التوصيل</div>' +
+            '<div class="sv" style="color:#a855f7;">' + buckets.shipping.length + '</div>' +
+          '</div>' +
+        '</div>';
+
+      // فلاتر
+      var filters = [
+        { key: 'awaiting_payment', label: '⏳ بانتظار الدفع', count: buckets.awaiting_payment.length },
+        { key: 'awaiting_categories', label: '⏳ بانتظار الأقسام', count: buckets.awaiting_categories.length },
+        { key: 'ready', label: '✅ جاهز للإرسال', count: buckets.ready.length },
+        { key: 'shipping', label: '🚚 في التوصيل', count: buckets.shipping.length },
+        { key: 'delivered', label: '📦 تم التسليم', count: buckets.delivered.length }
+      ];
+      
+      var filtersHtml = '<div class="ch" style="margin-bottom:16px;">';
+      filters.forEach(function(f) {
+        var active = (self.currentDispatchFilter || 'ready') === f.key;
+        filtersHtml += '<span class="cp' + (active ? ' active' : '') + '" onclick="A.setDispatchFilter(&quot;' + f.key + '&quot;,this)" style="cursor:pointer;display:inline-flex;gap:6px;align-items:center;">' +
+          f.label + ' <span style="background:' + (active ? 'rgba(255,255,255,0.25)' : 'rgba(168,85,247,0.15)') + ';padding:1px 8px;border-radius:10px;font-size:10px;font-weight:900;">' + f.count + '</span>' +
+        '</span>';
+      });
+      filtersHtml += '</div>';
+
+      // الطلبات المفلترة
+      var current = this.currentDispatchFilter || 'ready';
+      var filtered = buckets[current] || [];
+
+      // إذا لم يوجد طلبات — عرض حالة فارغة
+      var listHtml = '';
+      if (filtered.length === 0) {
+        var emptyMsgs = {
+          awaiting_payment: 'لا توجد طلبات بانتظار مراجعة الدفع',
+          awaiting_categories: 'لا توجد طلبات بانتظار تأكيد الأقسام',
+          ready: '✅ رائع! لا توجد طلبات معلقة',
+          shipping: 'لا توجد طلبات في التوصيل حالياً',
+          delivered: 'لا توجد طلبات مسلّمة بعد'
+        };
+        listHtml = '<div style="text-align:center;padding:60px 20px;background:rgba(255,255,255,0.02);border-radius:16px;">' +
+          '<div style="font-size:64px;margin-bottom:16px;">📭</div>' +
+          '<div style="font-size:14px;color:#888;">' + (emptyMsgs[current] || 'لا توجد طلبات') + '</div>' +
+        '</div>';
+      } else {
+        // ترتيب حسب التاريخ
+        filtered.sort(function(a, b) {
+          var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+          var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+          return tb - ta;
+        });
+        
+        listHtml = filtered.map(function(o) {
+          return self.buildDispatchCard(o, current);
+        }).join('');
+      }
+
+      var self = this;
+      sc.innerHTML = 
+        '<div class="cd" style="padding:20px;">' +
+          '<div class="cti" style="margin-bottom:16px;">' +
+            '<div class="ctl">🚚 إدارة التوصيل والطلبات</div>' +
+            '<button class="btn bg2 bsm" onclick="A.renderDispatcher()">🔄 تحديث</button>' +
+          '</div>' +
+          stats +
+          filtersHtml +
+          '<div id="dispatch-list">' + listHtml + '</div>' +
+        '</div>';
+    };
+
+    // ═══ فلترة ═══
+    A.setDispatchFilter = function(f, el) {
+      this.currentDispatchFilter = f;
+      this.renderDispatcher();
+    };
+
+    // ═══ بطاقة الطلب ═══
+    A.buildDispatchCard = function(o, state) {
+      var payment = o.payment || {};
+      var paymentStatus = payment.status || 'pending';
+      var categories = o.categories || {};
+      var categoriesList = Object.keys(categories);
+      var confirmedCount = categoriesList.filter(function(k) {
+        return categories[k] && categories[k].status === 'confirmed';
+      }).length;
+      var totalCats = categoriesList.length;
+      
+      // تاريخ
+      var dateStr = '';
+      if (o.createdAt && o.createdAt.seconds) {
+        var d = new Date(o.createdAt.seconds * 1000);
+        dateStr = d.toLocaleDateString('ar') + ' ' + d.toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      // شارات الحالة
+      var badges = '';
+      if (paymentStatus === 'pending') {
+        badges += '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">⏳ دفع معلق</span>';
+      } else if (paymentStatus === 'verified') {
+        badges += '<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">✅ دفع مؤكد</span>';
+      } else if (paymentStatus === 'rejected') {
+        badges += '<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">❌ دفع مرفوض</span>';
+      }
+      
+      if (totalCats > 0) {
+        var catColor = confirmedCount === totalCats ? '#10b981' : '#3b82f6';
+        badges += ' <span style="background:rgba(59,130,246,0.15);color:' + catColor + ';padding:3px 8px;border-radius:6px;font-size:10px;font-weight:900;">📦 ' + confirmedCount + '/' + totalCats + ' أقسام</span>';
+      }
+      
+      // الإجراءات
+      var actions = '';
+      if (state === 'awaiting_payment') {
+        actions = '<div style="display:flex;gap:8px;margin-top:12px;">' +
+          '<button onclick="A.verifyPayment(&quot;' + o.id + '&quot;)" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">✅ تأكيد الدفع</button>' +
+          '<button onclick="A.rejectPayment(&quot;' + o.id + '&quot;)" style="flex:1;padding:10px;background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">❌ رفض</button>' +
+        '</div>';
+        if (payment.receiptUrl) {
+          actions += '<a href="' + payment.receiptUrl + '" target="_blank" style="display:block;margin-top:8px;padding:8px;background:rgba(59,130,246,0.15);color:#3b82f6;border-radius:8px;text-align:center;font-size:11px;font-weight:800;text-decoration:none;">📸 عرض الإيصال</a>';
+        }
+      } else if (state === 'awaiting_categories') {
+        actions = '<div style="margin-top:12px;padding:10px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:10px;text-align:center;font-size:11px;color:#3b82f6;font-weight:800;">⏳ بانتظار تأكيد الأقسام</div>';
+        // قائمة الأقسام
+        categoriesList.forEach(function(catKey) {
+          var cat = categories[catKey] || {};
+          var status = cat.status || 'pending';
+          var emoji = status === 'confirmed' ? '✅' : (status === 'rejected' ? '❌' : '⏳');
+          var color = status === 'confirmed' ? '#10b981' : (status === 'rejected' ? '#ef4444' : '#f59e0b');
+          var catNames = {electronics:'إلكترونيات', fashion:'أزياء', home:'منزل', beauty:'جمال', kids:'أطفال', sports:'رياضة', tools:'أدوات'};
+          actions += '<div style="display:flex;justify-content:space-between;padding:6px 10px;font-size:11px;color:' + color + ';margin-top:4px;"><span>' + emoji + ' ' + (catNames[catKey] || catKey) + '</span><span>' + (cat.items || []).length + ' منتج</span></div>';
+        });
+      } else if (state === 'ready') {
+        actions = '<button onclick="A.openAssignDriver(&quot;' + o.id + '&quot;)" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:12px;font-weight:900;font-size:13px;cursor:pointer;">🚚 تعيين سائق وإرسال</button>';
+      } else if (state === 'shipping') {
+        var di = o.deliveryInfo || {};
+        actions = '<div style="margin-top:12px;padding:10px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;font-size:11px;color:#a855f7;">' +
+          '<div style="font-weight:900;margin-bottom:4px;">🚚 في التوصيل</div>' +
+          '<div>السائق: ' + (di.driverName || '—') + '</div>' +
+          '<div>الهاتف: ' + (di.driverPhone || '—') + '</div>' +
+          '<div>المنطقة: ' + (di.region || '—') + '</div>' +
+        '</div>' +
+        '<button onclick="A.markDelivered(&quot;' + o.id + '&quot;)" style="width:100%;margin-top:8px;padding:10px;background:rgba(16,185,129,0.15);border:1.5px solid #10b981;color:#10b981;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;">✅ تم التسليم</button>';
+      }
+
+      return '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(168,85,247,0.2);border-radius:14px;padding:14px;margin-bottom:12px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+          '<div>' +
+            '<div style="font-weight:900;color:#a855f7;font-size:13px;">#' + (o.id || '').substring(0, 14) + '</div>' +
+            '<div style="font-size:11px;color:#888;margin-top:2px;">' + (o.name || 'عميل') + ' • ' + (o.phone || '') + '</div>' +
+          '</div>' +
+          '<div style="font-weight:900;color:#ff4d94;font-size:14px;">' + (o.total || 0) + ' ر.س</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">' + badges + '</div>' +
+        '<div style="font-size:10px;color:#666;">📍 ' + (o.pickup || 'غير محدد') + ' • ' + dateStr + '</div>' +
+        actions +
+      '</div>';
+    };
+
+    // ═══ تأكيد الدفع ═══
+    A.verifyPayment = async function(orderId) {
+      try {
+        var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+        if (snap.empty) return this.toast('الطلب غير موجود', 'err');
+        
+        await snap.docs[0].ref.update({
+          'payment.status': 'verified',
+          'payment.verifiedBy': FB.currentUser ? FB.currentUser.uid : '',
+          'payment.verifiedAt': new Date(),
+          workflowStatus: 'awaiting_categories'
+        });
+        
+        // إشعار للعميل
+        var order = snap.docs[0].data();
+        if (order.customerId && FB.addUserNotification) {
+          await FB.addUserNotification(order.customerId, {
+            title: '✅ تم تأكيد الدفع',
+            body: 'طلبك #' + orderId.substring(0, 8) + ' جاري تجهيزه',
+            type: 'order'
+          });
+        }
+        
+        this.toast('✅ تم تأكيد الدفع', 'suc');
+        await this.loadData();
+        this.renderDispatcher();
+      } catch(e) {
+        this.toast('فشل: ' + e.message, 'err');
+      }
+    };
+
+    // ═══ رفض الدفع ═══
+    A.rejectPayment = function(orderId) {
+      var self = this;
+      this.confirm('رفض الدفع؟', 'سيتم إعلام العميل بالرفض', async function() {
+        try {
+          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+          if (snap.empty) return;
+          await snap.docs[0].ref.update({
+            'payment.status': 'rejected',
+            'payment.verifiedBy': FB.currentUser ? FB.currentUser.uid : '',
+            'payment.verifiedAt': new Date(),
+            workflowStatus: 'payment_rejected'
+          });
+          self.toast('تم رفض الدفع', 'suc');
+          await self.loadData();
+          self.renderDispatcher();
+        } catch(e) {
+          self.toast('فشل: ' + e.message, 'err');
+        }
+      });
+    };
+
+    // ═══ فتح modal تعيين السائق ═══
+    A.openAssignDriver = function(orderId) {
+      // ابحث عن الطلب
+      var order = null;
+      (this.orders || []).forEach(function(o) { if (o.id === orderId) order = o; });
+      if (!order) return this.toast('الطلب غير موجود', 'err');
+      
+      var body = 
+        '<div style="padding:4px;">' +
+          '<div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:12px;margin-bottom:14px;">' +
+            '<div style="font-size:12px;color:#a855f7;font-weight:900;margin-bottom:4px;">📦 طلب #' + order.id.substring(0, 10) + '</div>' +
+            '<div style="font-size:11px;color:#fff;">' + (order.name || 'عميل') + ' • ' + (order.phone || '') + '</div>' +
+            '<div style="font-size:12px;color:#ff4d94;font-weight:900;margin-top:4px;">' + (order.total || 0) + ' ر.س</div>' +
+          '</div>' +
+          
+          '<div style="margin-bottom:10px;">' +
+            '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">اسم السائق</label>' +
+            '<input class="fi" id="disp-driver-name" placeholder="مثال: أحمد علي" style="width:100%;">' +
+          '</div>' +
+          
+          '<div style="margin-bottom:10px;">' +
+            '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">رقم واتساب السائق (967xxxxxxxxx)</label>' +
+            '<input class="fi" id="disp-driver-phone" type="tel" placeholder="967771234567" style="width:100%;">' +
+          '</div>' +
+          
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+            '<div>' +
+              '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">المنطقة</label>' +
+              '<input class="fi" id="disp-region" placeholder="مثال: صنعاء" style="width:100%;">' +
+            '</div>' +
+            '<div>' +
+              '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">رسوم التوصيل</label>' +
+              '<input class="fi" id="disp-fee" type="number" placeholder="0" style="width:100%;">' +
+            '</div>' +
+          '</div>' +
+          
+          '<div style="margin-bottom:10px;">' +
+            '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">ملاحظة للسائق (اختياري)</label>' +
+            '<textarea class="fi" id="disp-note" placeholder="مثال: الطلب عاجل، اتصل قبل الوصول" style="width:100%;height:60px;resize:none;"></textarea>' +
+          '</div>' +
+        '</div>';
+      
+      var actions = '<button class="btn bg2" onclick="A.cm()">إلغاء</button>' +
+        '<button class="btn bp" onclick="A.assignDriverAndSend(&quot;' + orderId + '&quot;)">📤 إرسال للعميل</button>';
+      
+      this.modal('🚚 تعيين سائق', body, actions);
+    };
+
+    // ═══ تعيين السائق + إرسال ═══
+    A.assignDriverAndSend = async function(orderId) {
+      var driverName = (document.getElementById('disp-driver-name').value || '').trim();
+      var driverPhone = (document.getElementById('disp-driver-phone').value || '').trim();
+      var region = (document.getElementById('disp-region').value || '').trim();
+      var fee = parseFloat(document.getElementById('disp-fee').value) || 0;
+      var note = (document.getElementById('disp-note').value || '').trim();
+      
+      if (!driverName) return this.toast('أدخل اسم السائق', 'err');
+      if (!driverPhone) return this.toast('أدخل رقم واتساب السائق', 'err');
+      
+      // تطبيع الرقم
+      var phoneClean = driverPhone.replace(/D/g, '');
+      if (phoneClean.length === 9 && phoneClean.startsWith('7')) phoneClean = '967' + phoneClean;
+      else if (phoneClean.length === 10 && phoneClean.startsWith('0')) phoneClean = '967' + phoneClean.slice(1);
+      
+      try {
+        // تحديث الطلب
+        var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+        if (snap.empty) return this.toast('الطلب غير موجود', 'err');
+        
+        var order = snap.docs[0].data();
+        await snap.docs[0].ref.update({
+          sentToCustomer: true,
+          workflowStatus: 'sent_to_customer',
+          status: 'shipped',
+          deliveryInfo: {
+            driverName: driverName,
+            driverPhone: phoneClean,
+            region: region,
+            deliveryFee: fee,
+            note: note,
+            assignedAt: new Date(),
+            assignedBy: FB.currentUser ? FB.currentUser.uid : ''
+          }
+        });
+        
+        // رسالة واتساب للسائق
+        var waMsg = '🚚 *طلب توصيل جديد*
+
+' +
+          '*رقم الطلب:* #' + orderId.substring(0, 10) + '
+' +
+          '*العميل:* ' + (order.name || '') + '
+' +
+          '*الهاتف:* ' + (order.phone || '') + '
+' +
+          '*العنوان:* ' + (order.pickup || '') + '
+
+' +
+          '📦 *المنتجات:*
+';
+        
+        (order.items || []).forEach(function(it) {
+          waMsg += '• ' + (it.name || 'منتج') + ' × ' + (it.qty || 1) + '
+';
+        });
+        
+        waMsg += '
+💰 *المجموع:* ' + (order.total || 0) + ' ر.س';
+        if (fee > 0) waMsg += '
+🚗 *رسوم التوصيل:* ' + fee + ' ر.س';
+        waMsg += '
+💵 *المستلم:* ' + ((order.total || 0) + fee) + ' ر.س';
+        if (note) waMsg += '
+
+📝 *ملاحظة:* ' + note;
+        waMsg += '
+
+شكراً 🌟';
+        
+        // إشعار للعميل
+        if (order.customerId && FB.addUserNotification) {
+          await FB.addUserNotification(order.customerId, {
+            title: '🚚 طلبك في الطريق!',
+            body: 'السائق ' + driverName + ' (' + phoneClean + ') سيصل قريباً',
+            type: 'order'
+          });
+        }
+        
+        // إغلاق modal
+        this.cm();
+        this.toast('✅ تم الإرسال', 'suc');
+        
+        // فتح WhatsApp
+        window.open('https://wa.me/' + phoneClean + '?text=' + encodeURIComponent(waMsg), '_blank');
+        
+        // إعادة تحميل
+        await this.loadData();
+        this.renderDispatcher();
+        
+      } catch(e) {
+        this.toast('فشل: ' + e.message, 'err');
+      }
+    };
+
+    // ═══ تم التسليم ═══
+    A.markDelivered = async function(orderId) {
+      var self = this;
+      this.confirm('تم التسليم؟', 'سيتم تحديث حالة الطلب', async function() {
+        try {
+          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+          if (snap.empty) return;
+          await snap.docs[0].ref.update({
+            workflowStatus: 'delivered',
+            status: 'completed',
+            deliveredAt: new Date()
+          });
+          self.toast('✅ تم التسليم', 'suc');
+          await self.loadData();
+          self.renderDispatcher();
+        } catch(e) {
+          self.toast('فشل: ' + e.message, 'err');
+        }
+      });
+    };
+
+    console.log('[DISPATCH] installed');
+  }
+
   waitForA();
 })();
 </script>
