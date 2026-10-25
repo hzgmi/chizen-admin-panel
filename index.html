@@ -4127,5 +4127,528 @@ document.addEventListener('click', function(e) {
   waitForA();
 })();
 </script>
+<script id="chz-dedicated-delivery">
+(function(){
+  'use strict';
+  console.log('[DELIVERY-UI] loading...');
+
+  // ═══ الحالة ═══
+  window.CD = {
+    tab: 'ready',
+    orders: [],
+    listener: null,
+    lastDriver: (function() {
+      try { return JSON.parse(localStorage.getItem('chizen_last_driver') || '{}'); } catch(e) { return {}; }
+    })()
+  };
+
+  // ═══ أدوات ═══
+  function esc(x) {
+    return String(x == null ? '' : x).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function categorize(o) {
+    var p = o.payment || {};
+    var w = o.workflowStatus || '';
+    if (o.sentToCustomer === true || w === 'sent_to_customer' || o.status === 'shipped') return 'shipping';
+    if (w === 'delivered' || o.status === 'completed') return 'delivered';
+    if (w === 'ready_to_send') return 'ready';
+    if (p.status === 'verified' && o.allCategoriesConfirmed === true) return 'ready';
+    return 'not_ready';
+  }
+
+  function timeAgo(o) {
+    if (!o.createdAt) return '';
+    var ts = o.createdAt.seconds ? o.createdAt.seconds * 1000 : 0;
+    if (!ts) return '';
+    var diff = Math.floor((Date.now() - ts) / 60000);
+    if (diff < 1) return 'الآن';
+    if (diff < 60) return 'منذ ' + diff + ' د';
+    if (diff < 1440) return 'منذ ' + Math.floor(diff/60) + ' س';
+    if (diff < 10080) return 'منذ ' + Math.floor(diff/1440) + ' ي';
+    return new Date(ts).toLocaleDateString('ar');
+  }
+
+  // ═══ CSS ═══
+  var style = document.createElement('style');
+  style.id = 'delivery-ui-css';
+  style.textContent = 
+    '.dlv-app{position:fixed;inset:0;z-index:9000;background:radial-gradient(circle at 50% 0%,#151b3a 0%,#07091d 80%);display:none;flex-direction:column;font-family:Tajawal,sans-serif;direction:rtl;color:#fff;}' +
+    '.dlv-app.active{display:flex;}' +
+    '.dlv-header{padding:14px 18px;background:rgba(10,8,30,0.95);border-bottom:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;}' +
+    '.dlv-main{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;}' +
+    '.dlv-nav{display:flex;background:rgba(10,8,30,0.98);border-top:1px solid rgba(168,85,247,0.25);flex-shrink:0;}' +
+    '.dlv-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;background:transparent;border:none;color:rgba(255,255,255,0.55);font-family:inherit;cursor:pointer;font-weight:700;position:relative;transition:all 0.2s;}' +
+    '.dlv-nav-btn.active{color:#10b981;background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.1));}' +
+    '.dlv-nav-btn.active::after{content:"";position:absolute;bottom:6px;left:35%;right:35%;height:3px;background:#10b981;border-radius:2px;box-shadow:0 0 8px #10b981;}' +
+    '.dlv-nav-btn .icon{font-size:22px;}' +
+    '.dlv-nav-btn .label{font-size:10px;}' +
+    '.dlv-nav-btn .count{position:absolute;top:6px;right:calc(50% - 24px);background:#ef4444;color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:10px;min-width:16px;text-align:center;}' +
+    '.dlv-card{background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:14px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;}' +
+    '.dlv-card:active{transform:scale(0.98);}' +
+    '.dlv-empty{text-align:center;padding:60px 20px;}' +
+    '.dlv-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9500;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}' +
+    '.dlv-modal.active{display:flex;}' +
+    '.dlv-modal-content{background:#0a0e1a;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:20px;}' +
+    '@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}';
+  document.head.appendChild(style);
+
+  // ═══ بناء الهيكل ═══
+  function buildShell() {
+    var D = window.CD;
+    return '' +
+      '<header class="dlv-header">' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 12px rgba(16,185,129,0.4);">🚚</div>' +
+          '<div>' +
+            '<div style="color:#fff;font-weight:900;font-size:15px;">لوحة المندوب</div>' +
+            '<div style="color:#10b981;font-size:11px;margin-top:2px;">إدارة التوصيل والطلبات</div>' +
+          '</div>' +
+        '</div>' +
+        '<button onclick="window.__dlvLogout()" style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;padding:8px 14px;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🚪 خروج</button>' +
+      '</header>' +
+      '<main class="dlv-main" id="dlv-main"></main>' +
+      '<nav class="dlv-nav">' +
+        '<button class="dlv-nav-btn active" data-tab="ready" onclick="window.__dlvSwitchTab(\'ready\',this)">' +
+          '<span class="icon">✅</span>' +
+          '<span class="label">جاهزة</span>' +
+          '<span class="count" id="dlv-count-ready" style="display:none;">0</span>' +
+        '</button>' +
+        '<button class="dlv-nav-btn" data-tab="shipping" onclick="window.__dlvSwitchTab(\'shipping\',this)">' +
+          '<span class="icon">🚚</span>' +
+          '<span class="label">في التوصيل</span>' +
+          '<span class="count" id="dlv-count-shipping" style="display:none;">0</span>' +
+        '</button>' +
+        '<button class="dlv-nav-btn" data-tab="delivered" onclick="window.__dlvSwitchTab(\'delivered\',this)">' +
+          '<span class="icon">📦</span>' +
+          '<span class="label">تم التسليم</span>' +
+          '<span class="count" id="dlv-count-delivered" style="display:none;">0</span>' +
+        '</button>' +
+      '</nav>';
+  }
+
+  // ═══ رسم المحتوى ═══
+  function renderContent() {
+    var D = window.CD;
+    var main = document.getElementById('dlv-main');
+    if (!main) return;
+    
+    // فلترة
+    var filtered = D.orders.filter(function(o) { return categorize(o) === D.tab; });
+    filtered.sort(function(a, b) {
+      var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+      var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+      return tb - ta;
+    });
+
+    // إحصاء
+    var counts = { ready: 0, shipping: 0, delivered: 0 };
+    D.orders.forEach(function(o) {
+      var cat = categorize(o);
+      if (counts[cat] !== undefined) counts[cat]++;
+    });
+    
+    ['ready', 'shipping', 'delivered'].forEach(function(k) {
+      var badge = document.getElementById('dlv-count-' + k);
+      if (badge) {
+        badge.textContent = counts[k];
+        badge.style.display = counts[k] > 0 ? 'inline-block' : 'none';
+      }
+    });
+
+    // محتوى
+    if (filtered.length === 0) {
+      var msgs = {
+        ready: { icon: '🎉', title: 'لا توجد طلبات جاهزة', sub: 'كل الطلبات تم إرسالها' },
+        shipping: { icon: '🚚', title: 'لا توجد طلبات في التوصيل', sub: 'كل التوصيلات مكتملة' },
+        delivered: { icon: '📦', title: 'لا توجد طلبات مسلّمة', sub: 'لم يتم تسليم طلبات بعد' }
+      };
+      var m = msgs[D.tab];
+      main.innerHTML = '<div class="dlv-empty">' +
+        '<div style="font-size:72px;margin-bottom:16px;">' + m.icon + '</div>' +
+        '<div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:6px;">' + m.title + '</div>' +
+        '<div style="font-size:12px;color:#6b7591;">' + m.sub + '</div>' +
+      '</div>';
+      return;
+    }
+
+    main.innerHTML = filtered.map(function(o) {
+      return buildCard(o);
+    }).join('');
+  }
+
+  // ═══ بطاقة طلب ═══
+  function buildCard(o) {
+    var oid = o.id || '';
+    var di = o.deliveryInfo || {};
+    var date = timeAgo(o);
+    
+    var actions = '';
+    if (window.CD.tab === 'ready') {
+      actions = '<button onclick="event.stopPropagation();window.__dlvOpenAssign(\'' + oid + '\')" style="width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(16,185,129,0.3);">🚚 تعيين سائق</button>';
+    } else if (window.CD.tab === 'shipping') {
+      actions = '<div style="margin-top:10px;padding:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;font-size:11px;">' +
+        '<div style="color:#10b981;font-weight:800;margin-bottom:3px;">🚚 ' + esc(di.driverName || '—') + '</div>' +
+        '<div style="color:#b8c0d8;direction:ltr;text-align:right;">' + esc(di.driverPhone || '—') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:8px;">' +
+        '<button onclick="event.stopPropagation();window.__dlvMarkDelivered(\'' + oid + '\')" style="flex:1;padding:10px;background:rgba(16,185,129,0.15);border:1.5px solid #10b981;color:#10b981;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;font-family:inherit;">✅ تم التسليم</button>' +
+        (di.driverPhone ? '<a href="https://wa.me/' + di.driverPhone + '" target="_blank" onclick="event.stopPropagation()" style="padding:10px 14px;background:#25D366;color:#fff;border-radius:10px;font-weight:900;font-size:12px;text-decoration:none;">💬</a>' : '') +
+      '</div>';
+    }
+
+    return '<div class="dlv-card" onclick="window.__dlvOpenDetails(\'' + oid + '\')">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+            '<span style="font-weight:900;color:#10b981;font-size:13px;">#' + esc(oid.substring(0, 10)) + '</span>' +
+            '<span style="font-size:10px;color:#666;">' + esc(date) + '</span>' +
+          '</div>' +
+          '<div style="font-size:13px;color:#fff;font-weight:700;">' + esc(o.name || 'عميل') + '</div>' +
+          '<div style="font-size:11px;color:#888;">📱 ' + esc(o.phone || '—') + '</div>' +
+        '</div>' +
+        '<div style="text-align:left;">' +
+          '<div style="font-weight:900;color:#ff4d94;font-size:15px;">' + (o.total || 0) + '</div>' +
+          '<div style="font-size:9px;color:#666;">ر.س</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:8px;">📍 ' + esc(o.pickup || 'غير محدد') + '</div>' +
+      actions +
+    '</div>';
+  }
+
+  // ═══ تفاصيل الطلب ═══
+  window.__dlvOpenDetails = function(orderId) {
+    var order = window.CD.orders.find(function(o) { return o.id === orderId; });
+    if (!order) return;
+    
+    var cats = order.categories || {};
+    var catKeys = Object.keys(cats);
+    var catNames = {electronics:'إلكترونيات', fashion:'أزياء', home:'منزل', beauty:'جمال', kids:'أطفال', sports:'رياضة', tools:'أدوات'};
+    
+    var itemsHtml = '';
+    catKeys.forEach(function(k) {
+      var c = cats[k];
+      var items = c.items || [];
+      if (items.length === 0) return;
+      itemsHtml += '<div style="margin-bottom:10px;">' +
+        '<div style="font-size:11px;color:#10b981;font-weight:800;margin-bottom:4px;">📦 ' + (catNames[k] || k) + '</div>' +
+        items.map(function(it) {
+          return '<div style="display:flex;justify-content:space-between;padding:4px 8px;background:rgba(255,255,255,0.03);border-radius:6px;margin-bottom:3px;font-size:11px;">' +
+            '<span style="color:#fff;">' + esc(it.name || '—') + ' × ' + (it.qty || 1) + '</span>' +
+            '<span style="color:#ff4d94;">' + ((it.qty || 1) * (it.price || 0)) + ' ر.س</span>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    });
+    
+    var body = '<div class="dlv-modal" onclick="if(event.target===this)this.classList.remove(\'active\')">' +
+      '<div class="dlv-modal-content">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+          '<div style="font-weight:900;color:#10b981;font-size:14px;">📋 تفاصيل الطلب</div>' +
+          '<button onclick="this.closest(\'.dlv-modal\').classList.remove(\'active\')" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>' +
+        '</div>' +
+        '<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;margin-bottom:14px;">' +
+          '<div style="font-size:11px;color:#10b981;margin-bottom:4px;">رقم الطلب</div>' +
+          '<div style="font-weight:900;color:#fff;font-family:monospace;font-size:13px;">#' + esc(orderId) + '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">' +
+          '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;">' +
+            '<div style="font-size:10px;color:#888;margin-bottom:2px;">العميل</div>' +
+            '<div style="font-size:12px;color:#fff;font-weight:700;">' + esc(order.name || '—') + '</div>' +
+          '</div>' +
+          '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;">' +
+            '<div style="font-size:10px;color:#888;margin-bottom:2px;">الهاتف</div>' +
+            '<div style="font-size:12px;color:#fff;direction:ltr;">' + esc(order.phone || '—') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px;">' +
+          '<div style="font-size:10px;color:#888;margin-bottom:2px;">📍 العنوان</div>' +
+          '<div style="font-size:12px;color:#fff;">' + esc(order.pickup || '—') + '</div>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px;">' +
+          '<div style="font-size:10px;color:#888;margin-bottom:6px;">📦 المنتجات</div>' +
+          (itemsHtml || '<div style="color:#666;font-size:11px;">لا منتجات</div>') +
+        '</div>' +
+        '<div style="background:linear-gradient(135deg,rgba(236,72,153,0.1),rgba(168,85,247,0.05));border:1px solid rgba(236,72,153,0.3);border-radius:12px;padding:12px;text-align:center;">' +
+          '<div style="font-size:11px;color:#888;margin-bottom:2px;">الإجمالي</div>' +
+          '<div style="font-size:20px;font-weight:900;color:#ff4d94;">' + (order.total || 0) + ' ر.س</div>' +
+        '</div>' +
+        '<div style="margin-top:14px;display:flex;gap:8px;">' +
+          '<button onclick="this.closest(\'.dlv-modal\').classList.remove(\'active\')" style="flex:1;padding:12px;background:rgba(255,255,255,0.08);border:none;color:#fff;border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer;">إغلاق</button>' +
+          (order.phone ? '<a href="https://wa.me/' + String(order.phone).replace(/\D/g, '') + '" target="_blank" style="flex:1;padding:12px;background:#25D366;color:#fff;border-radius:10px;font-weight:800;text-align:center;text-decoration:none;font-family:inherit;">💬 واتساب</a>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    
+    var existing = document.querySelector('.dlv-modal');
+    if (existing) existing.remove();
+    
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = body;
+    document.body.appendChild(wrapper.firstElementChild);
+    setTimeout(function() {
+      document.querySelector('.dlv-modal').classList.add('active');
+    }, 10);
+  };
+
+  // ═══ فتح تعيين السائق ═══
+  window.__dlvOpenAssign = function(orderId) {
+    var order = window.CD.orders.find(function(o) { return o.id === orderId; });
+    if (!order) return;
+    
+    var last = window.CD.lastDriver || {};
+    
+    var body = '<div class="dlv-modal" onclick="if(event.target===this)this.classList.remove(\'active\')">' +
+      '<div class="dlv-modal-content">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+          '<div style="font-weight:900;color:#10b981;font-size:14px;">🚚 تعيين سائق</div>' +
+          '<button onclick="this.closest(\'.dlv-modal\').classList.remove(\'active\')" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>' +
+        '</div>' +
+        '<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;margin-bottom:14px;">' +
+          '<div style="font-size:11px;color:#10b981;font-weight:900;">📦 #' + esc(orderId.substring(0, 10)) + '</div>' +
+          '<div style="font-size:11px;color:#fff;margin-top:4px;">' + esc(order.name || '—') + ' • ' + esc(order.phone || '—') + '</div>' +
+          '<div style="font-size:11px;color:#888;margin-top:2px;">📍 ' + esc(order.pickup || '—') + '</div>' +
+        '</div>' +
+        '<div style="margin-bottom:12px;">' +
+          '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">اسم السائق *</label>' +
+          '<input id="dlv-driver-name" value="' + esc(last.name || '') + '" placeholder="أحمد علي" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;">' +
+        '</div>' +
+        '<div style="margin-bottom:12px;">' +
+          '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">رقم واتساب *</label>' +
+          '<input id="dlv-driver-phone" type="tel" value="' + esc(last.phone || '') + '" placeholder="967771234567" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;direction:ltr;box-sizing:border-box;outline:none;">' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">' +
+          '<div><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">المنطقة</label><input id="dlv-region" placeholder="صنعاء" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;"></div>' +
+          '<div><label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">رسوم التوصيل</label><input id="dlv-fee" type="number" value="0" placeholder="0" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;"></div>' +
+        '</div>' +
+        '<div style="margin-bottom:14px;">' +
+          '<label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;font-weight:700;">ملاحظة للسائق (اختياري)</label>' +
+          '<textarea id="dlv-note" placeholder="اتصل قبل الوصول..." style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:inherit;font-size:13px;height:60px;resize:none;box-sizing:border-box;outline:none;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button onclick="this.closest(\'.dlv-modal\').classList.remove(\'active\')" style="flex:1;padding:14px;background:rgba(255,255,255,0.08);border:none;color:#fff;border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer;">إلغاء</button>' +
+          '<button onclick="window.__dlvAssign(\'' + orderId + '\')" style="flex:2;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);">📤 إرسال واتساب</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    
+    var existing = document.querySelector('.dlv-modal');
+    if (existing) existing.remove();
+    
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = body;
+    document.body.appendChild(wrapper.firstElementChild);
+    setTimeout(function() {
+      document.querySelector('.dlv-modal').classList.add('active');
+    }, 10);
+  };
+
+  // ═══ تنفيذ الإرسال ═══
+  window.__dlvAssign = async function(orderId) {
+    var driverName = (document.getElementById('dlv-driver-name').value || '').trim();
+    var driverPhone = (document.getElementById('dlv-driver-phone').value || '').trim();
+    var region = (document.getElementById('dlv-region').value || '').trim();
+    var fee = parseFloat(document.getElementById('dlv-fee').value) || 0;
+    var note = (document.getElementById('dlv-note').value || '').trim();
+    
+    if (!driverName) return alert('أدخل اسم السائق');
+    if (!driverPhone) return alert('أدخل رقم السائق');
+    
+    var cleanPhone = driverPhone.replace(/\D/g, '');
+    if (cleanPhone.length === 9 && cleanPhone.startsWith('7')) cleanPhone = '967' + cleanPhone;
+    if (cleanPhone.length === 10 && cleanPhone.startsWith('0')) cleanPhone = '967' + cleanPhone.slice(1);
+    
+    try {
+      var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+      if (snap.empty) return alert('الطلب غير موجود');
+      
+      var order = snap.docs[0].data();
+      await snap.docs[0].ref.update({
+        sentToCustomer: true,
+        workflowStatus: 'sent_to_customer',
+        status: 'shipped',
+        deliveryInfo: {
+          driverName: driverName,
+          driverPhone: cleanPhone,
+          region: region,
+          deliveryFee: fee,
+          note: note,
+          assignedAt: new Date(),
+          assignedBy: FB.currentUser ? FB.currentUser.uid : ''
+        }
+      });
+      
+      // حفظ السائق
+      localStorage.setItem('chizen_last_driver', JSON.stringify({ name: driverName, phone: cleanPhone }));
+      window.CD.lastDriver = { name: driverName, phone: cleanPhone };
+      
+      // رسالة واتساب
+      var items = order.items || [];
+      var itemsList = items.map(function(it) { return '• ' + (it.name || 'منتج') + ' × ' + (it.qty || 1); }).join('\n');
+      
+      var waMsg = '🚚 *طلب توصيل جديد*\n\n' +
+        '*رقم الطلب:* #' + orderId.substring(0, 10) + '\n' +
+        '*العميل:* ' + (order.name || '') + '\n' +
+        '*الهاتف:* ' + (order.phone || '') + '\n' +
+        '*العنوان:* ' + (order.pickup || '') + '\n\n' +
+        '📦 *المنتجات:*\n' + itemsList + '\n\n' +
+        '💰 *المجموع:* ' + (order.total || 0) + ' ر.س';
+      if (fee > 0) waMsg += '\n🚗 *رسوم التوصيل:* ' + fee + ' ر.س';
+      waMsg += '\n💵 *المستلم:* ' + ((order.total || 0) + fee) + ' ر.س';
+      if (note) waMsg += '\n\n📝 *ملاحظة:* ' + note;
+      waMsg += '\n\nشكراً 🌟';
+      
+      // إشعار للعميل
+      if (order.customerId && FB.addUserNotification) {
+        try {
+          await FB.addUserNotification(order.customerId, {
+            title: '🚚 طلبك في الطريق!',
+            body: 'السائق ' + driverName + ' سيصل قريباً',
+            type: 'order'
+          });
+        } catch(e) {}
+      }
+      
+      document.querySelector('.dlv-modal').classList.remove('active');
+      setTimeout(function() { document.querySelector('.dlv-modal').remove(); }, 300);
+      
+      window.open('https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(waMsg), '_blank');
+      
+      // إعادة تحميل
+      setTimeout(function() { loadOrders(); }, 500);
+      
+    } catch(e) {
+      alert('فشل: ' + e.message);
+    }
+  };
+
+  // ═══ تم التسليم ═══
+  window.__dlvMarkDelivered = async function(orderId) {
+    if (!confirm('تم التسليم؟')) return;
+    try {
+      var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+      if (snap.empty) return;
+      await snap.docs[0].ref.update({
+        workflowStatus: 'delivered',
+        status: 'completed',
+        deliveredAt: new Date()
+      });
+      loadOrders();
+    } catch(e) {
+      alert('فشل: ' + e.message);
+    }
+  };
+
+  // ═══ تبديل التبويبات ═══
+  window.__dlvSwitchTab = function(tab, btn) {
+    window.CD.tab = tab;
+    document.querySelectorAll('.dlv-nav-btn').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+    renderContent();
+  };
+
+  // ═══ خروج ═══
+  window.__dlvLogout = function() {
+    if (!confirm('تسجيل الخروج؟')) return;
+    try { firebase.auth().signOut(); } catch(e) {}
+    try { localStorage.clear(); } catch(e) {}
+    setTimeout(function() {
+      window.location.replace(window.location.pathname + '?logout=' + Date.now());
+    }, 300);
+  };
+
+  // ═══ تحميل الطلبات ═══
+  async function loadOrders() {
+    try {
+      var snap = await FB.db.collection('orders').orderBy('createdAt', 'desc').limit(100).get();
+      var orders = [];
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        d.id = d.id || doc.id;
+        orders.push(d);
+      });
+      window.CD.orders = orders;
+      renderContent();
+    } catch(e) {
+      console.warn('[DELIVERY-UI] load orders error:', e.message);
+    }
+  }
+
+  // ═══ onSnapshot ═══
+  function setupListener() {
+    if (!window.FB || !FB.db) { setTimeout(setupListener, 500); return; }
+    if (window.CD.listener) return;
+    
+    try {
+      window.CD.listener = FB.db.collection('orders')
+        .orderBy('createdAt', 'desc')
+        .limit(100)
+        .onSnapshot(function(snap) {
+          var orders = [];
+          snap.forEach(function(doc) {
+            var d = doc.data();
+            d.id = d.id || doc.id;
+            orders.push(d);
+          });
+          window.CD.orders = orders;
+          renderContent();
+        }, function(err) {
+          console.warn('[DELIVERY-UI] listener error:', err.message);
+        });
+    } catch(e) {}
+  }
+
+  // ═══ التنشيط ═══
+  window.activateDeliveryUI = async function() {
+    console.log('[DELIVERY-UI] activating...');
+    
+    // إخفاء الأدمن
+    var gs = document.getElementById('gs'); if (gs) gs.style.display = 'none';
+    var am = document.getElementById('am'); if (am) am.style.display = 'none';
+    
+    // إنشاء أو عرض اللوحة
+    var app = document.getElementById('delivery-mgr-app');
+    if (!app) {
+      app = document.createElement('div');
+      app.id = 'delivery-mgr-app';
+      app.className = 'dlv-app active';
+      app.innerHTML = buildShell();
+      document.body.appendChild(app);
+    } else {
+      app.classList.add('active');
+    }
+    
+    // تحميل الطلبات
+    await loadOrders();
+    setupListener();
+  };
+
+  // ═══ Hook applyPermissions ═══
+  function hook() {
+    if (!window.A || !A.applyPermissions) { setTimeout(hook, 200); return; }
+    if (A.__deliveryUIHooked) return;
+    A.__deliveryUIHooked = true;
+    
+    var origApply = A.applyPermissions;
+    A.applyPermissions = function(role, category) {
+      if (role === 'delivery_mgr') {
+        window.activateDeliveryUI();
+        return;
+      }
+      if (origApply) return origApply.call(this, role, category);
+    };
+    
+    console.log('[DELIVERY-UI] hooked');
+  }
+  hook();
+
+  console.log('[DELIVERY-UI] ready');
+})();
+</script>
 </body>
 </html>
