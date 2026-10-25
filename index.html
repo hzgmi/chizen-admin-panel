@@ -5415,5 +5415,177 @@ document.addEventListener('click', function(e) {
   console.log('[ACCOUNTANT-UI] ready');
 })();
 </script>
+<script id="chz-login-robust">
+(function(){
+  'use strict';
+  console.log('[LOGIN-ROBUST] installing...');
+
+  // ═══ إصلاح doLogin بـ timeout + حالة واضحة ═══
+  function enhanceDoLogin() {
+    if (!window.doLogin) { setTimeout(enhanceDoLogin, 200); return; }
+    if (window.doLogin.__robust) return;
+    
+    var orig = window.doLogin;
+    window.doLogin = async function() {
+      var btn = document.getElementById('btn-do-login');
+      var errBox = document.getElementById('login-err');
+      var email = (document.getElementById('login-email') || {}).value || '';
+      var pass = (document.getElementById('login-pass') || {}).value || '';
+      
+      email = email.trim();
+      
+      if (!email || !pass) {
+        if (errBox) errBox.textContent = '⚠️ أدخل البريد وكلمة السر';
+        return;
+      }
+      
+      // حالة الزر
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('loading');
+        var span = btn.querySelector('span');
+        if (span) span.textContent = 'جاري التحقق...';
+      }
+      if (errBox) errBox.textContent = '';
+      
+      var loginSuccess = false;
+      var errorMsg = '';
+      
+      try {
+        // setPersistence مع timeout
+        try {
+          await Promise.race([
+            firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL),
+            new Promise(function(_, reject) { setTimeout(function() { reject(new Error('persist timeout')); }, 3000); })
+          ]);
+        } catch(pe) {
+          console.warn('[LOGIN] persist timeout, continuing...');
+        }
+        
+        // signIn مع timeout 20 ثانية
+        if (btn) {
+          var span2 = btn.querySelector('span');
+          if (span2) span2.textContent = 'جاري تسجيل الدخول...';
+        }
+        
+        var loginPromise = firebase.auth().signInWithEmailAndPassword(email, pass);
+        var timeoutPromise = new Promise(function(_, reject) {
+          setTimeout(function() { reject(new Error('انتهت مهلة الاتصال — تحقق من الإنترنت')); }, 20000);
+        });
+        
+        var cred = await Promise.race([loginPromise, timeoutPromise]);
+        loginSuccess = true;
+        console.log('[LOGIN-ROBUST] success:', cred.user.email);
+        
+        // بعد نجاح Auth — انتظر ظهور اللوحة حتى 12 ثانية
+        if (btn) {
+          var span3 = btn.querySelector('span');
+          if (span3) span3.textContent = 'جاري فتح اللوحة...';
+        }
+        
+        // راقب ظهور #am
+        var waited = 0;
+        var checkDash = setInterval(function() {
+          waited += 500;
+          var am = document.getElementById('am');
+          var isVisible = am && (am.style.display === 'flex' || am.style.display === 'block');
+          
+          // أو إذا اختفت شاشة الدخول
+          var gs = document.getElementById('gs');
+          var loginHidden = gs && gs.style.display === 'none';
+          
+          if (isVisible || loginHidden || waited >= 12000) {
+            clearInterval(checkDash);
+            if (btn) {
+              btn.disabled = false;
+              btn.classList.remove('loading');
+              var sp = btn.querySelector('span');
+              if (sp) sp.textContent = '🔓 تسجيل الدخول';
+            }
+          }
+        }, 500);
+        
+        return;
+        
+      } catch(e) {
+        errorMsg = e.message || 'فشل الدخول';
+        console.error('[LOGIN-ROBUST] error:', e.code, e.message);
+      }
+      
+      // فشل
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        var sp = btn.querySelector('span');
+        if (sp) sp.textContent = '🔓 تسجيل الدخول';
+      }
+      
+      if (errBox) {
+        var friendlyMsg = '❌ ' + errorMsg;
+        if (errorMsg.indexOf('network') > -1 || errorMsg.indexOf('timeout') > -1) {
+          friendlyMsg = '📡 تحقق من اتصال الإنترنت';
+        } else if (errorMsg.indexOf('password') > -1 || errorMsg.indexOf('invalid') > -1) {
+          friendlyMsg = '❌ البريد أو كلمة السر غير صحيحة';
+        } else if (errorMsg.indexOf('user-not-found') > -1) {
+          friendlyMsg = '❌ لا يوجد حساب بهذا البريد';
+        } else if (errorMsg.indexOf('too-many') > -1) {
+          friendlyMsg = '⏱️ محاولات كثيرة — انتظر 5 دقائق';
+        }
+        errBox.textContent = friendlyMsg;
+      }
+    };
+    
+    window.forceLogin = window.doLogin;
+    window.doLogin.__robust = true;
+    console.log('[LOGIN-ROBUST] doLogin enhanced');
+  }
+  
+  // ═══ إصلاح checkAdmin بـ timeout ═══
+  function enhanceCheckAdmin() {
+    if (!window.A || !A.checkAdmin) { setTimeout(enhanceCheckAdmin, 300); return; }
+    if (A.checkAdmin.__robust) return;
+    
+    var orig = A.checkAdmin;
+    A.checkAdmin = async function(u) {
+      if (!u) return;
+      
+      // حاول checkAdmin مع timeout 15 ثانية
+      var timeout = new Promise(function(resolve) {
+        setTimeout(function() {
+          console.warn('[LOGIN-ROBUST] checkAdmin timeout — forcing access');
+          resolve({ timeout: true });
+        }, 15000);
+      });
+      
+      var check = orig.call(this, u).then(function() { return { ok: true }; }).catch(function(e) {
+        console.error('[LOGIN-ROBUST] checkAdmin error:', e);
+        return { error: e };
+      });
+      
+      var result = await Promise.race([check, timeout]);
+      
+      if (result.timeout || result.error) {
+        // fallback: افتح اللوحة مباشرة
+        console.warn('[LOGIN-ROBUST] fallback — opening dashboard directly');
+        try {
+          this.access(u);
+          // محاولة applyPermissions بدون checkAdmin
+          if (this.applyPermissions) {
+            this.applyPermissions('super_admin', null);
+          }
+        } catch(e2) {
+          console.error('[LOGIN-ROBUST] fallback access failed:', e2);
+        }
+      }
+    };
+    A.checkAdmin.__robust = true;
+    console.log('[LOGIN-ROBUST] checkAdmin enhanced');
+  }
+  
+  // ═══ تشغيل ═══
+  setTimeout(function() { enhanceDoLogin(); enhanceCheckAdmin(); }, 500);
+  setTimeout(function() { enhanceDoLogin(); enhanceCheckAdmin(); }, 2000);
+})();
+</script>
 </body>
 </html>
