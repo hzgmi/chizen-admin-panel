@@ -925,6 +925,7 @@ var A={
     var catOpts='';
     this.cats.forEach(c=>{catOpts+='<option value="'+esc(c.key)+'"'+(p.category===c.key?' selected':'')+'>'+esc(c.name)+'</option>';});
     var feats=Array.isArray(p.features)?p.features.join('\n'):(p.features||'');
+    var imgsText=Array.isArray(p.imgs)?p.imgs.join('\n'):'';
     var html=
       '<div class="fl"><label class="fll">الاسم</label><input class="fi" id="f-name" value="'+esc(p.name||'')+'"></div>'+
       '<div class="fr"><div class="fl"><label class="fll">الماركة</label><select class="fi" id="f-brand"><option value="">بدون ماركة</option></select></div><div class="fl"><label class="fll">القسم</label><select class="fi" id="f-cat">'+catOpts+'</select></div></div>'+
@@ -932,6 +933,7 @@ var A={
       '<div class="fl"><label class="fll">السعر</label><input class="fi" type="number" id="f-price" value="'+esc(p.price||'')+'"></div><div class="fl"><label class="fll">القديم</label><input class="fi" type="number" id="f-old" value="'+esc(p.old||'')+'"></div><div class="fl"><label class="fll">المخزون</label><input class="fi" type="number" id="f-stock" value="'+esc(typeof p.stock==='number'?p.stock:'')+'"></div></div>'+
       '<div class="fl"><label class="fll">شارة</label><input class="fi" id="f-badge" value="'+esc(p.badge||'')+'" placeholder="-30%"></div>'+
       '<div class="fl"><label class="fll">رابط الصورة</label><input class="fi" id="f-img" value="'+esc(p.img||'')+'" oninput="A.prevImg(this.value)"><div class="ipt'+(p.img?' hi':'')+'" id="f-prev"><span>معاينة</span><img id="f-img-el" src="'+esc(p.img||'')+'"></div></div>'+
+      '<div class="fl"><label class="fll">🖼️ صور إضافية (مصغرات)</label><textarea class="fi" id="f-imgs" style="min-height:80px;font-family:monospace;font-size:11px;line-height:1.6;" placeholder="سطر لكل رابط:&#10;https://example.com/img1.jpg&#10;https://example.com/img2.jpg">'+esc(imgsText)+'</textarea><div style="font-size:11px;color:var(--mt2);margin-top:4px;">اتركه فارغاً إن لم ترد مصغرات. الصورة الرئيسية تُضاف تلقائياً.</div></div>'+
       '<div class="fl"><label class="fll">الوصف</label><textarea class="fi" id="f-desc">'+esc(p.desc||'')+'</textarea></div>'+
       '<div class="fl"><label class="fll">المميزات</label><textarea class="fi" id="f-feats">'+esc(feats)+'</textarea></div>'+
       '<div class="fr"><label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:10px;background:var(--bg2);border-radius:8px;cursor:pointer;"><input type="checkbox" id="f-active"'+(p.active!==false?' checked':'')+' style="width:20px;height:20px;"> مفعّل</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:10px;background:var(--bg2);border-radius:8px;cursor:pointer;"><input type="checkbox" id="f-featured"'+(p.featured?' checked':'')+' style="width:20px;height:20px;"> ⭐ مميز</label></div>';
@@ -953,10 +955,13 @@ var A={
     var price=parseFloat(document.getElementById('f-price').value);
     if(!name){this.toast('أدخل الاسم','err');return;}
     if(!price||price<=0){this.toast('سعر صحيح','err');return;}
+    var imgsRaw=(document.getElementById('f-imgs').value||'').split('\n').map(s=>s.trim()).filter(s=>s);
+    var mainImg=document.getElementById('f-img').value.trim();
+    if(mainImg&&imgsRaw.indexOf(mainImg)===-1)imgsRaw.unshift(mainImg);
     var feats=document.getElementById('f-feats').value.split('\n').map(s=>s.trim()).filter(s=>s);
     var stockV=document.getElementById('f-stock').value;
     var data={name:name,brand:document.getElementById('f-brand').value,category:document.getElementById('f-cat').value,price:price,old:parseFloat(document.getElementById('f-old').value)||null,stock:stockV?parseInt(stockV):null,badge:document.getElementById('f-badge').value.trim(),rating:4.5,reviews:0,sold:0,img:document.getElementById('f-img').value.trim(),
-         colors: document.getElementById('f-colors').value.split(',').map(s => s.trim()).filter(s => s !== ''),desc:document.getElementById('f-desc').value.trim(),features:feats,active:document.getElementById('f-active').checked,featured:document.getElementById('f-featured').checked};
+         colors: document.getElementById('f-colors').value.split(',').map(s => s.trim()).filter(s => s !== ''),desc:document.getElementById('f-desc').value.trim(),imgs:imgsRaw,features:feats,active:document.getElementById('f-active').checked,featured:document.getElementById('f-featured').checked};
     try{
       if(isEdit)await FB.updateProduct(id,data);else await FB.addProduct(data);
       this.toast(isEdit?'✓ تم':'✓ أُضيف','suc');
