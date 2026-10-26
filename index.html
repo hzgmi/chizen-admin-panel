@@ -6145,5 +6145,224 @@ document.addEventListener('click', function(e) {
   console.log('[BOOKINGS-MGR] ready');
 })();
 </script>
+<script id="chz-booking-v2-admin">
+(function(){
+  'use strict';
+  console.log('[BOOKING-V2-ADMIN] loading...');
+
+  // ═══ دالة مساعدة ═══
+  function esc(x) {
+    return String(x == null ? '' : x).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function formatPrice(amount, currency) {
+    var symbols = { SAR: 'ر.س', YER: 'ر.ي', USD: '$', AED: 'د.إ' };
+    return (amount || 0).toLocaleString('ar-EG') + ' ' + (symbols[currency] || 'ر.س');
+  }
+
+  // ═══ استبدال __cbConfirm بـ modal عرض السعر ═══
+  function installPriceQuoteFlow() {
+    if (!window.CB || typeof window.__cbConfirm !== 'function') {
+      setTimeout(installPriceQuoteFlow, 300);
+      return;
+    }
+    if (window.__cbQuoteInstalled) return;
+    window.__cbQuoteInstalled = true;
+
+    // نستبدل __cbConfirm لفتح modal عرض السعر بدلاً من التأكيد المباشر
+    window.__cbConfirm = function(bookingId) {
+      window.__cbOpenPriceQuote(bookingId);
+    };
+
+    // modal عرض السعر
+    window.__cbOpenPriceQuote = function(bookingId) {
+      var b = window.CB.bookings.find(function(x) { return x.id === bookingId; });
+      if (!b) return;
+
+      var d = b.data || {};
+      var typeInfo = {
+        flight: { icon: '✈️', name: 'طيران' },
+        bus: { icon: '🚌', name: 'باص' },
+        hotel: { icon: '🏨', name: 'فندق' },
+        hajj: { icon: '🕋', name: 'حج وعمرة' }
+      }[b.type] || { icon: '📋', name: 'حجز' };
+
+      var estimated = b.estimatedPrice || 0;
+      var currency = b.currency || 'SAR';
+
+      var modal = document.createElement('div');
+      modal.className = 'cb-modal active';
+      modal.onclick = function(e) { if (e.target === this) this.remove(); };
+      
+      modal.innerHTML = 
+        '<div class="cb-modal-content">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+            '<div style="font-weight:900;color:#f59e0b;font-size:15px;">💰 عرض السعر النهائي</div>' +
+            '<button onclick="this.closest(&quot;.cb-modal&quot;).remove()" style="background:var(--cb-input-bg);border:none;color:var(--cb-text);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>' +
+          '</div>' +
+
+          // بطاقة الحجز
+          '<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:14px;margin-bottom:16px;">' +
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+              '<div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;">' + typeInfo.icon + '</div>' +
+              '<div style="flex:1;">' +
+                '<div style="font-weight:900;color:#f59e0b;font-size:13px;">' + typeInfo.name + ' • #' + esc(bookingId.substring(0, 8)) + '</div>' +
+                '<div style="font-size:11px;color:var(--cb-text-sub);margin-top:2px;">' + esc(b.userName || d.name || 'عميل') + '</div>' +
+                '<div style="font-size:11px;color:var(--cb-text-muted);">📱 ' + esc(d.phone || b.userPhone || '—') + '</div>' +
+              '</div>' +
+            '</div>' +
+            (estimated > 0 ? 
+              '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--cb-input-bg);border-radius:8px;">' +
+                '<span style="font-size:11px;color:var(--cb-text-muted);">السعر التقريبي للعميل</span>' +
+                '<span style="font-size:14px;font-weight:900;color:var(--cb-text);">' + formatPrice(estimated, currency) + '</span>' +
+              '</div>' : '') +
+          '</div>' +
+
+          // تفاصيل الرحلة
+          '<details style="background:var(--cb-input-bg);border-radius:10px;padding:10px;margin-bottom:16px;">' +
+            '<summary style="cursor:pointer;font-size:12px;font-weight:800;color:var(--cb-text-sub);">📋 تفاصيل الطلب</summary>' +
+            '<div style="margin-top:10px;font-size:11px;color:var(--cb-text-sub);line-height:1.8;">' +
+              Object.keys(d).filter(function(k) { return typeof d[k] !== 'object' && d[k]; }).map(function(k) {
+                var labels = {
+                  from: 'من', to: 'إلى', date: 'التاريخ', type: 'النوع',
+                  checkin: 'دخول', checkout: 'خروج', city: 'المدينة',
+                  hotel: 'الفندق', airline: 'الخطوط', passengers: 'المسافرون',
+                  guests: 'الضيوف', rooms: 'الغرف', phone: 'الهاتف',
+                  name: 'الاسم', notes: 'ملاحظات', pax: 'عدد الأشخاص',
+                  time: 'الوقت', passport: 'الجواز', class: 'الدرجة'
+                };
+                return '<div><span style="color:var(--cb-text-muted);">' + esc(labels[k] || k) + ':</span> ' + esc(d[k]) + '</div>';
+              }).join('') +
+            '</div>' +
+          '</details>' +
+
+          // السعر النهائي
+          '<div style="margin-bottom:12px;">' +
+            '<label style="display:block;font-size:11px;color:var(--cb-text-sub);margin-bottom:6px;font-weight:800;">السعر النهائي *</label>' +
+            '<div style="position:relative;">' +
+              '<input id="quote-amount" type="number" placeholder="0" value="' + (estimated || '') + '" style="width:100%;padding:14px 50px 14px 14px;border-radius:10px;font-size:18px;font-weight:900;box-sizing:border-box;">' +
+              '<span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--cb-text-muted);font-weight:700;">' + (currency === 'SAR' ? 'ر.س' : currency) + '</span>' +
+            '</div>' +
+          '</div>' +
+
+          // ملاحظة
+          '<div style="margin-bottom:12px;">' +
+            '<label style="display:block;font-size:11px;color:var(--cb-text-sub);margin-bottom:6px;font-weight:800;">ملاحظة للعميل (اختياري)</label>' +
+            '<textarea id="quote-note" placeholder="مثال: السعر يشمل وجبة وترانزيت، متاح لفترة محدودة..." style="width:100%;padding:12px;border-radius:10px;font-family:inherit;font-size:13px;height:70px;resize:none;box-sizing:border-box;"></textarea>' +
+          '</div>' +
+
+          // صلاحية العرض
+          '<div style="margin-bottom:16px;">' +
+            '<label style="display:block;font-size:11px;color:var(--cb-text-sub);margin-bottom:6px;font-weight:800;">صلاحية العرض (ساعة)</label>' +
+            '<select id="quote-validity" style="width:100%;padding:12px;border-radius:10px;font-family:inherit;font-size:13px;">' +
+              '<option value="1">ساعة واحدة</option>' +
+              '<option value="6">6 ساعات</option>' +
+              '<option value="24" selected>24 ساعة</option>' +
+              '<option value="72">3 أيام</option>' +
+              '<option value="168">أسبوع</option>' +
+            '</select>' +
+          '</div>' +
+
+          // أزرار
+          '<div style="display:flex;gap:8px;">' +
+            '<button onclick="this.closest(&quot;.cb-modal&quot;).remove()" style="flex:1;padding:14px;background:var(--cb-input-bg);border:none;color:var(--cb-text);border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer;">إلغاء</button>' +
+            '<button onclick="window.__cbSendQuote(&quot;' + bookingId + '&quot;)" style="flex:2;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;border-radius:10px;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(245,158,11,0.4);">📤 إرسال العرض</button>' +
+          '</div>' +
+        '</div>';
+
+      var existing = document.querySelector('.cb-modal');
+      if (existing) existing.remove();
+      document.body.appendChild(modal);
+    };
+
+    // إرسال العرض
+    window.__cbSendQuote = async function(bookingId) {
+      var amount = parseFloat((document.getElementById('quote-amount') || {}).value) || 0;
+      var note = ((document.getElementById('quote-note') || {}).value || '').trim();
+      var validityHours = parseInt((document.getElementById('quote-validity') || {}).value) || 24;
+
+      if (amount <= 0) {
+        alert('أدخل سعراً صحيحاً');
+        return;
+      }
+
+      try {
+        var b = window.CB.bookings.find(function(x) { return x.id === bookingId; });
+        if (!b) return;
+
+        var expiresAt = new Date(Date.now() + validityHours * 60 * 60 * 1000);
+
+        await FB.db.collection('bookings').doc(bookingId).update({
+          'priceQuote.status': 'quoted',
+          'priceQuote.amount': amount,
+          'priceQuote.note': note,
+          'priceQuote.quotedAt': new Date(),
+          'priceQuote.quotedBy': FB.currentUser ? FB.currentUser.uid : '',
+          'priceQuote.expiresAt': expiresAt,
+          'chat': firebase.firestore.FieldValue.arrayUnion({
+            from: 'manager',
+            text: '💰 عرض السعر: ' + amount + ' — ' + note,
+            at: new Date().toISOString()
+          })
+        });
+
+        // إشعار Push للعميل
+        try {
+          await FB.db.collection('push_queue').add({
+            title: '💰 عرض سعر جديد لحجزك',
+            body: 'السعر: ' + amount + ' — عرض صالح لـ ' + validityHours + ' ساعة',
+            type: 'booking',
+            userId: b.userId,
+            status: 'pending',
+            data: { bookingId: bookingId, screen: 'bookings' },
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch(e) {}
+
+        // إشعار داخل التطبيق للعميل
+        try {
+          await FB.db.collection('notifications').add({
+            userId: b.userId,
+            title: '💰 عرض سعر جديد',
+            body: 'حجزك #' + bookingId.substring(0, 8) + ' — السعر: ' + amount,
+            type: 'booking',
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch(e) {}
+
+        // نجاح
+        var modal = document.querySelector('.cb-modal');
+        if (modal) modal.remove();
+
+        alert('✅ تم إرسال العرض للعميل — انتظر ردّه');
+
+        // إعادة تحميل
+        if (window.CB && typeof loadBookings === 'function') {
+          try { loadBookings(); } catch(e) {}
+        }
+      } catch(e) {
+        alert('فشل: ' + e.message);
+      }
+    };
+
+    // تعديل عرض البطاقة لإظهار حالة العرض
+    var origBuildCard = null;
+    if (window.CB && typeof window.__cbGetBuildCard === 'function') {
+      origBuildCard = window.__cbGetBuildCard();
+    }
+
+    console.log('[BOOKING-V2-ADMIN] price quote flow installed');
+  }
+
+  // تشغيل
+  setTimeout(installPriceQuoteFlow, 1000);
+  setTimeout(installPriceQuoteFlow, 2500);
+
+  console.log('[BOOKING-V2-ADMIN] ready');
+})();
+</script>
 </body>
 </html>
