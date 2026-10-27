@@ -1,0 +1,218 @@
+{
+  "scripts": [
+    {
+      "idx": 1,
+      "id": "dedicated-catmgr-ui",
+      "size": 21,
+      "tags": "pickup,logout"
+    },
+    {
+      "idx": 2,
+      "id": "cm-product-form",
+      "size": 14.1,
+      "tags": ""
+    },
+    {
+      "idx": 3,
+      "id": "pickup-admin-v1",
+      "size": 12.4,
+      "tags": "render,pickup"
+    },
+    {
+      "idx": 4,
+      "id": "dispatch-v1",
+      "size": 18.6,
+      "tags": "render,pickup,dispatch"
+    },
+    {
+      "idx": 5,
+      "id": "chz-simple-logout",
+      "size": 1.3,
+      "tags": "logout"
+    },
+    {
+      "idx": 6,
+      "id": "chz-settings-diag",
+      "size": 3.9,
+      "tags": "render,settings"
+    },
+    {
+      "idx": 7,
+      "id": "chz-settings-complete",
+      "size": 16.1,
+      "tags": "render,settings"
+    }
+  ],
+  "renderCount": {
+    "renderAll": [
+      47882
+    ],
+    "renderCats": [
+      57381
+    ],
+    "renderPays": [
+      60645
+    ],
+    "renderFlights": [
+      64217
+    ],
+    "renderOrders": [
+      68955
+    ],
+    "renderDelivery": [
+      76271
+    ],
+    "renderSups": [
+      78589
+    ],
+    "renderBalances": [
+      93043
+    ],
+    "renderUsers": [
+      99491
+    ],
+    "renderEmployees": [
+      103742
+    ],
+    "renderAdmins": [
+      107902
+    ],
+    "renderBrands": [
+      109461
+    ],
+    "renderSettings": [
+      111656
+    ]
+  },
+  "overrideCount": {
+    "applyPermissions": [
+      152009
+    ],
+    "productForm": [
+      166552
+    ],
+    "buildSections": [
+      167302
+    ],
+    "renderPickupAdmin": [
+      167829
+    ],
+    "switchPickupAdminTab": [
+      169120
+    ],
+    "loadPickupAdminData": [
+      169274
+    ],
+    "renderPickupContent": [
+      169946
+    ],
+    "addPickupArea": [
+      176213
+    ],
+    "deletePickupArea": [
+      177104
+    ],
+    "addPickupPoint": [
+      177424
+    ],
+    "deletePickupPoint": [
+      178401
+    ],
+    "savePickupAreas": [
+      178691
+    ],
+    "renderDispatcher": [
+      180589
+    ],
+    "setDispatchFilter": [
+      184889
+    ],
+    "buildDispatchCard": [
+      185010
+    ],
+    "verifyPayment": [
+      190807
+    ],
+    "rejectPayment": [
+      191792
+    ],
+    "openAssignDriver": [
+      192552
+    ],
+    "assignDriverAndSend": [
+      194926
+    ],
+    "markDelivered": [
+      197888
+    ],
+    "renderSettings": [
+      200826,
+      215203
+    ],
+    "buildSettingsHTML": [
+      204438
+    ],
+    "bindSettingsEvents": [
+      216464
+    ],
+    "saveAllSettings": [
+      216586
+    ]
+  },
+  "tabsList": {
+    "reports": [
+      1
+    ],
+    "products": [
+      2
+    ],
+    "brands": [
+      3
+    ],
+    "cats": [
+      4
+    ],
+    "pays": [
+      5
+    ],
+    "orders": [
+      6
+    ],
+    "dispatcher": [
+      7
+    ],
+    "push": [
+      8
+    ],
+    "flights": [
+      9
+    ],
+    "sups": [
+      10
+    ],
+    "balances": [
+      11
+    ],
+    "delivery": [
+      12
+    ],
+    "users": [
+      13
+    ],
+    "employees": [
+      14
+    ],
+    "admins": [
+      15
+    ],
+    "banners": [
+      16
+    ],
+    "settings": [
+      17
+    ],
+    "pickup": [
+      18
+    ]
+  }
+}
