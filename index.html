@@ -5791,36 +5791,6 @@ document.addEventListener('click', function(e) {
         return;
       }
 
-      // ═══ Stage 1: Preflight (fast connection check) ═══
-      setBtn('🌐 فحص الاتصال...', true);
-      setError('جاري فحص الاتصال...', 'info');
-
-      var online = navigator.onLine;
-      if (!online) {
-        setError('❌ لا يوجد إنترنت — تحقق من اتصالك', 'error');
-        setBtn('🔓 تسجيل الدخول', false);
-        return;
-      }
-
-      // Try a quick fetch to Firebase (5s max)
-      var preflightOK = false;
-      try {
-        var ctrl = new AbortController();
-        var t = setTimeout(function(){ ctrl.abort(); }, 5000);
-        var testResp = await fetch('https://identitytoolkit.googleapis.com/v1/projects?key=' + window.FIREBASE_CONFIG.apiKey, {
-          method: 'GET',
-          signal: ctrl.signal,
-          cache: 'no-store'
-        }).catch(function(){ return null; });
-        clearTimeout(t);
-        preflightOK = !!testResp;
-      } catch(e) { preflightOK = false; }
-
-      if (!preflightOK) {
-        setError('⚠️ الشبكة بطيئة — سنحاول مجدداً', 'warn');
-        // Continue anyway — maybe it was just a hiccup
-      }
-
       // ═══ Stage 2: Auth ═══
       setBtn('🔐 جاري التحقق...', true);
       setError('جاري تسجيل الدخول... قد يستغرق 30 ثانية على الشبكات البطيئة', 'info');
@@ -7091,204 +7061,214 @@ if ('serviceWorker' in navigator) {
   // ═══ RENDER v79 — Dashboard / Team / More ═══
   
   // ═══════════════════════════════════════════════════
-  // DASHBOARD v2
+  // ═══ RENDER v80 LIGHT — Optimized for slow networks ═══
   // ═══════════════════════════════════════════════════
+
+  _dashCache: null,
+  
   renderDash: async function() {
     var container = document.getElementById('dash-v2');
     if (!container) return;
     
-    container.innerHTML = '<div class="dash-loading"><div class="dash-loading-spinner"></div><div>جاري تحميل البيانات...</div></div>';
+    var self = this;
+    var CACHE_KEY = 'chizen_dash_cache_v80';
+    var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+    
+    // ─── STEP 1: Show cache immediately if exists ───
+    try {
+      var cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        var parsed = JSON.parse(cached);
+        if (parsed.html) {
+          container.innerHTML = parsed.html;
+          console.log('[dash v80] cache shown (' + Math.round((Date.now()-parsed.ts)/1000) + 's ago)');
+          
+          // If fresh enough, skip fetch
+          if (Date.now() - parsed.ts < CACHE_TTL) {
+            console.log('[dash v80] cache fresh — skip fetch');
+            return;
+          }
+        }
+      } else {
+        container.innerHTML = '<div class="dash-loading"><div class="dash-loading-spinner"></div><div>جاري التحميل السريع...</div></div>';
+      }
+    } catch(e) {}
     
     try {
       var now = new Date();
-      var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
-      var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+      var nowSec = Math.floor(now.getTime() / 1000);
+      var todayStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);
+      var monthStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
+      var twelveHoursAgo = nowSec - (12 * 3600);
+      var sixHoursAgo = nowSec - (6 * 3600);
+      var twoHoursAgo = nowSec - (2 * 3600);
+      var dayAgo = nowSec - (24 * 3600);
       
-      // Fetch all data in parallel
-      var [ordersSnap, bookingsSnap, listingsSnap, usersSnap, employeesSnap] = await Promise.all([
-        FB.db.collection('orders').orderBy('createdAt', 'desc').limit(200).get().catch(function(){ return { docs: [] }; }),
-        FB.db.collection('bookings').orderBy('createdAt', 'desc').limit(200).get().catch(function(){ return { docs: [] }; }),
-        FB.db.collection('listings').limit(300).get().catch(function(){ return { docs: [] }; }),
-        FB.db.collection('users').limit(100).get().catch(function(){ return { docs: [] }; }),
-        FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(50).get().catch(function(){ return { docs: [] }; })
+      // ═══ STEP 2: Fire 5 COUNT queries in parallel (tiny payloads) ═══
+      var counts = await Promise.all([
+        // Orders today count
+        FB.db.collection('orders').where('createdAt', '>=', new Date(todayStart * 1000)).count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),
+        // Bookings today count
+        FB.db.collection('bookings').where('createdAt', '>=', new Date(todayStart * 1000)).count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),
+        // Active listings count
+        FB.db.collection('listings').where('status', '==', 'active').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),
+        // Pending payments count (old > 12h)
+        FB.db.collection('orders').where('workflowStatus', '==', 'awaiting_verification').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),
+        // Pending bookings count
+        FB.db.collection('bookings').where('status', '==', 'pending').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; })
       ]);
       
-      // Parse arrays
-      var orders = [];
-      ordersSnap.docs.forEach(function(d) {
+      var ordersToday = counts[0].data().count || 0;
+      var bookingsToday = counts[1].data().count || 0;
+      var activeListings = counts[2].data().count || 0;
+      var pendingPaymentsCount = counts[3].data().count || 0;
+      var pendingBookingsCount = counts[4].data().count || 0;
+      
+      // ═══ STEP 3: Fetch ONLY recent data for alerts + activity (small limits) ═══
+      var [recentOrdersSnap, recentBookingsSnap, recentListingsSnap, monthOrdersSnap, employeesSnap] = await Promise.all([
+        // Only 20 recent orders (for alerts + activity)
+        FB.db.collection('orders').orderBy('createdAt', 'desc').limit(20).get().catch(function(){ return { docs: [] }; }),
+        // Only 10 recent bookings
+        FB.db.collection('bookings').orderBy('createdAt', 'desc').limit(10).get().catch(function(){ return { docs: [] }; }),
+        // Only 10 recent listings
+        FB.db.collection('listings').orderBy('createdAt', 'desc').limit(10).get().catch(function(){ return { docs: [] }; }),
+        // Orders this month (for revenue) — small limit
+        FB.db.collection('orders').where('createdAt', '>=', new Date(monthStart * 1000)).limit(100).get().catch(function(){ return { docs: [] }; }),
+        // Employees for team health
+        FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(20).get().catch(function(){ return { docs: [] }; })
+      ]);
+      
+      // Parse
+      var recentOrders = [];
+      recentOrdersSnap.docs.forEach(function(d) {
         var o = d.data();
         o.id = d.id;
         o._ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
-        orders.push(o);
+        recentOrders.push(o);
       });
       
-      var bookings = [];
-      bookingsSnap.docs.forEach(function(d) {
+      var recentBookings = [];
+      recentBookingsSnap.docs.forEach(function(d) {
         var b = d.data();
         b.id = d.id;
         b._ts = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-        bookings.push(b);
+        recentBookings.push(b);
       });
       
-      var listings = [];
-      listingsSnap.docs.forEach(function(d) {
+      var recentListings = [];
+      recentListingsSnap.docs.forEach(function(d) {
         var l = d.data();
         l.id = d.id;
         l._ts = l.createdAt && l.createdAt.seconds ? l.createdAt.seconds : 0;
-        listings.push(l);
+        recentListings.push(l);
       });
       
-      // ═══ Compute Alerts ═══
+      var monthOrders = [];
+      monthOrdersSnap.docs.forEach(function(d) {
+        var o = d.data();
+        if (o.status !== 'cancelled') {
+          monthOrders.push(Number(o.total) || 0);
+        }
+      });
+      
+      var employees = [];
+      employeesSnap.docs.forEach(function(d) {
+        var u = d.data();
+        u._id = d.id;
+        employees.push(u);
+      });
+      
+      var monthRevenue = monthOrders.reduce(function(s, v) { return s + v; }, 0);
+      
+      // ═══ STEP 4: Build Alerts ═══
       var alerts = [];
       
-      // 1. Payment awaiting verification > 12h
-      var pendingPayments = orders.filter(function(o) {
-        return (o.workflowStatus === 'awaiting_verification') && (now.getTime()/1000 - o._ts > 12*3600);
-      });
-      if (pendingPayments.length > 0) {
-        alerts.push({
-          icon: '💳',
-          title: pendingPayments.length + ' دفع بانتظار مراجعة',
-          sub: 'منذ أكثر من 12 ساعة — قد يؤثر على تجربة العميل',
-          action: 'orders'
+      // Alert 1: pending payments (count > 0, check age on recent orders)
+      if (pendingPaymentsCount > 0) {
+        var oldPayments = recentOrders.filter(function(o) {
+          return o.workflowStatus === 'awaiting_verification' && o._ts < twelveHoursAgo;
         });
+        if (oldPayments.length > 0 || pendingPaymentsCount > 0) {
+          alerts.push({
+            icon: '💳',
+            title: pendingPaymentsCount + ' دفع بانتظار مراجعة',
+            sub: 'راجع الدفعات الواردة',
+            action: 'orders'
+          });
+        }
       }
       
-      // 2. Bookings awaiting price quote > 6h
-      var pendingQuotes = bookings.filter(function(b) {
-        return b.status === 'pending' && (now.getTime()/1000 - b._ts > 6*3600);
-      });
-      if (pendingQuotes.length > 0) {
+      // Alert 2: pending bookings
+      if (pendingBookingsCount > 0) {
         alerts.push({
           icon: '✈️',
-          title: pendingQuotes.length + ' حجز ينتظر رد السعر',
-          sub: 'العميل ينتظر — الرد السريع يزيد فرص القبول',
+          title: pendingBookingsCount + ' حجز ينتظر رد السعر',
+          sub: 'الرد السريع يزيد فرص القبول',
           action: 'flights'
         });
       }
       
-      // 3. Ready to send orders without driver > 2h
-      var awaitingDriver = orders.filter(function(o) {
-        return o.workflowStatus === 'ready_to_send' && !o.deliveryInfo && (now.getTime()/1000 - o._ts > 2*3600);
+      // Alert 3: ready to send without driver
+      var awaitingDriver = recentOrders.filter(function(o) {
+        return o.workflowStatus === 'ready_to_send' && !o.deliveryInfo;
       });
       if (awaitingDriver.length > 0) {
         alerts.push({
           icon: '🚚',
           title: awaitingDriver.length + ' طلب جاهز بدون سائق',
-          sub: 'بحاجة لتعيين سائق للتوصيل',
+          sub: 'عيّن سائق للتوصيل',
           action: 'dispatcher'
         });
       }
       
-      // 4. Categories with pending orders > 24h (if pending_categories workflow exists)
-      var pendingCats = orders.filter(function(o) {
-        return o.workflowStatus === 'awaiting_categories' && (now.getTime()/1000 - o._ts > 24*3600);
+      // Alert 4: pending categories
+      var pendingCats = recentOrders.filter(function(o) {
+        return o.workflowStatus === 'awaiting_categories' && o._ts < dayAgo;
       });
       if (pendingCats.length > 0) {
         alerts.push({
           icon: '📦',
           title: pendingCats.length + ' طلب لم يجهزه القسم',
-          sub: 'منذ أكثر من 24 ساعة — راجع الأقسام',
+          sub: 'راجع الأقسام',
           action: 'team'
         });
       }
       
-      // 5. Listings pending review > 24h
-      var pendingListings = listings.filter(function(l) {
-        return l.status === 'active' && !l.reviewedBy && (now.getTime()/1000 - l._ts > 24*3600);
-      });
-      if (pendingListings.length > 3) {
-        alerts.push({
-          icon: '🏪',
-          title: pendingListings.length + ' إعلان حراج لم يُراجع',
-          sub: 'راجع الإعلانات الجديدة',
-          action: 'haraj'
-        });
-      }
-      
-      // ═══ KPIs ═══
-      var ordersToday = orders.filter(function(o){ return o._ts >= todayStart; }).length;
-      var bookingsToday = bookings.filter(function(b){ return b._ts >= todayStart; }).length;
-      var activeListings = listings.filter(function(l){ return l.status === 'active'; }).length;
-      var monthRevenue = orders
-        .filter(function(o){ return o._ts >= monthStart && o.status !== 'cancelled'; })
-        .reduce(function(sum, o){ return sum + (Number(o.total) || 0); }, 0);
-      
-      // ═══ Team Health ═══
-      var teamStats = {
-        green: 0,
-        yellow: 0,
-        red: 0,
-        items: []
-      };
-      
-      // Group by category for cat_managers
-      var categoryIssues = {};
-      orders.forEach(function(o) {
-        if (o.status === 'cancelled') return;
-        var cats = Object.keys(o.categories || o.categoryStatus || {});
-        var wf = o.workflowStatus || '';
-        if (wf === 'awaiting_categories') {
-          var hoursOld = (now.getTime()/1000 - o._ts) / 3600;
-          cats.forEach(function(cat) {
-            if (!categoryIssues[cat]) categoryIssues[cat] = { count: 0, oldest: 0 };
-            categoryIssues[cat].count++;
-            categoryIssues[cat].oldest = Math.max(categoryIssues[cat].oldest, hoursOld);
-          });
-        }
-      });
-      
-      // Cat managers
-      var catManagers = {};
-      employeesSnap.docs.forEach(function(d) {
-        var u = d.data();
-        if (u.role === 'cat_manager' && u.assignedCategory) {
-          catManagers[u.assignedCategory] = u;
-        }
-      });
-      
-      // Build team rows
+      // ═══ STEP 5: Team Health ═══
       var catNames = {
         electronics: 'إلكترونيات', fashion: 'أزياء', clothing: 'ملابس',
         sports: 'أدوات رياضية', beauty: 'جمال وعطور', kids: 'مستلزمات أطفال',
         tools: 'أدوات منزلية', home: 'منزل وأثاث'
       };
       
-      Object.keys(catNames).forEach(function(catKey) {
-        var mgr = catManagers[catKey];
-        var issues = categoryIssues[catKey] || { count: 0, oldest: 0 };
-        var status = 'green';
-        var reason = '';
-        
-        if (!mgr) {
-          status = 'red';
-          reason = 'لا يوجد مدير قسم';
-        } else if (issues.count > 0 && issues.oldest > 24) {
-          status = 'red';
-          reason = issues.count + ' طلب معلق منذ ' + Math.floor(issues.oldest/24) + ' يوم';
-        } else if (issues.count > 0) {
-          status = 'yellow';
-          reason = issues.count + ' طلب معلق';
+      var catManagers = {};
+      employees.forEach(function(e) {
+        if (e.role === 'cat_manager' && e.assignedCategory) {
+          catManagers[e.assignedCategory] = e;
         }
+      });
+      
+      var teamStats = { green: 0, yellow: 0, red: 0, items: [] };
+      
+      Object.keys(catNames).forEach(function(k) {
+        var mgr = catManagers[k];
+        var status = mgr ? 'green' : 'red';
+        var reason = mgr ? '' : 'بدون مدير';
         
         if (status === 'green') teamStats.green++;
-        else if (status === 'yellow') teamStats.yellow++;
         else teamStats.red++;
         
         teamStats.items.push({
-          key: catKey,
-          name: catNames[catKey],
+          name: catNames[k],
           manager: mgr ? (mgr.name || mgr.email || '—') : '—',
           status: status,
           reason: reason
         });
       });
       
-      // ═══ Recent Activity ═══
+      // ═══ STEP 6: Activity ═══
       var activity = [];
-      
-      // Recent orders
-      orders.slice(0, 3).forEach(function(o) {
+      recentOrders.slice(0, 3).forEach(function(o) {
         var status = o.workflowStatus || o.status || '';
         var action = {
           'awaiting_verification': 'طلب جديد',
@@ -7297,47 +7277,25 @@ if ('serviceWorker' in navigator) {
           'sent_to_customer': 'تم تعيين سائق',
           'delivered': 'تم التسليم'
         }[status] || 'تحديث طلب';
-        
-        activity.push({
-          ts: o._ts,
-          icon: '🛒',
-          text: action + ' #' + (o.orderNumber || o.id.substring(0, 6))
-        });
+        activity.push({ ts: o._ts, icon: '🛒', text: action + ' #' + (o.orderNumber || o.id.substring(0, 6)) });
       });
       
-      // Recent bookings
-      bookings.slice(0, 2).forEach(function(b) {
-        var action = {
-          'pending': 'حجز جديد',
-          'confirmed': 'تأكيد حجز',
-          'completed': 'إتمام حجز',
-          'cancelled': 'إلغاء حجز'
-        }[b.status] || 'تحديث حجز';
-        
-        activity.push({
-          ts: b._ts,
-          icon: '✈️',
-          text: action + ' — ' + (b.data && b.data.type ? b.data.type : '')
-        });
+      recentBookings.slice(0, 2).forEach(function(b) {
+        var action = { 'pending': 'حجز جديد', 'confirmed': 'تأكيد حجز', 'completed': 'إتمام حجز', 'cancelled': 'إلغاء حجز' }[b.status] || 'تحديث حجز';
+        activity.push({ ts: b._ts, icon: '✈️', text: action });
       });
       
-      // Recent listings
-      listings.slice(0, 2).forEach(function(l) {
-        activity.push({
-          ts: l._ts,
-          icon: '🏪',
-          text: 'إعلان حراج: ' + (l.title || '').substring(0, 30)
-        });
+      recentListings.slice(0, 2).forEach(function(l) {
+        activity.push({ ts: l._ts, icon: '🏪', text: 'إعلان: ' + (l.title || '').substring(0, 30) });
       });
       
-      // Sort by time
       activity.sort(function(a, b) { return b.ts - a.ts; });
       activity = activity.slice(0, 6);
       
-      // ═══ Build HTML ═══
+      // ═══ STEP 7: Build HTML ═══
       var html = '';
       
-      // Alerts section (only if there are alerts)
+      // Alerts
       if (alerts.length > 0) {
         html += '<div class="dash-alerts">' +
           '<div class="dash-alerts-title">⚠️ يحتاج تدخلك الآن (' + alerts.length + ')</div>';
@@ -7394,17 +7352,14 @@ if ('serviceWorker' in navigator) {
         '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:12px;font-weight:800;color:#e5e7eb;">' +
           '<div class="dash-team-dot ' + teamColorClass + '"></div>' +
           '<span>' + teamStats.green + ' قسم نشط</span>' +
-          (teamStats.yellow > 0 ? ' · <span style="color:#fbbf24;">' + teamStats.yellow + ' يحتاج انتباه</span>' : '') +
           (teamStats.red > 0 ? ' · <span style="color:#fca5a5;">' + teamStats.red + ' مشكلة</span>' : '') +
         '</div>';
       
-      // Show top 3 problem categories
       var problems = teamStats.items.filter(function(t) { return t.status !== 'green'; });
       if (problems.length > 0) {
         problems.slice(0, 3).forEach(function(t) {
-          var dotClass = t.status === 'red' ? 'red' : 'yellow';
           html += '<div class="dash-team-row">' +
-            '<div class="dash-team-dot ' + dotClass + '"></div>' +
+            '<div class="dash-team-dot ' + t.status + '"></div>' +
             '<div class="dash-team-name">' + t.name + '</div>' +
             '<div class="dash-team-count">' + (t.reason || '—') + '</div>' +
           '</div>';
@@ -7412,7 +7367,7 @@ if ('serviceWorker' in navigator) {
       }
       html += '</div>';
       
-      // Recent activity
+      // Activity
       if (activity.length > 0) {
         html += '<div class="dash-activity">' +
           '<div class="dash-activity-title">📊 آخر الأنشطة</div>';
@@ -7429,12 +7384,25 @@ if ('serviceWorker' in navigator) {
       
       container.innerHTML = html;
       
+      // ─── Save to cache ───
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ html: html, ts: Date.now() }));
+      } catch(e) {}
+      
+      console.log('[dash v80] fresh data loaded & cached');
+      
     } catch(e) {
-      console.error('[dashboard]', e);
+      console.error('[dashboard v80]', e);
       container.innerHTML = '<div class="dash-loading"><div style="color:#f87171;font-size:32px;margin-bottom:12px;">⚠️</div><div>تعذر تحميل البيانات</div><div style="font-size:10px;color:#6b7280;margin-top:8px;">' + (e.message || '') + '</div></div>';
     }
   };
   
+  // ═══ Refresh button (manual) ═══
+  A.clearDashCache = function() {
+    try { localStorage.removeItem('chizen_dash_cache_v80'); } catch(e) {}
+    this.renderDash();
+  };
+
   // ═══════════════════════════════════════════════════
   // TEAM
   // ═══════════════════════════════════════════════════
@@ -7442,23 +7410,33 @@ if ('serviceWorker' in navigator) {
     var container = document.getElementById('team-content');
     if (!container) return;
     
-    container.innerHTML = '<div class="dash-loading"><div class="dash-loading-spinner"></div></div>';
+    var CACHE_KEY = 'chizen_team_cache_v80';
+    var CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+    
+    // Cache first
+    try {
+      var cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        var parsed = JSON.parse(cached);
+        if (parsed.html && Date.now() - parsed.ts < CACHE_TTL) {
+          container.innerHTML = parsed.html;
+          console.log('[team v80] cache fresh');
+          return;
+        }
+        if (parsed.html) container.innerHTML = parsed.html;
+      }
+    } catch(e) {}
+    
+    if (!container.innerHTML || container.innerHTML.indexOf('dash-loading') > -1) {
+      container.innerHTML = '<div class="dash-loading"><div class="dash-loading-spinner"></div></div>';
+    }
     
     try {
-      var now = new Date();
-      
-      var [ordersSnap, employeesSnap] = await Promise.all([
-        FB.db.collection('orders').orderBy('createdAt', 'desc').limit(200).get().catch(function(){ return { docs: [] }; }),
-        FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(50).get().catch(function(){ return { docs: [] }; })
+      var [employeesSnap, pendingOrdersSnap] = await Promise.all([
+        FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(30).get().catch(function(){ return { docs: [] }; }),
+        // Only pending orders, small limit
+        FB.db.collection('orders').where('workflowStatus', '==', 'awaiting_categories').limit(50).get().catch(function(){ return { docs: [] }; })
       ]);
-      
-      var orders = [];
-      ordersSnap.docs.forEach(function(d) {
-        var o = d.data();
-        o.id = d.id;
-        o._ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
-        orders.push(o);
-      });
       
       var employees = [];
       employeesSnap.docs.forEach(function(d) {
@@ -7467,65 +7445,61 @@ if ('serviceWorker' in navigator) {
         employees.push(u);
       });
       
-      // Build category stats
-      var catStats = {};
+      var pendingOrders = [];
+      pendingOrdersSnap.docs.forEach(function(d) {
+        var o = d.data();
+        o.id = d.id;
+        o._ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
+        pendingOrders.push(o);
+      });
+      
+      var now = Math.floor(Date.now() / 1000);
       var catNames = {
         electronics: 'إلكترونيات', fashion: 'أزياء', clothing: 'ملابس',
         sports: 'أدوات رياضية', beauty: 'جمال وعطور', kids: 'مستلزمات أطفال',
         tools: 'أدوات منزلية', home: 'منزل وأثاث'
       };
       
-      Object.keys(catNames).forEach(function(k) {
-        catStats[k] = { total: 0, pending: 0, oldestPending: 0, manager: null };
-      });
-      
-      // Scan orders
-      orders.forEach(function(o) {
-        if (o.status === 'cancelled') return;
-        var cats = Object.keys(o.categories || o.categoryStatus || {});
-        cats.forEach(function(cat) {
-          if (!catStats[cat]) return;
-          catStats[cat].total++;
-          if (o.workflowStatus === 'awaiting_categories') {
-            catStats[cat].pending++;
-            var hoursOld = (now.getTime()/1000 - o._ts) / 3600;
-            catStats[cat].oldestPending = Math.max(catStats[cat].oldestPending, hoursOld);
-          }
-        });
-      });
-      
-      // Assign managers
-      employees.forEach(function(emp) {
-        if (emp.role === 'cat_manager' && emp.assignedCategory && catStats[emp.assignedCategory]) {
-          catStats[emp.assignedCategory].manager = emp;
+      var catManagers = {};
+      employees.forEach(function(e) {
+        if (e.role === 'cat_manager' && e.assignedCategory) {
+          catManagers[e.assignedCategory] = e;
         }
       });
       
-      // Build HTML
-      var html = '';
+      // Count pending per category
+      var catPending = {};
+      pendingOrders.forEach(function(o) {
+        var cats = Object.keys(o.categories || o.categoryStatus || {});
+        var hoursOld = (now - o._ts) / 3600;
+        cats.forEach(function(c) {
+          if (!catPending[c]) catPending[c] = { count: 0, oldest: 0 };
+          catPending[c].count++;
+          catPending[c].oldest = Math.max(catPending[c].oldest, hoursOld);
+        });
+      });
       
-      // Tabs
-      html += '<div class="team-tabs">' +
-        '<button class="team-tab active" data-view="cats" onclick="A._teamView(\'cats\',this)">📦 الأقسام</button>' +
-        '<button class="team-tab" data-view="employees" onclick="A._teamView(\'employees\',this)">👤 الموظفون</button>' +
+      var html = '<div class="team-tabs">' +
+        '<button class="team-tab active" onclick="A._teamView(\'cats\',this)">📦 الأقسام</button>' +
+        '<button class="team-tab" onclick="A._teamView(\'employees\',this)">👤 الموظفون</button>' +
       '</div>';
       
-      // Categories view
       html += '<div id="team-view-cats">';
       Object.keys(catNames).forEach(function(k) {
-        var s = catStats[k];
+        var mgr = catManagers[k];
+        var pending = catPending[k] || { count: 0, oldest: 0 };
         var status = 'green';
         var reason = '';
         
-        if (!s.manager) {
+        if (!mgr) {
           status = 'red';
-          reason = 'لا يوجد مدير قسم — عيّن واحداً من "المزيد"';
-        } else if (s.pending > 0 && s.oldestPending > 24) {
+          reason = 'لا يوجد مدير قسم';
+        } else if (pending.count > 0 && pending.oldest > 24) {
           status = 'red';
-          reason = s.pending + ' طلب معلق منذ ' + Math.floor(s.oldestPending/24) + ' يوم';
-        } else if (s.pending > 0) {
+          reason = pending.count + ' طلب معلق منذ ' + Math.floor(pending.oldest/24) + ' يوم';
+        } else if (pending.count > 0) {
           status = 'yellow';
-          reason = s.pending + ' طلب معلق (' + Math.floor(s.oldestPending) + ' ساعة)';
+          reason = pending.count + ' طلب معلق (' + Math.floor(pending.oldest) + ' ساعة)';
         }
         
         var cardClass = 'team-card' + (status === 'red' ? ' danger' : (status === 'yellow' ? ' warning' : ''));
@@ -7533,44 +7507,25 @@ if ('serviceWorker' in navigator) {
         html += '<div class="' + cardClass + '">' +
           '<div class="team-card-icon">📦</div>' +
           '<div class="team-card-body">' +
-            '<div class="team-card-title">' +
-              '<div class="status-dot ' + status + '"></div>' +
-              catNames[k] +
-            '</div>' +
-            '<div class="team-card-meta">' +
-              '👤 <strong>' + (s.manager ? (s.manager.name || s.manager.email) : 'بدون مدير') + '</strong>' +
-              ' · 📦 ' + s.total + ' طلب' +
-            '</div>' +
+            '<div class="team-card-title"><div class="status-dot ' + status + '"></div>' + catNames[k] + '</div>' +
+            '<div class="team-card-meta">👤 <strong>' + (mgr ? (mgr.name || mgr.email || '—') : 'بدون مدير') + '</strong></div>' +
             (reason ? '<div class="team-card-warn ' + (status === 'red' ? 'danger' : '') + '">⚠️ ' + reason + '</div>' : '') +
           '</div>' +
         '</div>';
       });
       html += '</div>';
       
-      // Employees view
       html += '<div id="team-view-employees" style="display:none;">';
       if (employees.length === 0) {
         html += '<div class="team-card"><div class="team-card-body"><div class="team-card-title">لا يوجد موظفون</div><div class="team-card-meta">أضف موظفين من "المزيد" → الموظفين</div></div></div>';
       } else {
-        var roleLabels = {
-          cat_manager: 'مدير قسم',
-          delivery_mgr: 'مندوب طلبات',
-          accountant: 'محاسب',
-          bookings_mgr: 'مدير حجوزات'
-        };
-        employees.forEach(function(emp) {
-          var roleLbl = roleLabels[emp.role] || emp.role;
+        var roleLabels = { cat_manager: 'مدير قسم', delivery_mgr: 'مندوب طلبات', accountant: 'محاسب', bookings_mgr: 'مدير حجوزات' };
+        employees.forEach(function(e) {
           html += '<div class="team-card">' +
             '<div class="team-card-icon">👤</div>' +
             '<div class="team-card-body">' +
-              '<div class="team-card-title">' +
-                '<div class="status-dot green"></div>' +
-                (emp.name || emp.email || '—') +
-              '</div>' +
-              '<div class="team-card-meta">' +
-                '🎯 ' + roleLbl +
-                (emp.assignedCategory ? ' · ' + (catNames[emp.assignedCategory] || emp.assignedCategory) : '') +
-              '</div>' +
+              '<div class="team-card-title"><div class="status-dot green"></div>' + (e.name || e.email || '—') + '</div>' +
+              '<div class="team-card-meta">🎯 ' + (roleLabels[e.role] || e.role) + (e.assignedCategory ? ' · ' + (catNames[e.assignedCategory] || e.assignedCategory) : '') + '</div>' +
             '</div>' +
           '</div>';
         });
@@ -7579,8 +7534,15 @@ if ('serviceWorker' in navigator) {
       
       container.innerHTML = html;
       
+      // Cache
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ html: html, ts: Date.now() }));
+      } catch(e) {}
+      
+      console.log('[team v80] loaded & cached');
+      
     } catch(e) {
-      console.error('[team]', e);
+      console.error('[team v80]', e);
       container.innerHTML = '<div class="dash-loading">⚠️ تعذر التحميل</div>';
     }
   };
