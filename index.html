@@ -1,6 +1,78 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<!-- ═══ Admin Force Fresh v78 ═══ -->
+<script id="chz-admin-force-fresh">
+(function(){
+  'use strict';
+  var VERSION = 'admin-v78-2026-10-27';
+  var STORED = 'chizen_admin_v';
+  
+  // 1. Unregister ALL service workers immediately
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(r) {
+        console.log('[admin] unregistering SW:', r.scope);
+        r.unregister();
+      });
+    });
+  }
+  
+  // 2. Clear all caches
+  if ('caches' in window) {
+    caches.keys().then(function(keys) {
+      keys.forEach(function(k) {
+        console.log('[admin] clearing cache:', k);
+        caches.delete(k);
+      });
+    });
+  }
+  
+  // 3. Force reload if version changed (but only once)
+  var prevVersion = null;
+  try { prevVersion = localStorage.getItem(STORED); } catch(e){}
+  
+  if (prevVersion && prevVersion !== VERSION) {
+    console.log('[admin] version changed:', prevVersion, '→', VERSION);
+    try { localStorage.setItem(STORED, VERSION); } catch(e){}
+    var reloaded = sessionStorage.getItem('chz_admin_reloaded');
+    if (!reloaded) {
+      sessionStorage.setItem('chz_admin_reloaded', '1');
+      setTimeout(function() {
+        window.location.replace(window.location.pathname + '?v=' + Date.now());
+      }, 100);
+      return;
+    }
+  }
+  
+  try { localStorage.setItem(STORED, VERSION); } catch(e){}
+  
+  // 4. Add cache-buster to all API calls
+  var origFetch = window.fetch;
+  if (origFetch) {
+    window.fetch = function(url, opts) {
+      if (typeof url === 'string' && url.indexOf('http') === 0) {
+        try {
+          var u = new URL(url);
+          if (u.hostname.indexOf('firebase') > -1 || u.hostname.indexOf('googleapis') > -1) {
+            return origFetch.call(this, url, opts);
+          }
+        } catch(e){}
+      }
+      return origFetch.call(this, url, opts);
+    };
+  }
+  
+  console.log('[admin v78] force fresh active');
+})();
+</script>
+
+<!-- ═══ Admin Cache Buster v77 ═══ -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="robots" content="noindex,nofollow">
@@ -379,6 +451,12 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
     </div>
     
     <div id="login-err" style="color:#ef4444;font-size:12px;text-align:center;min-height:18px;margin-bottom:10px;font-weight:700;"></div>
+    <div class="chz-reset-link" style="margin-top:14px;text-align:center;">
+      <a href="reset.html" style="color:#a855f7;font-size:11px;font-weight:700;text-decoration:underline;">
+        🔄 مواجهة مشكلة؟ إعادة تعيين كاملة
+      </a>
+    </div>
+  
     
     <button id="btn-do-login" class="gbtn" onclick="doLogin()" style="width:100%;position:relative;overflow:hidden;">
       <span style="position:relative;z-index:2;">🔓 تسجيل الدخول</span>
@@ -6774,5 +6852,14 @@ document.addEventListener('click', function(e) {
 </script>
 
 
+
+<!-- SW KILLER -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register = function() {
+    return Promise.reject(new Error('SW disabled on admin'));
+  };
+}
+</script>
 </body>
 </html>

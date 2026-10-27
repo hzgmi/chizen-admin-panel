@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>CHIZEN — إعادة تعيين كاملة</title>
+<style>
+  body { margin:0; padding:0; min-height:100vh; background:#02051b; color:#fff; font-family:Tajawal,sans-serif; display:flex; align-items:center; justify-content:center; }
+  .box { text-align:center; padding:40px 24px; max-width:400px; }
+  h1 { font-size:26px; margin-bottom:10px; background:linear-gradient(135deg,#FF3D9A,#9B4DFF); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  p { color:#9ca3af; font-size:13px; line-height:1.6; margin:10px 0 24px; }
+  .log { background:#0a0e2a; border:1px solid #1e2438; border-radius:12px; padding:14px; text-align:right; font-family:monospace; font-size:11px; color:#10b981; margin:20px 0; max-height:200px; overflow-y:auto; }
+  .log div { padding:3px 0; }
+  .log .err { color:#f87171; }
+  .log .warn { color:#fbbf24; }
+  .btn { display:inline-block; padding:14px 28px; background:linear-gradient(135deg,#FF3D9A,#9B4DFF); color:#fff; text-decoration:none; border-radius:14px; font-weight:900; font-size:14px; margin-top:16px; border:none; cursor:pointer; font-family:Tajawal,sans-serif; }
+  .btn:active { transform:scale(0.97); }
+  .success { color:#10b981; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🧹 إعادة تعيين كاملة</h1>
+  <p>جاري محو كل البيانات المؤقتة والنسخ القديمة...</p>
+  <div class="log" id="log"></div>
+  <a href="index.html?v=fresh" class="btn" id="go" style="display:none;">🚀 ابدأ من جديد</a>
+</div>
+<script>
+(async function() {
+  var log = document.getElementById('log');
+  function add(text, cls) {
+    var d = document.createElement('div');
+    if (cls) d.className = cls;
+    d.textContent = '▸ ' + text;
+    log.appendChild(d);
+    console.log(text);
+  }
+  
+  add('بدء إعادة التعيين...');
+  
+  // 1. Unregister all SWs
+  try {
+    if ('serviceWorker' in navigator) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      if (regs.length === 0) {
+        add('لا توجد Service Workers', 'warn');
+      } else {
+        for (var r of regs) {
+          await r.unregister();
+          add('✓ إلغاء SW: ' + r.scope);
+        }
+      }
+    }
+  } catch(e) { add('خطأ SW: ' + e.message, 'err'); }
+  
+  // 2. Delete all caches
+  try {
+    if ('caches' in window) {
+      var keys = await caches.keys();
+      if (keys.length === 0) {
+        add('لا توجد caches', 'warn');
+      } else {
+        for (var k of keys) {
+          await caches.delete(k);
+          add('✓ محو cache: ' + k);
+        }
+      }
+    }
+  } catch(e) { add('خطأ cache: ' + e.message, 'err'); }
+  
+  // 3. Clear localStorage
+  try {
+    var localCount = localStorage.length;
+    localStorage.clear();
+    add('✓ محو localStorage (' + localCount + ' عنصر)');
+  } catch(e) { add('خطأ localStorage: ' + e.message, 'err'); }
+  
+  // 4. Clear sessionStorage
+  try {
+    var sessCount = sessionStorage.length;
+    sessionStorage.clear();
+    add('✓ محو sessionStorage (' + sessCount + ' عنصر)');
+  } catch(e) { add('خطأ sessionStorage: ' + e.message, 'err'); }
+  
+  // 5. Clear IndexedDB
+  try {
+    if ('indexedDB' in window) {
+      var dbs = await indexedDB.databases();
+      for (var db of dbs) {
+        if (db.name) {
+          indexedDB.deleteDatabase(db.name);
+          add('✓ محو IndexedDB: ' + db.name);
+        }
+      }
+    }
+  } catch(e) { add('⚠️ IndexedDB: ' + e.message, 'warn'); }
+  
+  add('');
+  add('✅ اكتملت إعادة التعيين!', 'success');
+  
+  // Show button
+  document.getElementById('go').style.display = 'inline-block';
+  document.querySelector('p').textContent = 'تم محو كل البيانات المؤقتة. اضغط على الزر للبدء من جديد.';
+})();
+</script>
+</body>
+</html>
