@@ -9938,7 +9938,7 @@ if ('serviceWorker' in navigator) {
 
 <script>
 window.catMgrApp = (function(){
-  const CAT_LABELS = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'تجميل',kids:'أطفال',sports:'رياضة',groceries:'بقالة',auto:'سيارات',cars:'سيارات',phones:'هواتف',books:'كتب',health:'صحة'};
+  const CAT_LABELS = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',sports:'أدوات رياضية',beauty:'جمال وعطور',kids:'مستلزمات أطفال',tools:'أدوات منزلية',home:'منزل وأثاث',cars:'سيارات',phones:'هواتف',books:'كتب',health:'صحة'};
   const state = {user:null,cat:null,activeTab:'pending',pending:[],products:[],unsub:null,initialized:false};
   const $ = id => document.getElementById(id);
   const label = c => CAT_LABELS[c] || c || '—';
@@ -10571,7 +10571,7 @@ window.catMgrApp = (function(){
       var hour = new Date().getHours();
       var greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء النور' : 'مساء الخير';
       var emoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌙';
-      var catLabels = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'تجميل',kids:'أطفال',sports:'رياضة',groceries:'بقالة',auto:'سيارات'};
+      var catLabels = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',sports:'أدوات رياضية',beauty:'جمال وعطور',kids:'مستلزمات أطفال',tools:'أدوات منزلية',home:'منزل وأثاث'};
       var catName = catLabels[st.cat] || st.cat;
       var pendingCount = st.pending.length;
       var prodCount = st.products.length;
@@ -11413,7 +11413,7 @@ window.catMgrApp = (function(){
       var hour = new Date().getHours();
       var greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء النور' : 'مساء الخير';
       var emoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌙';
-      var catLabels = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'تجميل',kids:'أطفال',sports:'رياضة',groceries:'بقالة',auto:'سيارات'};
+      var catLabels = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',sports:'أدوات رياضية',beauty:'جمال وعطور',kids:'مستلزمات أطفال',tools:'أدوات منزلية',home:'منزل وأثاث'};
       var catName = catLabels[st.cat] || st.cat;
       var lowStock = (st.products || []).filter(function(p){ return Number(p.stock) > 0 && Number(p.stock) <= 3; }).length;
 
