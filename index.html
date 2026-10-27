@@ -383,6 +383,12 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
     <button id="btn-do-login" class="gbtn" onclick="doLogin()" style="width:100%;position:relative;overflow:hidden;">
       <span style="position:relative;z-index:2;">🔓 تسجيل الدخول</span>
     </button>
+      <div id="login-network-hint" style="margin-top:10px;padding:10px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.25);border-radius:10px;font-size:10.5px;color:#9ca3af;text-align:center;line-height:1.6;">
+        🌐 <b>ملاحظة:</b> على الشبكات البطيئة قد يستغرق الدخول 30-60 ثانية<br>
+        <span style="color:#a855f7;">لا تغلق الصفحة أثناء التحقق</span>
+        &nbsp;·&nbsp;
+        <a href="javascript:void(0)" onclick="location.reload()" style="color:#22d3ee;font-weight:800;text-decoration:underline;">🔄 تحديث الصفحة</a>
+      </div>
     
     <button class="gbtn sec" onclick="location.reload()" style="width:100%;margin-top:8px;">
       🔄 إعادة
@@ -5451,170 +5457,167 @@ document.addEventListener('click', function(e) {
   'use strict';
   console.log('[LOGIN-ROBUST] installing...');
 
-  // ═══ إصلاح doLogin بـ timeout + حالة واضحة ═══
+  // ═══ LOGIN v2 — robust with preflight ═══
   function enhanceDoLogin() {
     if (!window.doLogin) { setTimeout(enhanceDoLogin, 200); return; }
     if (window.doLogin.__robust) return;
-    
-    var orig = window.doLogin;
+
     window.doLogin = async function() {
       var btn = document.getElementById('btn-do-login');
       var errBox = document.getElementById('login-err');
       var email = (document.getElementById('login-email') || {}).value || '';
       var pass = (document.getElementById('login-pass') || {}).value || '';
-      
       email = email.trim();
-      
+
+      function setError(msg, type) {
+        if (!errBox) return;
+        errBox.textContent = msg;
+        errBox.style.color = type === 'error' ? '#ef4444' : (type === 'warn' ? '#f59e0b' : '#9ca3af');
+      }
+      function setBtn(text, disabled) {
+        if (!btn) return;
+        btn.disabled = !!disabled;
+        var span = btn.querySelector('span');
+        if (span) span.textContent = text;
+        else btn.textContent = text;
+      }
+
       if (!email || !pass) {
-        if (errBox) errBox.textContent = '⚠️ أدخل البريد وكلمة السر';
+        setError('⚠️ أدخل البريد وكلمة السر', 'warn');
         return;
       }
-      
-      // حالة الزر
-      if (btn) {
-        btn.disabled = true;
-        btn.classList.add('loading');
-        var span = btn.querySelector('span');
-        if (span) span.textContent = 'جاري التحقق...';
+
+      // ═══ Stage 1: Preflight (fast connection check) ═══
+      setBtn('🌐 فحص الاتصال...', true);
+      setError('جاري فحص الاتصال...', 'info');
+
+      var online = navigator.onLine;
+      if (!online) {
+        setError('❌ لا يوجد إنترنت — تحقق من اتصالك', 'error');
+        setBtn('🔓 تسجيل الدخول', false);
+        return;
       }
-      if (errBox) errBox.textContent = '';
-      
-      var loginSuccess = false;
-      var errorMsg = '';
-      
+
+      // Try a quick fetch to Firebase (5s max)
+      var preflightOK = false;
       try {
-        // setPersistence مع timeout
+        var ctrl = new AbortController();
+        var t = setTimeout(function(){ ctrl.abort(); }, 5000);
+        var testResp = await fetch('https://identitytoolkit.googleapis.com/v1/projects?key=' + window.FIREBASE_CONFIG.apiKey, {
+          method: 'GET',
+          signal: ctrl.signal,
+          cache: 'no-store'
+        }).catch(function(){ return null; });
+        clearTimeout(t);
+        preflightOK = !!testResp;
+      } catch(e) { preflightOK = false; }
+
+      if (!preflightOK) {
+        setError('⚠️ الشبكة بطيئة — سنحاول مجدداً', 'warn');
+        // Continue anyway — maybe it was just a hiccup
+      }
+
+      // ═══ Stage 2: Auth ═══
+      setBtn('🔐 جاري التحقق...', true);
+      setError('جاري تسجيل الدخول... قد يستغرق 30 ثانية على الشبكات البطيئة', 'info');
+
+      var authStart = Date.now();
+
+      // Progress updater (updates every 3s)
+      var progressTimer = setInterval(function() {
+        var elapsed = Math.floor((Date.now() - authStart) / 1000);
+        if (elapsed < 10) setError('جاري الاتصال بـ Firebase... (' + elapsed + 's)', 'info');
+        else if (elapsed < 20) setError('الشبكة بطيئة — يرجى الانتظار... (' + elapsed + 's)', 'warn');
+        else if (elapsed < 40) setError('ما زال يحاول... (' + elapsed + 's) — يمكنك الانتظار', 'warn');
+        else setError('يستغرق وقتاً طويلاً — سيتم الإلغاء قريباً', 'warn');
+      }, 3000);
+
+      try {
+        // Persistence (with shorter timeout)
         try {
           await Promise.race([
             firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL),
             new Promise(function(_, reject) { setTimeout(function() { reject(new Error('persist timeout')); }, 3000); })
           ]);
         } catch(pe) {
-          console.warn('[LOGIN] persist timeout, continuing...');
+          console.warn('[LOGIN] persistence failed, continuing');
         }
-        
-        // signIn مع timeout 20 ثانية
-        if (btn) {
-          var span2 = btn.querySelector('span');
-          if (span2) span2.textContent = 'جاري تسجيل الدخول...';
-        }
-        
+
+        // ═══ Sign in with 60s timeout (was 20s) ═══
         var loginPromise = firebase.auth().signInWithEmailAndPassword(email, pass);
         var timeoutPromise = new Promise(function(_, reject) {
-          setTimeout(function() { reject(new Error('انتهت مهلة الاتصال — تحقق من الإنترنت')); }, 20000);
+          setTimeout(function() {
+            reject(Object.assign(new Error('TIMEOUT'), { code: 'app/timeout' }));
+          }, 60000);
         });
-        
+
         var cred = await Promise.race([loginPromise, timeoutPromise]);
-        loginSuccess = true;
-        console.log('[LOGIN-ROBUST] success:', cred.user.email);
-        
-        // بعد نجاح Auth — انتظر ظهور اللوحة حتى 12 ثانية
-        if (btn) {
-          var span3 = btn.querySelector('span');
-          if (span3) span3.textContent = 'جاري فتح اللوحة...';
-        }
-        
-        // راقب ظهور #am
+        clearInterval(progressTimer);
+
+        console.log('[LOGIN-v2] ✓ auth success:', cred.user.email);
+        setBtn('✅ تم التحقق — جاري فتح اللوحة...', true);
+        setError('✅ تم تسجيل الدخول — جاري تحميل اللوحة...', 'success');
+
+        // Wait for dashboard (8s, was 12s)
         var waited = 0;
         var checkDash = setInterval(function() {
           waited += 500;
           var am = document.getElementById('am');
           var isVisible = am && (am.style.display === 'flex' || am.style.display === 'block');
-          
-          // أو إذا اختفت شاشة الدخول
           var gs = document.getElementById('gs');
           var loginHidden = gs && gs.style.display === 'none';
-          
-          if (isVisible || loginHidden || waited >= 12000) {
+
+          if (isVisible || loginHidden) {
             clearInterval(checkDash);
-            if (btn) {
-              btn.disabled = false;
-              btn.classList.remove('loading');
-              var sp = btn.querySelector('span');
-              if (sp) sp.textContent = '🔓 تسجيل الدخول';
-            }
+            setBtn('🔓 تسجيل الدخول', false);
+            setError('', 'info');
+          } else if (waited >= 8000) {
+            clearInterval(checkDash);
+            console.log('[LOGIN-v2] dashboard wait timed out, but auth OK');
+            setBtn('🔓 تسجيل الدخول', false);
+            setError('⚠️ تم الدخول لكن اللوحة تأخرت — جرّب إعادة تحميل الصفحة', 'warn');
           }
         }, 500);
-        
+
         return;
-        
+
       } catch(e) {
-        errorMsg = e.message || 'فشل الدخول';
-        console.error('[LOGIN-ROBUST] error:', e.code, e.message);
-      }
-      
-      // فشل
-      if (btn) {
-        btn.disabled = false;
-        btn.classList.remove('loading');
-        var sp = btn.querySelector('span');
-        if (sp) sp.textContent = '🔓 تسجيل الدخول';
-      }
-      
-      if (errBox) {
-        var friendlyMsg = '❌ ' + errorMsg;
-        if (errorMsg.indexOf('network') > -1 || errorMsg.indexOf('timeout') > -1) {
-          friendlyMsg = '📡 تحقق من اتصال الإنترنت';
-        } else if (errorMsg.indexOf('password') > -1 || errorMsg.indexOf('invalid') > -1) {
-          friendlyMsg = '❌ البريد أو كلمة السر غير صحيحة';
-        } else if (errorMsg.indexOf('user-not-found') > -1) {
-          friendlyMsg = '❌ لا يوجد حساب بهذا البريد';
-        } else if (errorMsg.indexOf('too-many') > -1) {
-          friendlyMsg = '⏱️ محاولات كثيرة — انتظر 5 دقائق';
+        clearInterval(progressTimer);
+        console.error('[LOGIN-v2] fail:', e.code, e.message);
+
+        var msg = 'فشل الدخول';
+        var type = 'error';
+
+        if (e.code === 'app/timeout' || e.message === 'TIMEOUT') {
+          msg = '⏱️ الشبكة بطيئة جداً — انتهت المهلة (60 ثانية). تحقق من الإنترنت أو استخدم شبكة أخرى';
+        } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+          msg = '🔑 البريد أو كلمة السر غير صحيحة';
+        } else if (e.code === 'auth/user-not-found') {
+          msg = '📧 لا يوجد حساب بهذا البريد';
+        } else if (e.code === 'auth/too-many-requests') {
+          msg = '🚫 محاولات كثيرة — انتظر 5 دقائق ثم حاول مجدداً';
+        } else if (e.code === 'auth/network-request-failed') {
+          msg = '🌐 لا يمكن الوصول لـ Firebase — تحقق من الإنترنت أو جرّب VPN';
+        } else if (e.code === 'auth/user-disabled') {
+          msg = '🚫 الحساب معطل';
+        } else if (e.code === 'auth/invalid-email') {
+          msg = '📧 بريد إلكتروني غير صالح';
+        } else if (e.message && e.message.indexOf('timeout') > -1) {
+          msg = '⏱️ انتهت المهلة — شبكة بطيئة';
+        } else {
+          msg = '❌ ' + (e.message || 'خطأ غير معروف');
+          type = 'warn';
         }
-        errBox.textContent = friendlyMsg;
+
+        setError(msg, type);
+        setBtn('🔓 إعادة المحاولة', false);
       }
     };
-    
-    window.forceLogin = window.doLogin;
+
     window.doLogin.__robust = true;
-    console.log('[LOGIN-ROBUST] doLogin enhanced');
+    console.log('[LOGIN-v2] installed');
   }
-  
-  // ═══ إصلاح checkAdmin بـ timeout ═══
-  function enhanceCheckAdmin() {
-    if (!window.A || !A.checkAdmin) { setTimeout(enhanceCheckAdmin, 300); return; }
-    if (A.checkAdmin.__robust) return;
-    
-    var orig = A.checkAdmin;
-    A.checkAdmin = async function(u) {
-      if (!u) return;
-      
-      // حاول checkAdmin مع timeout 15 ثانية
-      var timeout = new Promise(function(resolve) {
-        setTimeout(function() {
-          console.warn('[LOGIN-ROBUST] checkAdmin timeout — forcing access');
-          resolve({ timeout: true });
-        }, 15000);
-      });
-      
-      var check = orig.call(this, u).then(function() { return { ok: true }; }).catch(function(e) {
-        console.error('[LOGIN-ROBUST] checkAdmin error:', e);
-        return { error: e };
-      });
-      
-      var result = await Promise.race([check, timeout]);
-      
-      if (result.timeout || result.error) {
-        // fallback: افتح اللوحة مباشرة
-        console.warn('[LOGIN-ROBUST] fallback — opening dashboard directly');
-        try {
-          this.access(u);
-          // محاولة applyPermissions بدون checkAdmin
-          if (this.applyPermissions) {
-            this.applyPermissions('super_admin', null);
-          }
-        } catch(e2) {
-          console.error('[LOGIN-ROBUST] fallback access failed:', e2);
-        }
-      }
-    };
-    A.checkAdmin.__robust = true;
-    console.log('[LOGIN-ROBUST] checkAdmin enhanced');
-  }
-  
-  // ═══ تشغيل ═══
-  setTimeout(function() { enhanceDoLogin(); enhanceCheckAdmin(); }, 500);
+  enhanceDoLogin(); enhanceCheckAdmin(); }, 500);
   setTimeout(function() { enhanceDoLogin(); enhanceCheckAdmin(); }, 2000);
 })();
 </script>
