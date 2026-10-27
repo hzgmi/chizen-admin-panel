@@ -404,6 +404,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 <button class="tb" onclick="A.tab('cats',this)">🗂️ الأقسام</button>
 <button class="tb" onclick="A.tab('pays',this)">💳 الدفع</button>
 <button class="tb" onclick="A.tab('orders',this)">🛒 الطلبات</button>
+<button class="tb" onclick="A.tab('haraj',this)">🏪 حراج شيزن</button>
 <button class="tb" onclick="A.tab('dispatcher',this)">🚚 مندوب الطلبات</button>
 <button class="tb" onclick="A.tab('push',this)">🔔 الإشعارات</button>
 <button class="tb" onclick="A.tab('flights',this)">✈️ الحجوزات</button>
@@ -413,7 +414,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 <button class="tb" onclick="A.tab('users',this)">👥 المستخدمين</button>
 <button class="tb" onclick="A.tab('employees',this)">👥 الموظفين</button>
 <button class="tb" onclick="A.tab('admins',this)">🔑 المسؤولين</button>
-<button class="tb" onclick="A.tab('banners',this); setTimeout(function(){A.loadBanners();}, 100);">🖼️ البانرات</button>🖼️ البانرات</button>
+<button class="tb" onclick="A.tab('banners',this); setTimeout(function(){A.loadBanners();}, 100);">🖼️ البانرات</button>
       <button class="tb" onclick="A.tab('settings',this)">⚙️ الإعدادات</button>
 <button class="tb" onclick="A.tab('pickup',this)">📍 مواقع التسليم</button>
 </div>
@@ -705,6 +706,19 @@ var A={
         '</div>'+
         '<div id="o-list"></div>'+
       '</div>'+
+      '<div class="sc" id="sc-haraj">'+
+        '<div class="sw"><svg class="sic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" id="h-search" placeholder="ابحث بالعنوان، البائع، المدينة، الهاتف..." oninput="A.harajSearchInput(this.value)"></div>'+
+        '<div id="h-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>'+
+        '<div class="ch">'+
+          '<div class="cp active" onclick="A.filterHaraj(\'all\',this)">الكل</div>'+
+          '<div class="cp" onclick="A.filterHaraj(\'active\',this)">✅ نشط</div>'+
+          '<div class="cp" onclick="A.filterHaraj(\'sold\',this)">💰 مباع</div>'+
+          '<div class="cp" onclick="A.filterHaraj(\'reserved\',this)">⏸️ محجوز</div>'+
+          '<div class="cp" onclick="A.filterHaraj(\'paused\',this)">⏹️ موقوف</div>'+
+          '<div class="cp" onclick="A.filterHaraj(\'removed\',this)">🗑️ محذوف</div>'+
+        '</div>'+
+        '<div id="h-list"></div>'+
+      '</div>'+
       '<div class="sc" id="sc-sups">'+
         '<div class="ib">🏢 الموردين — أضف مورداً واربطه بأقسامه</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'+
@@ -854,7 +868,7 @@ var A={
     if(el)el.classList.add('active');
     document.getElementById('ct').scrollTop=0;
     this.currentTab=n;
-    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,dispatcher:this.renderDispatcher,flights:this.renderFlights,push:function(){},pickup:this.renderPickupAdmin,sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,employees:this.renderEmployees,admins:this.renderAdmins,settings:this.renderSettings,banners:this.loadBanners}[n];
+    var f={dash:this.renderDash,reports:this.renderReports,products:this.renderProducts,cats:this.renderCats,pays:this.renderPays,orders:this.renderOrders,haraj:this.renderHaraj,dispatcher:this.renderDispatcher,flights:this.renderFlights,push:function(){},pickup:this.renderPickupAdmin,sups:this.renderSups,balances:this.renderBalances,delivery:this.renderDelivery,users:this.renderUsers,employees:this.renderEmployees,admins:this.renderAdmins,settings:this.renderSettings,banners:this.loadBanners}[n];
     if(f)try{f.call(this);}catch(e){console.warn(e);}
   },
 
