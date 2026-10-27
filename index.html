@@ -6392,6 +6392,384 @@ document.addEventListener('click', function(e) {
 
   console.log('[BOOKING-V2-ADMIN] ready');
 })();
+
+
+  // ═══ NOTIFICATION SYSTEM v1 ═══
+  // Central messaging hub - رسائل جاهزة لكل حالة
+  
+  window.CHIZEN_MESSAGES = {
+    // ─── Order events ───
+    'order.awaiting_verification': {
+      title: '⏳ تم استلام طلبك',
+      body: 'طلبك #{{id}} قيد المراجعة. سنؤكد الدفع قريباً.',
+      type: 'order', icon: '⏳', important: false,
+      deepLink: 'orders/{{id}}'
+    },
+    'order.verified': {
+      title: '✅ تم تأكيد دفعتك',
+      body: 'طلبك #{{id}} قيد التجهيز الآن. سننبهك عند الشحن.',
+      type: 'order', icon: '✅', important: true,
+      deepLink: 'orders/{{id}}'
+    },
+    'order.payment_rejected': {
+      title: '⚠️ الدفع لم يُؤكد',
+      body: 'طلبك #{{id}} — سبب الرفض: {{reason}}. يرجى إعادة الإرسال.',
+      type: 'order', icon: '⚠️', important: true,
+      deepLink: 'orders/{{id}}'
+    },
+    'order.ready_to_send': {
+      title: '📦 طلبك جاهز',
+      body: 'طلبك #{{id}} جاهز للإرسال. في الطريق إليك قريباً.',
+      type: 'order', icon: '📦', important: false,
+      deepLink: 'orders/{{id}}'
+    },
+    'order.sent_to_customer': {
+      title: '🚚 طلبك في الطريق',
+      body: 'طلبك #{{id}} في الطريق. توجه إلى المكان الأقرب لك الذي اخترته.',
+      type: 'order', icon: '🚚', important: false,
+      deepLink: 'orders/{{id}}'
+    },
+    'order.delivered': {
+      title: '🎉 تم تسليم طلبك',
+      body: 'شكراً لثقتك بشيزن! نأمل أن تستمتع بطلبك.',
+      type: 'order', icon: '🎉', important: true,
+      deepLink: 'orders/{{id}}'
+    },
+    'order.cancelled': {
+      title: '❌ تم إلغاء طلبك',
+      body: 'طلبك #{{id}} تم إلغاؤه. للاستفسار تواصل معنا.',
+      type: 'order', icon: '❌', important: true,
+      deepLink: 'orders/{{id}}'
+    },
+    'order.on_hold': {
+      title: '⏸️ طلبك معلق',
+      body: 'طلبك #{{id}} معلق مؤقتاً. سنعود لك قريباً.',
+      type: 'order', icon: '⏸️', important: false,
+      deepLink: 'orders/{{id}}'
+    },
+    
+    // ─── Booking events ───
+    'booking.pending': {
+      title: '⏳ تم استلام حجزك',
+      body: 'حجزك قيد المراجعة. سنراجع التفاصيل ونرسل السعر قريباً.',
+      type: 'booking', icon: '⏳', important: false,
+      deepLink: 'booking'
+    },
+    'booking.quoted': {
+      title: '💰 عرض السعر جاهز',
+      body: 'حجزك — السعر المؤكد: {{amount}} ر.س. يتطلب موافقتك.',
+      type: 'booking', icon: '💰', important: true,
+      deepLink: 'booking'
+    },
+    'booking.accepted': {
+      title: '✅ وافقت على السعر',
+      body: 'شكراً! جاري تأكيد الحجز مع المزود.',
+      type: 'booking', icon: '✅', important: false,
+      deepLink: 'booking'
+    },
+    'booking.confirmed': {
+      title: '🎉 تم تأكيد حجزك',
+      body: 'حجزك مؤكد! رقم الحجز: {{id}}. رحلة سعيدة!',
+      type: 'booking', icon: '🎉', important: true,
+      deepLink: 'booking'
+    },
+    'booking.completed': {
+      title: '✅ تمت الرحلة',
+      body: 'رحلة سعيدة! نشكرك على ثقتك بشيزن.',
+      type: 'booking', icon: '✅', important: false,
+      deepLink: 'booking'
+    },
+    'booking.cancelled': {
+      title: '❌ تم إلغاء حجزك',
+      body: 'حجزك #{{id}} تم إلغاؤه. المبلغ المسترد: {{amount}} ر.س.',
+      type: 'booking', icon: '❌', important: true,
+      deepLink: 'booking'
+    },
+    
+    // ─── Listing events ───
+    'listing.active': {
+      title: '✅ إعلانك منشور',
+      body: 'إعلان "{{title}}" منشور الآن في حراج شيزن.',
+      type: 'listing', icon: '✅', important: false,
+      deepLink: 'commerce'
+    },
+    'listing.sold': {
+      title: '💰 تم بيع إعلانك',
+      body: '"{{title}}" تم بيعه! مبروك.',
+      type: 'listing', icon: '💰', important: true,
+      deepLink: 'commerce'
+    },
+    'listing.paused': {
+      title: '⏸️ إعلانك موقوف',
+      body: '"{{title}}" موقوف مؤقتاً. للاستفسار: واتساب.',
+      type: 'listing', icon: '⏸️', important: true,
+      deepLink: 'commerce'
+    },
+    'listing.removed': {
+      title: '⚠️ تم حذف إعلانك',
+      body: 'إعلان "{{title}}" حُذف. السبب: {{reason}}.',
+      type: 'listing', icon: '⚠️', important: true,
+      deepLink: 'commerce'
+    },
+    
+    // ─── Points events ───
+    'points.approved': {
+      title: '💎 تم تأكيد تحويلك',
+      body: '+{{amount}} نقطة أضيفت إلى حسابك. شكراً!',
+      type: 'points', icon: '💎', important: true,
+      deepLink: 'points'
+    },
+    'points.rejected': {
+      title: '❌ تم رفض طلب النقاط',
+      body: 'سبب الرفض: {{reason}}. تواصل معنا للمساعدة.',
+      type: 'points', icon: '❌', important: true,
+      deepLink: 'points'
+    },
+    
+    // ─── Account ───
+    'account.verified': {
+      title: '✅ تم توثيق حسابك',
+      body: 'حسابك موثق الآن. استمتع بمزايا إضافية!',
+      type: 'account', icon: '✅', important: true,
+      deepLink: 'profile'
+    },
+    'account.banned': {
+      title: '🚫 تم تعليق حسابك',
+      body: 'حسابك معلق. للاستفسار: {{phone}}.',
+      type: 'account', icon: '🚫', important: true,
+      deepLink: 'profile'
+    },
+    'account.points_earned': {
+      title: '💎 +{{amount}} نقاط',
+      body: 'كسبت نقاطاً من شرائك الأخير. استبدلها بعروض رائعة!',
+      type: 'account', icon: '💎', important: false,
+      deepLink: 'points'
+    }
+  };
+
+  // ─── Central notify function ───
+  window.notifyCustomer = async function(customerId, event, data) {
+    data = data || {};
+    if (!customerId) { console.warn('[notify] no customerId for', event); return; }
+    
+    var template = window.CHIZEN_MESSAGES[event];
+    if (!template) { console.warn('[notify] unknown event:', event); return; }
+    
+    // Replace placeholders
+    function fill(str) {
+      return String(str || '').replace(/\{\{(\w+)\}\}/g, function(_, k) {
+        return data[k] != null ? String(data[k]) : '';
+      });
+    }
+    
+    var title = fill(template.title);
+    var body = fill(template.body);
+    var deepLink = template.deepLink ? fill(template.deepLink) : null;
+    
+    // Check user preference (only for non-important events)
+    var skipPush = false;
+    if (!template.important && window.FB && FB.db) {
+      try {
+        var userDoc = await FB.db.collection('users').doc(customerId).get();
+        if (userDoc.exists) {
+          var prefs = userDoc.data().notif_prefs || {};
+          if (prefs.externalDisabled === true) {
+            skipPush = true;
+            console.log('[notify] external disabled for', customerId.slice(-6), '- event:', event);
+          }
+        }
+      } catch(e) { console.warn('[notify] prefs read error:', e.message); }
+    }
+    
+    // Always save to internal notifications
+    var notifPromise = FB.db.collection('notifications').add({
+      userId: customerId,
+      title: title,
+      body: body,
+      type: template.type,
+      event: event,
+      icon: template.icon,
+      important: !!template.important,
+      deepLink: deepLink,
+      read: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // Push only if not skipped
+    var pushPromise = skipPush ? Promise.resolve(null) : FB.db.collection('push_queue').add({
+      userId: customerId,
+      title: title,
+      body: body,
+      type: template.type,
+      event: event,
+      important: !!template.important,
+      data: { deepLink: deepLink, event: event, type: template.type },
+      status: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    await Promise.all([notifPromise, pushPromise]);
+    console.log('[notify] ✓', event, '→', customerId.slice(-6), skipPush ? '(no push)' : '(push sent)');
+  };
+
+  // ─── Helper: get customerId from order/booking ───
+  window.getOrderCustomerId = async function(orderId) {
+    try {
+      var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+      if (snap.empty) return null;
+      return snap.docs[0].data().customerId;
+    } catch(e) { return null; }
+  };
+  window.getBookingUserId = async function(bookingId) {
+    try {
+      var doc = await FB.db.collection('bookings').doc(bookingId).get();
+      if (!doc.exists) return null;
+      return doc.data().userId;
+    } catch(e) { return null; }
+  };
+
+  console.log('[notify system] ✓ loaded', Object.keys(window.CHIZEN_MESSAGES).length, 'templates');
+
 </script>
+
+
+<script>
+// ═══ WIRE ORDERS v1 ═══
+(function(){
+  function hook(){
+    if (!window.A || !window.notifyCustomer) { setTimeout(hook, 500); return; }
+    if (window.A._orderHooksWired) return;
+    window.A._orderHooksWired = true;
+    
+    // Helper: read order after status change
+    async function notifyOrder(orderId, event, extraData) {
+      try {
+        var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
+        if (snap.empty) {
+          var doc = await FB.db.collection('orders').doc(orderId).get();
+          if (!doc.exists) return;
+          var o = doc.data();
+          await window.notifyCustomer(o.customerId, event, Object.assign({
+            id: orderId.substring(0, 8).toUpperCase(),
+            total: o.total
+          }, extraData || {}));
+          return;
+        }
+        var o = snap.docs[0].data();
+        await window.notifyCustomer(o.customerId, event, Object.assign({
+          id: orderId.substring(0, 8).toUpperCase(),
+          total: o.total
+        }, extraData || {}));
+      } catch(e) { console.warn('[notify order]', e.message); }
+    }
+    
+    // ═══ 1. verifyPayment → order.verified ═══
+    var origVerify = window.A.verifyPayment;
+    if (origVerify) {
+      window.A.verifyPayment = async function(orderId) {
+        var r = await origVerify.apply(this, arguments);
+        setTimeout(function(){ notifyOrder(orderId, 'order.verified'); }, 800);
+        return r;
+      };
+    }
+    
+    // ═══ 2. rejectPayment → order.payment_rejected ═══
+    var origReject = window.A.rejectPayment;
+    if (origReject) {
+      window.A.rejectPayment = async function(orderId) {
+        var r = await origReject.apply(this, arguments);
+        setTimeout(function(){
+          notifyOrder(orderId, 'order.payment_rejected', { reason: 'غير محدد — تواصل معنا' });
+        }, 800);
+        return r;
+      };
+    }
+    
+    // ═══ 3. markDelivered → order.delivered ═══
+    var origDelivered = window.A.markDelivered;
+    if (origDelivered) {
+      window.A.markDelivered = async function(orderId) {
+        var r = await origDelivered.apply(this, arguments);
+        setTimeout(function(){ notifyOrder(orderId, 'order.delivered'); }, 800);
+        return r;
+      };
+    }
+    
+    // ═══ 4. sendToCustomer → order.sent_to_customer ═══
+    var origSend = window.A.sendToCustomer || window.A.assignDriver || window.A.dispatchOrder;
+    if (origSend) {
+      window.A.sendToCustomer = async function(orderId) {
+        var r = await origSend.apply(this, arguments);
+        setTimeout(function(){ notifyOrder(orderId, 'order.sent_to_customer'); }, 800);
+        return r;
+      };
+    }
+    
+    console.log('[wire orders] ✓ hooks applied');
+  }
+  hook();
+})();
+</script>
+
+
+
+
+<script>
+// ═══ WIRE BOOKINGS v1 ═══
+(function(){
+  function hook(){
+    if (!window.A || !window.notifyCustomer) { setTimeout(hook, 500); return; }
+    if (window.A._bookingHooksWired) return;
+    window.A._bookingHooksWired = true;
+    
+    async function notifyBooking(bookingId, event, extraData) {
+      try {
+        var doc = await FB.db.collection('bookings').doc(bookingId).get();
+        if (!doc.exists) return;
+        var b = doc.data();
+        await window.notifyCustomer(b.userId, event, Object.assign({
+          id: bookingId.substring(0, 8).toUpperCase(),
+          amount: b.priceQuote && b.priceQuote.amount ? b.priceQuote.amount : (b.estimatedPrice || 0)
+        }, extraData || {}));
+      } catch(e) { console.warn('[notify booking]', e.message); }
+    }
+    
+    // ═══ confirmBooking → booking.confirmed ═══
+    var origConfirm = window.A.confirmBooking;
+    if (origConfirm) {
+      window.A.confirmBooking = async function(bookingId) {
+        var r = await origConfirm.apply(this, arguments);
+        setTimeout(function(){ notifyBooking(bookingId, 'booking.confirmed'); }, 800);
+        return r;
+      };
+    }
+    
+    // ═══ cancelBooking → booking.cancelled ═══
+    var origCancel = window.A.cancelBooking;
+    if (origCancel) {
+      window.A.cancelBooking = async function(bookingId) {
+        var r = await origCancel.apply(this, arguments);
+        setTimeout(function(){ notifyBooking(bookingId, 'booking.cancelled', { amount: 0 }); }, 800);
+        return r;
+      };
+    }
+    
+    // ═══ completeBooking → booking.completed ═══
+    var origComplete = window.A.completeBooking;
+    if (origComplete) {
+      window.A.completeBooking = async function(bookingId) {
+        var r = await origComplete.apply(this, arguments);
+        setTimeout(function(){ notifyBooking(bookingId, 'booking.completed'); }, 800);
+        return r;
+      };
+    }
+    
+    console.log('[wire bookings] ✓ hooks applied');
+  }
+  hook();
+})();
+</script>
+
+
 </body>
 </html>
