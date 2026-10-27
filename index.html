@@ -655,62 +655,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 }
 </style>
 
-<style id="chz-acct-v89-css">
-/* Fix: prevent tab overlap in accountant panel */
-#accountant-mgr-app [id^="ca-content-"] {
-  position: relative !important;
-  margin-top: 8px !important;
-  z-index: 1 !important;
-}
 
-#accountant-mgr-app [id^="ca-content-"] > *:first-child {
-  margin-top: 0 !important;
-}
-
-/* Hide the time period tabs (اليوم/الأسبوع/الشهر) when on products tab */
-#accountant-mgr-app [id^="ca-content-products"] ~ .ca-period-tabs,
-#accountant-mgr-app .ca-period-tabs:not(.show-products) {
-  /* handled via JS */
-}
-
-/* Ensure category filter tabs don't overflow */
-#ca-content-products .v88-cat-btn {
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-width: 120px !important;
-}
-
-/* Fix product row layout on small screens */
-@media (max-width: 400px) {
-  #ca-content-products .v88-prod-row > div:first-child > div:last-child {
-    flex-wrap: wrap !important;
-  }
-  #ca-content-products .v88-prod-row > div:first-child > div:last-child > div {
-    min-width: 45% !important;
-  }
-}
-
-/* Ensure nav tabs stay in their own bar */
-#accountant-mgr-app .ca-nav-bar {
-  position: relative !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  white-space: nowrap !important;
-  margin-bottom: 8px !important;
-}
-
-/* Responsive: tighten tab buttons */
-@media (max-width: 400px) {
-  #accountant-mgr-app .ca-nav-btn {
-    padding: 8px 12px !important;
-    font-size: 10px !important;
-    min-width: auto !important;
-  }
-  #accountant-mgr-app .ca-nav-btn .label {
-    font-size: 10px !important;
-  }
-}
-</style>
 
 </head>
 <body>
@@ -9209,1793 +9154,348 @@ if ('serviceWorker' in navigator) {
 </script>
 
 
-<script id="chz-acct-v88">
-(function(){
-  'use strict';
-  
-  function install() {
-    if (!window.A || !window.A.products) {
-      return setTimeout(install, 500);
-    }
-    if (window.A._v88Installed) return;
-    window.A._v88Installed = true;
-    
-    var _esc = function(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
-    
-    // ═══ Add products tab to accountant ═══
-    window.__v88RenderProductsTab = function() {
-      var container = document.getElementById('ca-content-products');
-      if (!container) return;
-      
-      var products = window.A.products || [];
-      if (!products.length) {
-        container.innerHTML = '<div class="emp">لا منتجات</div>';
-        return;
-      }
-      
-      // Group by category
-      var catNames = {};
-      (window.A.cats || []).forEach(function(c){ catNames[c.key] = c.name; });
-      
-      // Stats
-      var totalCost = 0, totalSell = 0, totalProfit = 0, count = products.length;
-      products.forEach(function(p){
-        var cost = Number(p.costPrice) || 0;
-        var sell = Number(p.price) || 0;
-        totalCost += cost;
-        totalSell += sell;
-        totalProfit += (sell - cost);
-      });
-      var avgMargin = totalSell > 0 ? ((totalProfit / totalSell) * 100).toFixed(1) : 0;
-      
-      // Filter controls
-      var html = '<div style="padding:14px;margin-bottom:12px;background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(239,68,68,0.04));border:1.5px solid rgba(245,158,11,0.3);border-radius:12px;">' +
-        '<div style="font-size:11px;font-weight:900;color:#f59e0b;margin-bottom:10px;">📊 إحصائيات المنتجات (' + count + ')</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">' +
-          '<div style="padding:10px;background:rgba(239,68,68,0.08);border-radius:10px;text-align:center;">' +
-            '<div style="font-size:10px;color:#fca5a5;font-weight:700;margin-bottom:2px;">💰 قيمة الجملة</div>' +
-            '<div style="font-size:14px;font-weight:900;color:#ef4444;">' + totalCost.toLocaleString('ar-EG') + '</div>' +
-          '</div>' +
-          '<div style="padding:10px;background:rgba(168,85,247,0.08);border-radius:10px;text-align:center;">' +
-            '<div style="font-size:10px;color:#c084fc;font-weight:700;margin-bottom:2px;">💵 قيمة البيع</div>' +
-            '<div style="font-size:14px;font-weight:900;color:#a855f7;">' + totalSell.toLocaleString('ar-EG') + '</div>' +
-          '</div>' +
-          '<div style="padding:10px;background:rgba(16,185,129,0.08);border-radius:10px;text-align:center;grid-column:1/-1;">' +
-            '<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:2px;">📈 الربح المتوقع (هامش ' + avgMargin + '%)</div>' +
-            '<div style="font-size:18px;font-weight:900;color:#10b981;">' + totalProfit.toLocaleString('ar-EG') + ' ر.س</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-      
-      // Search
-      html += '<div style="margin-bottom:10px;"><input type="text" id="v88-prod-search" placeholder="🔍 ابحث باسم المنتج..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(168,85,247,0.2);background:rgba(20,15,45,0.8);color:#e5e7eb;font-size:12px;" oninput="window.__v88FilterProducts()"></div>';
-      
-      // Filter tabs
-      html += '<div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:6px;">' +
-        '<button class="v88-cat-btn active" data-cat="all" onclick="window.__v88SetCat(\'all\',this)" style="padding:6px 14px;border-radius:10px;border:1px solid rgba(168,85,247,0.3);background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">الكل</button>';
-      Object.keys(catNames).forEach(function(k){
-        html += '<button class="v88-cat-btn" data-cat="' + k + '" onclick="window.__v88SetCat(\'' + k + '\',this)" style="padding:6px 14px;border-radius:10px;border:1px solid rgba(168,85,247,0.2);background:rgba(168,85,247,0.08);color:#9ca3af;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">' + _esc(catNames[k]) + '</button>';
-      });
-      html += '</div>';
-      
-      // Products list
-      html += '<div id="v88-products-list" style="max-height:calc(100vh - 320px);overflow-y:auto;">';
-      products.forEach(function(prod){
-        var cost = Number(prod.costPrice) || 0;
-        var sell = Number(prod.price) || 0;
-        var profit = sell - cost;
-        var margin = sell > 0 ? (profit / sell * 100).toFixed(1) : '—';
-        var marginColor = profit > 0 ? (parseFloat(margin) >= 20 ? '#10b981' : (parseFloat(margin) >= 10 ? '#f59e0b' : '#ef4444')) : '#6b7280';
-        var supplier = prod.supplierName || '—';
-        
-        html += '<div class="v88-prod-row" data-cat="' + _esc(prod.category || '') + '" data-name="' + _esc((prod.name || '').toLowerCase()) + '" style="padding:12px 14px;background:rgba(20,15,45,0.85);border:1px solid rgba(168,85,247,0.15);border-radius:10px;margin-bottom:8px;">' +
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-size:12px;font-weight:800;color:#e5e7eb;margin-bottom:4px;">' + _esc(prod.name || 'منتج') + '</div>' +
-              '<div style="font-size:10px;color:#9ca3af;margin-bottom:6px;">🏢 ' + _esc(supplier) + ' · 🗂️ ' + _esc(catNames[prod.category] || prod.category) + '</div>' +
-              '<div style="display:flex;gap:12px;font-size:11px;">' +
-                '<div><span style="color:#9ca3af;">جملة:</span> <b style="color:#ef4444;">' + cost.toLocaleString('ar-EG') + '</b></div>' +
-                '<div><span style="color:#9ca3af;">بيع:</span> <b style="color:#a855f7;">' + sell.toLocaleString('ar-EG') + '</b></div>' +
-              '</div>' +
-            '</div>' +
-            '<div style="text-align:left;flex-shrink:0;">' +
-              '<div style="font-size:14px;font-weight:900;color:' + marginColor + ';">+' + profit.toLocaleString('ar-EG') + '</div>' +
-              '<div style="font-size:9px;color:' + marginColor + ';font-weight:800;">' + margin + '%</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-      });
-      html += '</div>';
-      
-      container.innerHTML = html;
-    };
-    
-    window.__v88SetCat = function(cat, btn) {
-      document.querySelectorAll('.v88-cat-btn').forEach(function(b){
-        b.classList.remove('active');
-        b.style.background = 'rgba(168,85,247,0.08)';
-        b.style.color = '#9ca3af';
-        b.style.borderColor = 'rgba(168,85,247,0.2)';
-      });
-      if (btn) {
-        btn.classList.add('active');
-        btn.style.background = 'linear-gradient(135deg,#a855f7,#7c3aed)';
-        btn.style.color = '#fff';
-        btn.style.borderColor = '#a855f7';
-      }
-      window.__v88FilterProducts(cat);
-    };
-    
-    window.__v88FilterProducts = function(cat) {
-      var activeCat = document.querySelector('.v88-cat-btn.active');
-      var selectedCat = activeCat ? activeCat.dataset.cat : 'all';
-      var searchVal = ((document.getElementById('v88-prod-search') || {}).value || '').toLowerCase();
-      
-      document.querySelectorAll('.v88-prod-row').forEach(function(row){
-        var matchCat = selectedCat === 'all' || row.dataset.cat === selectedCat;
-        var matchSearch = !searchVal || row.dataset.name.indexOf(searchVal) > -1;
-        row.style.display = (matchCat && matchSearch) ? 'block' : 'none';
-      });
-    };
-    
-    // ═══ Patch __caSwitchTab to add products tab ═══
-    function patchAccountantTab() {
-      var origSwitch = window.__caSwitchTab;
-      if (!origSwitch || origSwitch._v88Patched) return;
-      
-      window.__caSwitchTab = function(tab, btn) {
-        origSwitch.call(this, tab, btn);
-        if (tab === 'products') {
-          setTimeout(window.__v88RenderProductsTab, 100);
-        }
-      };
-      window.__caSwitchTab._v88Patched = true;
-      
-      console.log('[v88] accountant tab patched');
-    }
-    
-    // ═══ Add tab button ═══
-    function addProductsTabButton() {
-      var navs = document.querySelectorAll('.ca-nav-btn');
-      if (navs.length === 0) { setTimeout(addProductsTabButton, 500); return; }
-      
-      // Check if already exists
-      for (var i = 0; i < navs.length; i++) {
-        if (navs[i].getAttribute('data-tab') === 'products') return;
-      }
-      
-      // Insert after "orders"
-      var ordersBtn = null;
-      navs.forEach(function(n){ if (n.getAttribute('data-tab') === 'orders') ordersBtn = n; });
-      
-      var newBtn = document.createElement('button');
-      newBtn.className = 'ca-nav-btn';
-      newBtn.setAttribute('data-tab', 'products');
-      newBtn.setAttribute('onclick', 'window.__caSwitchTab(\'products\',this)');
-      newBtn.innerHTML = '<span class="icon">📦</span><span class="label">المنتجات</span>';
-      
-      if (ordersBtn && ordersBtn.parentNode) {
-        ordersBtn.parentNode.insertBefore(newBtn, ordersBtn.nextSibling);
-      } else if (navs[0].parentNode) {
-        navs[0].parentNode.appendChild(newBtn);
-      }
-      
-      console.log('[v88] products tab button added');
-      
-      // Add content container
-      var app = document.getElementById('accountant-mgr-app');
-      if (app && !document.getElementById('ca-content-products')) {
-        var container = document.createElement('div');
-        container.id = 'ca-content-products';
-        container.style.cssText = 'padding:14px;display:none;';
-        app.appendChild(container);
-      }
-    }
-    
-    // Hook tab switching to show/hide products content
-    var origCaSwitch = window.__caSwitchTab;
-    if (origCaSwitch) {
-      window.__caSwitchTab = function(tab, btn) {
-        // Hide all content
-        document.querySelectorAll('[id^="ca-content-"]').forEach(function(el){
-          el.style.display = 'none';
-        });
-        // Show selected
-        var target = document.getElementById('ca-content-' + tab);
-        if (target) target.style.display = 'block';
-        
-        origCaSwitch.call(this, tab, btn);
-        
-        if (tab === 'products') {
-          setTimeout(window.__v88RenderProductsTab, 100);
-        }
-      };
-    }
-    
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function(){ setTimeout(patchAccountantTab, 1000); setTimeout(addProductsTabButton, 1500); });
-    } else {
-      setTimeout(patchAccountantTab, 1000);
-      setTimeout(addProductsTabButton, 1500);
-    }
-    setTimeout(patchAccountantTab, 3000);
-    setTimeout(addProductsTabButton, 3000);
-    
-    console.log('[v88] ✓ accountant products tab installed');
-  }
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(install, 500); });
-  } else {
-    setTimeout(install, 500);
-  }
-  setTimeout(install, 3000);
-})();
-</script>
 
 
-<script id="chz-acct-v89-logic">
-(function(){
-  'use strict';
-  
-  function install() {
-    if (!window.__v88RenderProductsTab) return setTimeout(install, 500);
-    if (window.__v88RenderProductsTab._v89) return;
-    
-    window.__v88RenderProductsTab = function() {
-      var container = document.getElementById('ca-content-products');
-      if (!container) return;
-      
-      var products = window.A.products || [];
-      if (!products.length) {
-        container.innerHTML = '<div class="emp">لا منتجات</div>';
-        return;
-      }
-      
-      var catNames = {};
-      (window.A.cats || []).forEach(function(c){ catNames[c.key] = c.name; });
-      
-      // ═══ Compute stats with proper validation ═══
-      var totalCost = 0, totalSell = 0, totalProfit = 0;
-      var count = products.length;
-      var withCost = 0, withoutCost = 0;
-      
-      products.forEach(function(p){
-        var cost = Number(p.costPrice) || 0;
-        var sell = Number(p.price) || 0;
-        totalSell += sell;
-        if (cost > 0) {
-          totalCost += cost;
-          totalProfit += (sell - cost);
-          withCost++;
-        } else {
-          withoutCost++;
-        }
-      });
-      
-      var avgMargin = withCost > 0 && totalSell > 0 
-        ? Math.round((totalProfit / (totalSell - (withoutCost > 0 ? 0 : 0))) * 100) 
-        : 0;
-      
-      // Better margin calc: only for products with cost
-      var soldWithCost = 0;
-      products.forEach(function(p){
-        if (Number(p.costPrice) > 0) soldWithCost += Number(p.price) || 0;
-      });
-      avgMargin = soldWithCost > 0 ? Math.round((totalProfit / soldWithCost) * 100) : 0;
-      
-      var html = '<div style="padding:14px;margin-bottom:12px;background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(239,68,68,0.04));border:1.5px solid rgba(245,158,11,0.3);border-radius:12px;">' +
-        '<div style="font-size:11px;font-weight:900;color:#f59e0b;margin-bottom:10px;">📊 إحصائيات المنتجات (' + count + ')</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">' +
-          '<div style="padding:10px;background:rgba(239,68,68,0.08);border-radius:10px;text-align:center;">' +
-            '<div style="font-size:10px;color:#fca5a5;font-weight:700;margin-bottom:2px;">💰 قيمة الجملة</div>' +
-            '<div style="font-size:14px;font-weight:900;color:#ef4444;">' + (withCost > 0 ? totalCost.toLocaleString('ar-EG') : '—') + '</div>' +
-            '<div style="font-size:8.5px;color:#9ca3af;margin-top:2px;">' + withCost + ' منتج محدد</div>' +
-          '</div>' +
-          '<div style="padding:10px;background:rgba(168,85,247,0.08);border-radius:10px;text-align:center;">' +
-            '<div style="font-size:10px;color:#c084fc;font-weight:700;margin-bottom:2px;">💵 قيمة البيع</div>' +
-            '<div style="font-size:14px;font-weight:900;color:#a855f7;">' + totalSell.toLocaleString('ar-EG') + '</div>' +
-            '<div style="font-size:8.5px;color:#9ca3af;margin-top:2px;">' + count + ' منتج</div>' +
-          '</div>' +
-          '<div style="padding:10px;background:rgba(16,185,129,0.08);border-radius:10px;text-align:center;grid-column:1/-1;">' +
-            '<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:2px;">📈 الربح المتوقع ' + (withCost > 0 ? '(هامش ' + avgMargin + '%)' : '') + '</div>' +
-            '<div style="font-size:18px;font-weight:900;color:#10b981;">' + (withCost > 0 ? totalProfit.toLocaleString('ar-EG') + ' ر.س' : '—') + '</div>' +
-          '</div>' +
-        '</div>' +
-        (withoutCost > 0 
-          ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:10px;color:#fbbf24;text-align:center;">⚠️ ' + withoutCost + ' منتج بدون سعر جملة — عدّلها من مدير القسم</div>' 
-          : '') +
-      '</div>';
-      
-      // Search
-      html += '<div style="margin-bottom:10px;"><input type="text" id="v88-prod-search" placeholder="🔍 ابحث باسم المنتج..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(168,85,247,0.2);background:rgba(20,15,45,0.8);color:#e5e7eb;font-size:12px;box-sizing:border-box;" oninput="window.__v88FilterProducts()"></div>';
-      
-      // Category tabs
-      html += '<div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;">' +
-        '<button class="v88-cat-btn active" data-cat="all" onclick="window.__v88SetCat(\'all\',this)" style="flex-shrink:0;padding:6px 14px;border-radius:10px;border:1px solid #a855f7;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">الكل</button>';
-      Object.keys(catNames).forEach(function(k){
-        html += '<button class="v88-cat-btn" data-cat="' + k + '" onclick="window.__v88SetCat(\'' + k + '\',this)" style="flex-shrink:0;padding:6px 14px;border-radius:10px;border:1px solid rgba(168,85,247,0.2);background:rgba(168,85,247,0.08);color:#9ca3af;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">' + (catNames[k] || k) + '</button>';
-      });
-      html += '</div>';
-      
-      // Products list
-      html += '<div id="v88-products-list" style="max-height:calc(100vh - 380px);overflow-y:auto;">';
-      products.forEach(function(prod){
-        var cost = Number(prod.costPrice) || 0;
-        var sell = Number(prod.price) || 0;
-        var profit = sell - cost;
-        var margin = cost > 0 && sell > 0 ? (profit / sell * 100).toFixed(1) : '—';
-        var marginColor = cost > 0 
-          ? (profit > 0 ? (parseFloat(margin) >= 20 ? '#10b981' : (parseFloat(margin) >= 10 ? '#f59e0b' : '#ef4444')) : '#ef4444')
-          : '#6b7280';
-        var supplier = prod.supplierName || '—';
-        var costDisplay = cost > 0 ? cost.toLocaleString('ar-EG') : '—';
-        var profitDisplay = cost > 0 ? '+' + profit.toLocaleString('ar-EG') : '—';
-        var marginDisplay = cost > 0 ? margin + '%' : 'غير محدد';
-        
-        html += '<div class="v88-prod-row" data-cat="' + (prod.category || '') + '" data-name="' + (prod.name || '').toLowerCase() + '" style="padding:12px 14px;background:rgba(20,15,45,0.85);border:1px solid rgba(168,85,247,0.15);border-radius:10px;margin-bottom:8px;">' +
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-size:12px;font-weight:800;color:#e5e7eb;margin-bottom:4px;">' + String(prod.name || 'منتج').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }) + '</div>' +
-              '<div style="font-size:10px;color:#9ca3af;margin-bottom:6px;">🏢 ' + String(supplier).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }) + ' · 🗂️ ' + (catNames[prod.category] || prod.category || '—') + '</div>' +
-              '<div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap;">' +
-                '<div><span style="color:#9ca3af;">جملة:</span> <b style="color:' + (cost > 0 ? '#ef4444' : '#6b7280') + ';">' + costDisplay + '</b></div>' +
-                '<div><span style="color:#9ca3af;">بيع:</span> <b style="color:#a855f7;">' + sell.toLocaleString('ar-EG') + '</b></div>' +
-              '</div>' +
-            '</div>' +
-            '<div style="text-align:left;flex-shrink:0;">' +
-              '<div style="font-size:14px;font-weight:900;color:' + marginColor + ';">' + profitDisplay + '</div>' +
-              '<div style="font-size:9px;color:' + marginColor + ';font-weight:800;">' + marginDisplay + '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-      });
-      html += '</div>';
-      
-      container.innerHTML = html;
-    };
-    window.__v88RenderProductsTab._v89 = true;
-    
-    console.log('[v89] logic fixed — handles costPrice=0 correctly');
-  }
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(install, 1500); });
-  } else {
-    setTimeout(install, 1500);
-  }
-})();
-</script>
 
 
-<style id="chz-acct-v90-css">
-.ca-extra-panel { padding: 14px; direction: rtl; font-family: 'Tajawal', sans-serif; }
-.ca-kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
-.ca-kpi { padding: 12px; border-radius: 12px; text-align: center; border: 1.5px solid; }
-.ca-kpi-green { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); }
-.ca-kpi-red { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
-.ca-kpi-purple { background: rgba(168,85,247,0.08); border-color: rgba(168,85,247,0.3); }
-.ca-kpi-yellow { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); }
-.ca-kpi-label { font-size: 10px; color: #9ca3af; font-weight: 700; margin-bottom: 4px; }
-.ca-kpi-value { font-size: 16px; font-weight: 900; }
-.ca-kpi-green .ca-kpi-value { color: #10b981; }
-.ca-kpi-red .ca-kpi-value { color: #ef4444; }
-.ca-kpi-purple .ca-kpi-value { color: #a855f7; }
-.ca-kpi-yellow .ca-kpi-value { color: #f59e0b; }
-.ca-card { padding: 14px; background: rgba(20,15,45,0.85); border: 1px solid rgba(168,85,247,0.15); border-radius: 12px; margin-bottom: 10px; }
-.ca-card-title { font-size: 12px; font-weight: 900; color: #e5e7eb; margin-bottom: 4px; }
-.ca-card-meta { font-size: 10.5px; color: #9ca3af; margin-bottom: 8px; }
-.ca-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.ca-btn { padding: 8px 14px; border-radius: 8px; border: none; font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.ca-btn:active { transform: scale(0.96); }
-.ca-btn-primary { background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; }
-.ca-btn-success { background: rgba(16,185,129,0.15); border: 1.5px solid #10b981; color: #10b981; }
-.ca-btn-danger { background: rgba(239,68,68,0.15); border: 1.5px solid #ef4444; color: #ef4444; }
-.ca-btn-ghost { background: rgba(168,85,247,0.08); border: 1.5px solid rgba(168,85,247,0.3); color: #c084fc; }
-.ca-input { width: 100%; padding: 10px 12px; background: rgba(10,14,42,0.8); border: 1.5px solid rgba(168,85,247,0.2); border-radius: 8px; color: #e5e7eb; font-family: inherit; font-size: 12px; box-sizing: border-box; }
-.ca-input:focus { outline: none; border-color: #a855f7; }
-.ca-empty { padding: 30px; text-align: center; color: #6b7280; font-size: 12px; }
-.ca-row { padding: 12px; background: rgba(20,15,45,0.85); border: 1px solid rgba(168,85,247,0.15); border-radius: 10px; margin-bottom: 8px; }
-.ca-row-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; gap: 8px; }
-.ca-row-title { font-size: 12px; font-weight: 800; color: #e5e7eb; }
-.ca-row-sub { font-size: 10px; color: #9ca3af; margin-top: 2px; }
-.ca-badge { padding: 3px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; }
-.ca-badge-green { background: rgba(16,185,129,0.15); color: #10b981; }
-.ca-badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
-.ca-badge-yellow { background: rgba(245,158,11,0.15); color: #f59e0b; }
-.ca-badge-gray { background: rgba(107,114,128,0.15); color: #9ca3af; }
-.ca-section-title { font-size: 13px; font-weight: 900; color: #f59e0b; margin: 16px 0 10px; display: flex; align-items: center; gap: 6px; }
-.ca-tabs-inner { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
-.ca-tab-inner { flex-shrink: 0; padding: 7px 14px; border-radius: 10px; border: 1.5px solid rgba(168,85,247,0.2); background: rgba(168,85,247,0.06); color: #9ca3af; font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
-.ca-tab-inner.active { background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; border-color: #a855f7; }
-</style>
 
-<script id="chz-acct-v90">
-(function(){
-  'use strict';
-  console.log('[v90] accountant extras loading...');
-  
-  var _esc = function(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
-  
-  window.CAExtras = {
-    employees: [],
-    transactions: [],
-    rates: {},
-    loaded: false,
-    activeTab: 'all'
-  };
-  
-  // ═══════════════════════════════════════════════
-  // INIT FIRESTORE COLLECTIONS
-  // ═══════════════════════════════════════════════
-  async function ensureCollections() {
-    if (!window.FB || !FB.db) return;
-    try {
-      // Ensure commission_rates exists
-      var ratesDoc = await FB.db.collection('config').doc('commission_rates').get();
-      if (!ratesDoc.exists) {
-        await FB.db.collection('config').doc('commission_rates').set({
-          list: [
-            { role: 'cat_manager', pct: 10, label: 'مدير قسم — 10% من مبيعات قسمه' },
-            { role: 'delivery_mgr', pct: 2, label: 'مندوب طلبات — 2% من كل توصيل' },
-            { role: 'bookings_mgr', pct: 5, label: 'مدير حجوزات — 5% من قيمة الحجوزات' },
-            { role: 'accountant', pct: 0, label: 'محاسب — راتب ثابت' }
-          ]
-        });
-        console.log('[v90] commission_rates created with defaults');
-      }
-    } catch(e) { console.warn('[v90] ensureCollections:', e.message); }
-  }
-  
-  // ═══════════════════════════════════════════════
-  // LOAD DATA
-  // ═══════════════════════════════════════════════
-  async function loadEmployeesData() {
-    if (!window.FB || !FB.db) return;
-    try {
-      var snap = await FB.db.collection('users')
-        .where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr'])
-        .limit(50).get();
-      
-      window.CAExtras.employees = [];
-      snap.forEach(function(d) {
-        var u = d.data();
-        u._id = d.id;
-        window.CAExtras.employees.push(u);
-      });
-      
-      var ratesDoc = await FB.db.collection('config').doc('commission_rates').get();
-      if (ratesDoc.exists) {
-        var rates = {};
-        (ratesDoc.data().list || []).forEach(function(r) {
-          rates[r.role] = r.pct;
-        });
-        window.CAExtras.rates = rates;
-      }
-      
-      console.log('[v90] loaded', window.CAExtras.employees.length, 'employees');
-    } catch(e) { console.warn('[v90] loadEmployeesData:', e.message); }
-  }
-  
-  async function loadTransactions() {
-    if (!window.FB || !FB.db) return;
-    try {
-      var snap = await FB.db.collection('transactions').orderBy('createdAt', 'desc').limit(100).get();
-      window.CAExtras.transactions = [];
-      snap.forEach(function(d) {
-        var t = d.data();
-        t._id = d.id;
-        window.CAExtras.transactions.push(t);
-      });
-      console.log('[v90] loaded', window.CAExtras.transactions.length, 'transactions');
-    } catch(e) {
-      // orderBy may fail if no index — try without
-      try {
-        var snap2 = await FB.db.collection('transactions').limit(100).get();
-        window.CAExtras.transactions = [];
-        snap2.forEach(function(d) {
-          var t = d.data();
-          t._id = d.id;
-          window.CAExtras.transactions.push(t);
-        });
-      } catch(e2) { console.warn('[v90] transactions:', e2.message); }
-    }
-  }
-  
-  // ═══════════════════════════════════════════════
-  // CALCULATE EMPLOYEE COMMISSIONS
-  // ═══════════════════════════════════════════════
-  function calcCommission(emp) {
-    var pct = window.CAExtras.rates[emp.role] || 0;
-    var monthlySales = 0;
-    
-    if (emp.role === 'cat_manager' && emp.assignedCategory) {
-      // Sum sales from his category
-      var orders = window.A.orders || [];
-      orders.forEach(function(o) {
-        if (o.status === 'cancelled') return;
-        var catData = (o.categories || {})[emp.assignedCategory];
-        if (catData && catData.status === 'confirmed') {
-          monthlySales += Number(catData.subtotal) || 0;
-        }
-      });
-    } else if (emp.role === 'bookings_mgr') {
-      var bookings = window.A.bookings || [];
-      bookings.forEach(function(b) {
-        if (b.status === 'confirmed' || b.status === 'completed') {
-          monthlySales += Number((b.priceQuote && b.priceQuote.amount) || b.estimatedPrice || 0);
-        }
-      });
-    } else if (emp.role === 'delivery_mgr') {
-      // Count deliveries
-      var orders2 = window.A.orders || [];
-      orders2.forEach(function(o) {
-        if (o.status === 'completed' && o.deliveryInfo && o.deliveryInfo.deliveryFee) {
-          monthlySales += Number(o.deliveryInfo.deliveryFee) || 0;
-        }
-      });
-    }
-    
-    var commission = Math.round(monthlySales * pct / 100);
-    return { sales: monthlySales, pct: pct, commission: commission };
-  }
-  
-  function calcBalance(emp) {
-    var trans = window.CAExtras.transactions.filter(function(t) {
-      return t.userId === emp._id && t.status !== 'rejected';
-    });
-    
-    var advances = 0, deductions = 0, paid = 0;
-    trans.forEach(function(t) {
-      var amt = Number(t.amount) || 0;
-      if (t.type === 'advance') advances += amt;
-      else if (t.type === 'deduction') deductions += amt;
-      else if (t.type === 'paid') paid += amt;
-    });
-    
-    var commission = calcCommission(emp).commission;
-    var owed = commission + advances - deductions - paid;
-    
-    return { owed: owed, advances: advances, deductions: deductions, paid: paid, commission: commission };
-  }
-  
-  // ═══════════════════════════════════════════════
-  // TAB 7: EMPLOYEES
-  // ═══════════════════════════════════════════════
-  window.__caRenderEmployees = function() {
-    var container = document.getElementById('ca-content-employees');
-    if (!container) return;
-    
-    if (!window.CAExtras.loaded) {
-      container.innerHTML = '<div class="ca-empty"><div style="font-size:32px;margin-bottom:10px;">⏳</div>جاري التحميل...</div>';
-      loadEmployeesData().then(function() {
-        loadTransactions().then(function() {
-          window.CAExtras.loaded = true;
-          window.__caRenderEmployees();
-        });
-      });
-      return;
-    }
-    
-    var emps = window.CAExtras.employees;
-    if (!emps.length) {
-      container.innerHTML = '<div class="ca-empty">لا موظفين مسجلين</div>';
-      return;
-    }
-    
-    var totalCommissions = 0, totalAdvances = 0, totalOwed = 0;
-    var empCalculations = [];
-    
-    emps.forEach(function(emp) {
-      var c = calcCommission(emp);
-      var b = calcBalance(emp);
-      totalCommissions += c.commission;
-      totalAdvances += b.advances;
-      totalOwed += Math.max(0, b.owed);
-      empCalculations.push({ emp: emp, calc: c, balance: b });
-    });
-    
-    var html = '<div class="ca-extra-panel">';
-    
-    // KPIs
-    html += '<div class="ca-kpi-grid">' +
-      '<div class="ca-kpi ca-kpi-purple"><div class="ca-kpi-label">👥 الموظفون</div><div class="ca-kpi-value">' + emps.length + '</div></div>' +
-      '<div class="ca-kpi ca-kpi-green"><div class="ca-kpi-label">💰 إجمالي العمولات</div><div class="ca-kpi-value">' + totalCommissions.toLocaleString('ar-EG') + '</div></div>' +
-      '<div class="ca-kpi ca-kpi-yellow"><div class="ca-kpi-label">💸 إجمالي التقدمات</div><div class="ca-kpi-value">' + totalAdvances.toLocaleString('ar-EG') + '</div></div>' +
-      '<div class="ca-kpi ca-kpi-red"><div class="ca-kpi-label">📊 المستحقات</div><div class="ca-kpi-value">' + totalOwed.toLocaleString('ar-EG') + '</div></div>' +
-    '</div>';
-    
-    // Employees list
-    var roleLabels = {
-      cat_manager: { label: 'مدير قسم', icon: '📦' },
-      delivery_mgr: { label: 'مندوب طلبات', icon: '🚚' },
-      accountant: { label: 'محاسب', icon: '💰' },
-      bookings_mgr: { label: 'مدير حجوزات', icon: '✈️' }
-    };
-    
-    html += '<div class="ca-section-title">👥 فريق العمل — العمولات والرواتب</div>';
-    
-    empCalculations.forEach(function(item) {
-      var e = item.emp, c = item.calc, b = item.balance;
-      var role = roleLabels[e.role] || { label: e.role, icon: '👤' };
-      var catLabel = e.assignedCategory ? ' · قسم ' + e.assignedCategory : '';
-      var owedColor = b.owed > 0 ? '#10b981' : (b.owed < 0 ? '#ef4444' : '#6b7280');
-      
-      html += '<div class="ca-card">' +
-        '<div class="ca-row-header">' +
-          '<div>' +
-            '<div class="ca-card-title">' + role.icon + ' ' + _esc(e.name || e.email || 'موظف') + '</div>' +
-            '<div class="ca-card-meta">' + role.label + catLabel + '</div>' +
-          '</div>' +
-          '<div class="ca-badge ' + (b.owed > 0 ? 'ca-badge-green' : b.owed < 0 ? 'ca-badge-red' : 'ca-badge-gray') + '">' +
-            (b.owed > 0 ? '+' : '') + b.owed.toLocaleString('ar-EG') + ' ر.س' +
-          '</div>' +
-        '</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0;font-size:10.5px;">' +
-          '<div style="padding:6px 8px;background:rgba(168,85,247,0.06);border-radius:6px;">' +
-            '<span style="color:#9ca3af;">📊 مبيعاته:</span> <b style="color:#a855f7;">' + c.sales.toLocaleString('ar-EG') + '</b>' +
-          '</div>' +
-          '<div style="padding:6px 8px;background:rgba(16,185,129,0.06);border-radius:6px;">' +
-            '<span style="color:#9ca3af;">💰 عمولته (' + c.pct + '%):</span> <b style="color:#10b981;">' + c.commission.toLocaleString('ar-EG') + '</b>' +
-          '</div>' +
-          '<div style="padding:6px 8px;background:rgba(245,158,11,0.06);border-radius:6px;">' +
-            '<span style="color:#9ca3af;">💸 تقدمات:</span> <b style="color:#f59e0b;">' + b.advances.toLocaleString('ar-EG') + '</b>' +
-          '</div>' +
-          '<div style="padding:6px 8px;background:rgba(239,68,68,0.06);border-radius:6px;">' +
-            '<span style="color:#9ca3af;">📉 خصومات:</span> <b style="color:#ef4444;">' + b.deductions.toLocaleString('ar-EG') + '</b>' +
-          '</div>' +
-        '</div>' +
-        '<div class="ca-card-actions">' +
-          '<button class="ca-btn ca-btn-ghost" onclick="window.__caEditRate(\'' + e._id + '\')">✏️ تعديل النسبة</button>' +
-          '<button class="ca-btn ca-btn-success" onclick="window.__caAddTransaction(\'' + e._id + '\',\'advance\')">💸 تقدمة</button>' +
-          '<button class="ca-btn ca-btn-danger" onclick="window.__caAddTransaction(\'' + e._id + '\',\'deduction\')">📉 خصم</button>' +
-          '<button class="ca-btn ca-btn-primary" onclick="window.__caAddTransaction(\'' + e._id + '\',\'paid\')">✅ دفع راتب</button>' +
-        '</div>' +
-      '</div>';
-    });
-    
-    html += '</div>';
-    container.innerHTML = html;
-  };
-  
-  // ═══════════════════════════════════════════════
-  // TAB 8: ADVANCES & TRANSACTIONS
-  // ═══════════════════════════════════════════════
-  window.__caRenderAdvances = function() {
-    var container = document.getElementById('ca-content-advances');
-    if (!container) return;
-    
-    if (!window.CAExtras.loaded) {
-      loadTransactions().then(function() {
-        window.CAExtras.loaded = true;
-        window.__caRenderAdvances();
-      });
-      container.innerHTML = '<div class="ca-empty">⏳ جاري التحميل...</div>';
-      return;
-    }
-    
-    var trans = window.CAExtras.transactions;
-    var filter = window.CAExtras.activeTab || 'all';
-    
-    var filtered = trans;
-    if (filter === 'advances') filtered = trans.filter(function(t){ return t.type === 'advance'; });
-    else if (filter === 'deductions') filtered = trans.filter(function(t){ return t.type === 'deduction'; });
-    else if (filter === 'paid') filtered = trans.filter(function(t){ return t.type === 'paid'; });
-    else if (filter === 'pending') filtered = trans.filter(function(t){ return t.status === 'pending'; });
-    
-    var totalAdvances = 0, totalDeductions = 0, totalPaid = 0, totalPending = 0;
-    trans.forEach(function(t) {
-      var amt = Number(t.amount) || 0;
-      if (t.type === 'advance') totalAdvances += amt;
-      else if (t.type === 'deduction') totalDeductions += amt;
-      else if (t.type === 'paid') totalPaid += amt;
-      if (t.status === 'pending') totalPending += amt;
-    });
-    
-    var html = '<div class="ca-extra-panel">';
-    
-    html += '<div class="ca-kpi-grid">' +
-      '<div class="ca-kpi ca-kpi-yellow"><div class="ca-kpi-label">💸 التقدمات</div><div class="ca-kpi-value">' + totalAdvances.toLocaleString('ar-EG') + '</div></div>' +
-      '<div class="ca-kpi ca-kpi-red"><div class="ca-kpi-label">📉 الخصومات</div><div class="ca-kpi-value">' + totalDeductions.toLocaleString('ar-EG') + '</div></div>' +
-      '<div class="ca-kpi ca-kpi-green"><div class="ca-kpi-label">✅ المدفوع</div><div class="ca-kpi-value">' + totalPaid.toLocaleString('ar-EG') + '</div></div>' +
-      '<div class="ca-kpi ca-kpi-purple"><div class="ca-kpi-label">⏳ معلق</div><div class="ca-kpi-value">' + totalPending.toLocaleString('ar-EG') + '</div></div>' +
-    '</div>';
-    
-    html += '<div class="ca-tabs-inner">' +
-      '<button class="ca-tab-inner' + (filter === 'all' ? ' active' : '') + '" onclick="window.__caSetSubTab(\'advances\',\'all\')">الكل</button>' +
-      '<button class="ca-tab-inner' + (filter === 'advances' ? ' active' : '') + '" onclick="window.__caSetSubTab(\'advances\',\'advances\')">💸 تقدمات</button>' +
-      '<button class="ca-tab-inner' + (filter === 'deductions' ? ' active' : '') + '" onclick="window.__caSetSubTab(\'advances\',\'deductions\')">📉 خصومات</button>' +
-      '<button class="ca-tab-inner' + (filter === 'paid' ? ' active' : '') + '" onclick="window.__caSetSubTab(\'advances\',\'paid\')">✅ مدفوع</button>' +
-      '<button class="ca-tab-inner' + (filter === 'pending' ? ' active' : '') + '" onclick="window.__caSetSubTab(\'advances\',\'pending\')">⏳ معلق</button>' +
-    '</div>';
-    
-    if (!filtered.length) {
-      html += '<div class="ca-empty">لا حركات في هذه الفئة</div>';
-    } else {
-      filtered.forEach(function(t) {
-        var typeIcon = { advance: '💸', deduction: '📉', paid: '✅' }[t.type] || '📝';
-        var typeLabel = { advance: 'تقدمة', deduction: 'خصم', paid: 'دفع راتب' }[t.type] || t.type;
-        var statusBadge = { pending: 'ca-badge-yellow', approved: 'ca-badge-green', rejected: 'ca-badge-red' }[t.status] || 'ca-badge-gray';
-        var statusLabel = { pending: '⏳ معلق', approved: '✅ معتمد', rejected: '❌ مرفوض' }[t.status] || t.status;
-        var date = t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : '—';
-        
-        html += '<div class="ca-row">' +
-          '<div class="ca-row-header">' +
-            '<div>' +
-              '<div class="ca-row-title">' + typeIcon + ' ' + _esc(t.userName || 'موظف') + '</div>' +
-              '<div class="ca-row-sub">' + typeLabel + ' · ' + date + '</div>' +
-            '</div>' +
-            '<div style="text-align:left;">' +
-              '<div style="font-size:14px;font-weight:900;color:' + (t.type === 'advance' ? '#f59e0b' : (t.type === 'paid' ? '#10b981' : '#ef4444')) + ';">' + (Number(t.amount) || 0).toLocaleString('ar-EG') + ' ر.س</div>' +
-              '<div class="ca-badge ' + statusBadge + '" style="margin-top:4px;display:inline-block;">' + statusLabel + '</div>' +
-            '</div>' +
-          '</div>' +
-          (t.reason ? '<div style="font-size:10.5px;color:#9ca3af;padding:6px 8px;background:rgba(168,85,247,0.05);border-radius:6px;margin-top:6px;">📝 ' + _esc(t.reason) + '</div>' : '') +
-          (t.status === 'pending' ? '<div class="ca-card-actions" style="margin-top:8px;">' +
-            '<button class="ca-btn ca-btn-success" onclick="window.__caApproveTrans(\'' + t._id + '\',\'approved\')">✅ اعتماد</button>' +
-            '<button class="ca-btn ca-btn-danger" onclick="window.__caApproveTrans(\'' + t._id + '\',\'rejected\')">❌ رفض</button>' +
-          '</div>' : '') +
-        '</div>';
-      });
-    }
-    
-    html += '</div>';
-    container.innerHTML = html;
-  };
-  
-  // ═══════════════════════════════════════════════
-  // TAB 9: COMPREHENSIVE REPORT
-  // ═══════════════════════════════════════════════
-  window.__caRenderReport = function() {
-    var container = document.getElementById('ca-content-report');
-    if (!container) return;
-    
-    var orders = window.A.orders || [];
-    var bookings = window.A.bookings || [];
-    var products = window.A.products || [];
-    
-    // Period: this month
-    var now = new Date();
-    var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
-    var monthName = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][now.getMonth()];
-    
-    var monthOrders = orders.filter(function(o) {
-      var ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
-      return ts >= monthStart && o.status !== 'cancelled';
-    });
-    
-    var monthBookings = bookings.filter(function(b) {
-      var ts = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-      return ts >= monthStart && b.status !== 'cancelled';
-    });
-    
-    // ═══ REVENUE ═══
-    var salesRevenue = monthOrders.reduce(function(s, o) { return s + (Number(o.total) || 0); }, 0);
-    var bookingsRevenue = monthBookings.reduce(function(s, b) { return s + Number((b.priceQuote && b.priceQuote.amount) || b.estimatedPrice || 0); }, 0);
-    var totalRevenue = salesRevenue + bookingsRevenue;
-    
-    // ═══ COSTS ═══
-    // Cost of goods sold: sum costPrice of items sold
-    var goodsCost = 0;
-    monthOrders.forEach(function(o) {
-      (o.items || []).forEach(function(it) {
-        var prod = products.find(function(p){ return String(p.id) === String(it.id); });
-        if (prod && prod.costPrice > 0) {
-          goodsCost += (Number(prod.costPrice) || 0) * (Number(it.qty) || 1);
-        }
-      });
-    });
-    
-    var deliveryCost = monthOrders.reduce(function(s, o) {
-      return s + Number((o.deliveryInfo && o.deliveryInfo.deliveryFee) || 0);
-    }, 0);
-    
-    // ═══ COMMISSIONS ═══
-    var totalCommissions = 0;
-    window.CAExtras.employees.forEach(function(emp) {
-      totalCommissions += calcCommission(emp).commission;
-    });
-    
-    // ═══ PROFIT ═══
-    var totalCosts = goodsCost + deliveryCost + totalCommissions;
-    var netProfit = totalRevenue - totalCosts;
-    var profitMargin = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
-    
-    var html = '<div class="ca-extra-panel">';
-    
-    html += '<div class="ca-section-title">📈 التقرير الشامل — ' + monthName + ' ' + now.getFullYear() + '</div>';
-    
-    // Revenue
-    html += '<div class="ca-card">' +
-      '<div class="ca-card-title" style="color:#10b981;">💰 الإيرادات</div>' +
-      '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11.5px;"><span style="color:#9ca3af;">🛒 المبيعات</span><b style="color:#e5e7eb;">' + salesRevenue.toLocaleString('ar-EG') + '</b></div>' +
-      '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11.5px;"><span style="color:#9ca3af;">✈️ الحجوزات</span><b style="color:#e5e7eb;">' + bookingsRevenue.toLocaleString('ar-EG') + '</b></div>' +
-      '<div style="display:flex;justify-content:space-between;padding:8px 0;margin-top:6px;border-top:1.5px solid rgba(16,185,129,0.2);font-size:13px;"><span style="color:#10b981;font-weight:900;">الإجمالي</span><b style="color:#10b981;font-size:15px;">' + totalRevenue.toLocaleString('ar-EG') + ' ر.س</b></div>' +
-    '</div>';
-    
-    // Costs
-    html += '<div class="ca-card">' +
-      '<div class="ca-card-title" style="color:#ef4444;">💸 التكاليف</div>' +
-      '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11.5px;"><span style="color:#9ca3af;">📦 جملة المنتجات</span><b style="color:#e5e7eb;">' + goodsCost.toLocaleString('ar-EG') + '</b></div>' +
-      '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11.5px;"><span style="color:#9ca3af;">🚚 التوصيل</span><b style="color:#e5e7eb;">' + deliveryCost.toLocaleString('ar-EG') + '</b></div>' +
-      '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11.5px;"><span style="color:#9ca3af;">👥 العمولات</span><b style="color:#e5e7eb;">' + totalCommissions.toLocaleString('ar-EG') + '</b></div>' +
-      '<div style="display:flex;justify-content:space-between;padding:8px 0;margin-top:6px;border-top:1.5px solid rgba(239,68,68,0.2);font-size:13px;"><span style="color:#ef4444;font-weight:900;">الإجمالي</span><b style="color:#ef4444;font-size:15px;">' + totalCosts.toLocaleString('ar-EG') + ' ر.س</b></div>' +
-    '</div>';
-    
-    // Net Profit
-    var profitColor = netProfit >= 0 ? '#10b981' : '#ef4444';
-    html += '<div class="ca-card" style="background:linear-gradient(135deg,' + (netProfit >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)') + ',rgba(168,85,247,0.06));border-color:' + profitColor + ';text-align:center;padding:20px;">' +
-      '<div style="font-size:11px;color:' + profitColor + ';font-weight:800;margin-bottom:6px;">' + (netProfit >= 0 ? '✅ صافي الربح' : '❌ صافي الخسارة') + '</div>' +
-      '<div style="font-size:32px;font-weight:900;color:' + profitColor + ';margin-bottom:6px;">' + Math.abs(netProfit).toLocaleString('ar-EG') + ' ر.س</div>' +
-      '<div style="font-size:11px;color:#9ca3af;">هامش الربح: ' + profitMargin + '%</div>' +
-    '</div>';
-    
-    // Actions
-    html += '<div class="ca-card-actions" style="margin-top:14px;">' +
-      '<button class="ca-btn ca-btn-primary" onclick="window.__caSendReportToOwner()">📤 إرسال للمدير</button>' +
-      '<button class="ca-btn ca-btn-ghost" onclick="window.__caExportReport()">📥 تصدير CSV</button>' +
-    '</div>';
-    
-    html += '</div>';
-    container.innerHTML = html;
-  };
-  
-  // ═══════════════════════════════════════════════
-  // ACTIONS
-  // ═══════════════════════════════════════════════
-  window.__caSetSubTab = function(parentTab, subTab) {
-    window.CAExtras.activeTab = subTab;
-    if (parentTab === 'advances') window.__caRenderAdvances();
-  };
-  
-  window.__caEditRate = function(empId) {
-    var emp = window.CAExtras.employees.find(function(e){ return e._id === empId; });
-    if (!emp) return;
-    
-    var currentRate = window.CAExtras.rates[emp.role] || 0;
-    var newRate = prompt('نسبة العمولة لـ ' + (emp.name || emp.email) + ' (%):', currentRate);
-    if (newRate === null) return;
-    
-    var pct = parseFloat(newRate);
-    if (isNaN(pct) || pct < 0 || pct > 100) {
-      if (window.A && window.A.toast) window.A.toast('نسبة غير صحيحة', 'err');
-      return;
-    }
-    
-    // Update global rate for this role
-    FB.db.collection('config').doc('commission_rates').get().then(function(doc) {
-      var list = doc.exists ? (doc.data().list || []) : [];
-      var found = false;
-      list.forEach(function(r) {
-        if (r.role === emp.role) { r.pct = pct; found = true; }
-      });
-      if (!found) list.push({ role: emp.role, pct: pct });
-      
-      return FB.db.collection('config').doc('commission_rates').set({ list: list });
-    }).then(function() {
-      window.CAExtras.rates[emp.role] = pct;
-      window.__caRenderEmployees();
-      if (window.A && window.A.toast) window.A.toast('✓ تم التحديث', 'suc');
-    }).catch(function(e) {
-      if (window.A && window.A.toast) window.A.toast('فشل: ' + e.message, 'err');
-    });
-  };
-  
-  window.__caAddTransaction = function(empId, type) {
-    var emp = window.CAExtras.employees.find(function(e){ return e._id === empId; });
-    if (!emp) return;
-    
-    var typeLabels = { advance: 'تقدمة', deduction: 'خصم', paid: 'دفع راتب' };
-    var amount = prompt('مبلغ ' + typeLabels[type] + ' لـ ' + (emp.name || emp.email) + ' (ر.س):');
-    if (!amount) return;
-    
-    var amt = parseFloat(amount);
-    if (isNaN(amt) || amt <= 0) {
-      if (window.A && window.A.toast) window.A.toast('مبلغ غير صحيح', 'err');
-      return;
-    }
-    
-    var reason = prompt('سبب الحركة (اختياري):', '') || '';
-    
-    FB.db.collection('transactions').add({
-      userId: emp._id,
-      userName: emp.name || emp.email,
-      role: emp.role,
-      type: type,
-      amount: amt,
-      reason: reason,
-      status: 'pending',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      createdBy: FB.currentUser ? FB.currentUser.uid : ''
-    }).then(function() {
-      if (window.A && window.A.toast) window.A.toast('✓ تمت الإضافة', 'suc');
-      window.CAExtras.loaded = false;
-      window.__caRenderEmployees();
-    }).catch(function(e) {
-      if (window.A && window.A.toast) window.A.toast('فشل: ' + e.message, 'err');
-    });
-  };
-  
-  window.__caApproveTrans = function(transId, status) {
-    FB.db.collection('transactions').doc(transId).update({
-      status: status,
-      approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      approvedBy: FB.currentUser ? FB.currentUser.uid : ''
-    }).then(function() {
-      if (window.A && window.A.toast) window.A.toast('✓ ' + (status === 'approved' ? 'تم الاعتماد' : 'تم الرفض'), 'suc');
-      window.CAExtras.loaded = false;
-      window.__caRenderAdvances();
-    }).catch(function(e) {
-      if (window.A && window.A.toast) window.A.toast('فشل: ' + e.message, 'err');
-    });
-  };
-  
-  window.__caSendReportToOwner = function() {
-    var orders = window.A.orders || [];
-    var now = new Date();
-    var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
-    var monthOrders = orders.filter(function(o) {
-      var ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
-      return ts >= monthStart && o.status !== 'cancelled';
-    });
-    var revenue = monthOrders.reduce(function(s, o){ return s + (Number(o.total) || 0); }, 0);
-    
-    var msg = '📊 تقرير مالي — ' + now.toLocaleDateString('ar-EG') + '\n\n' +
-      '💰 إيرادات الشهر: ' + revenue.toLocaleString('ar-EG') + ' ر.س\n' +
-      '📦 عدد الطلبات: ' + monthOrders.length + '\n' +
-      '👥 الموظفون: ' + window.CAExtras.employees.length + '\n';
-    
-    if (FB.db) {
-      FB.db.collection('push_queue').add({
-        title: '📊 تقرير مالي جديد',
-        body: 'من المحاسب — ' + now.toLocaleDateString('ar-EG'),
-        type: 'financial',
-        data: { report: msg },
-        status: 'pending',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        if (window.A && window.A.toast) window.A.toast('✓ تم الإرسال للمدير', 'suc');
-      }).catch(function(e) {
-        if (window.A && window.A.toast) window.A.toast('فشل: ' + e.message, 'err');
-      });
-    }
-  };
-  
-  window.__caExportReport = function() {
-    var orders = window.A.orders || [];
-    var products = window.A.products || [];
-    var now = new Date();
-    var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
-    var monthOrders = orders.filter(function(o) {
-      var ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
-      return ts >= monthStart && o.status !== 'cancelled';
-    });
-    
-    var csv = 'التاريخ,رقم الطلب,العميل,الإجمالي,الحالة\n';
-    monthOrders.forEach(function(o) {
-      var date = o.createdAt ? new Date(o.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : '';
-      csv += date + ',' + (o.orderNumber || o.id) + ',' + (o.name || '') + ',' + (o.total || 0) + ',' + (o.status || '') + '\n';
-    });
-    
-    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'chizen-report-' + now.toISOString().slice(0, 10) + '.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  
-  // ═══════════════════════════════════════════════
-  // EXTEND __caSwitchTab
-  // ═══════════════════════════════════════════════
-  function extendCaSwitchTab() {
-    var orig = window.__caSwitchTab;
-    if (!orig || orig._v90Patched) return;
-    
-    window.__caSwitchTab = function(tab, btn) {
-      // Hide all content
-      document.querySelectorAll('[id^="ca-content-"]').forEach(function(el){
-        el.style.display = 'none';
-      });
-      
-      // Call original
-      orig.call(this, tab, btn);
-      
-      // Show target content
-      var target = document.getElementById('ca-content-' + tab);
-      if (target) {
-        target.style.display = 'block';
-      } else {
-        // Create if needed
-        var app = document.getElementById('accountant-mgr-app');
-        if (app) {
-          target = document.createElement('div');
-          target.id = 'ca-content-' + tab;
-          target.style.cssText = 'padding:0;';
-          app.appendChild(target);
-        }
-      }
-      
-      // Render new tabs
-      if (tab === 'employees') setTimeout(window.__caRenderEmployees, 100);
-      if (tab === 'advances') setTimeout(window.__caRenderAdvances, 100);
-      if (tab === 'report') setTimeout(window.__caRenderReport, 100);
-    };
-    window.__caSwitchTab._v90Patched = true;
-    console.log('[v90] __caSwitchTab extended');
-  }
-  
-  // ═══════════════════════════════════════════════
-  // ADD TAB BUTTONS
-  // ═══════════════════════════════════════════════
-  function addExtraTabButtons() {
-    var navs = document.querySelectorAll('.ca-nav-btn');
-    if (navs.length === 0) { setTimeout(addExtraTabButtons, 500); return; }
-    
-    var existingTabs = {};
-    navs.forEach(function(n) { existingTabs[n.getAttribute('data-tab')] = true; });
-    
-    var newTabs = [
-      { key: 'employees', icon: '👥', label: 'الموظفون' },
-      { key: 'advances', icon: '💳', label: 'التقدمات' },
-      { key: 'report', icon: '📈', label: 'تقرير' }
-    ];
-    
-    var lastNav = navs[navs.length - 1];
-    
-    newTabs.forEach(function(t) {
-      if (existingTabs[t.key]) return;
-      var btn = document.createElement('button');
-      btn.className = 'ca-nav-btn';
-      btn.setAttribute('data-tab', t.key);
-      btn.setAttribute('onclick', 'window.__caSwitchTab(\'' + t.key + '\',this)');
-      btn.innerHTML = '<span class="icon">' + t.icon + '</span><span class="label">' + t.label + '</span>';
-      if (lastNav && lastNav.parentNode) {
-        lastNav.parentNode.appendChild(btn);
-      }
-    });
-    
-    console.log('[v90] added', newTabs.length, 'tab buttons');
-  }
-  
-  // ═══════════════════════════════════════════════
-  // INIT
-  // ═══════════════════════════════════════════════
-  function init() {
-    ensureCollections();
-    extendCaSwitchTab();
-    addExtraTabButtons();
-    console.log('[v90] ✓ accountant extras ready');
-  }
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 2000); });
-  } else {
-    setTimeout(init, 2000);
-  }
-  setTimeout(init, 4000);
-})();
-</script>
 
-<style id="chz-force-navbar-v91">
-/* ═══ FORCE: Accountant Nav Bar Horizontal ═══ */
-#accountant-mgr-app .ca-nav-bar,
-#accountant-mgr-app > [class*="ca-nav"] {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style id="chz-acct-v93-css">
+/* ═══ v93: Clean accountant extension — NO infinite loops ═══ */
+#accountant-mgr-app .ca-nav-bar {
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
-  align-items: stretch !important;
-  gap: 6px !important;
-  padding: 8px 10px !important;
   overflow-x: auto !important;
   overflow-y: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
+  gap: 6px !important;
+  padding: 8px 10px !important;
   scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch !important;
   background: rgba(15,10,35,0.98) !important;
   border-bottom: 1px solid rgba(168,85,247,0.15) !important;
-  white-space: nowrap !important;
-  height: auto !important;
   min-height: 60px !important;
-  max-height: 70px !important;
+  max-height: 68px !important;
   box-sizing: border-box !important;
-  position: relative !important;
-  z-index: 10 !important;
 }
-#accountant-mgr-app .ca-nav-bar::-webkit-scrollbar { display: none !important; height: 0 !important; }
-#accountant-mgr-app .ca-nav-bar::after { display: none !important; }
+#accountant-mgr-app .ca-nav-bar::-webkit-scrollbar { display: none !important; }
 
-/* Force all nav buttons in one row */
 #accountant-mgr-app .ca-nav-btn {
   flex: 0 0 auto !important;
+  min-width: 58px !important;
+  max-width: 84px !important;
+  padding: 6px 10px !important;
   display: inline-flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 3px !important;
-  padding: 8px 12px !important;
-  min-width: 62px !important;
-  max-width: 85px !important;
-  height: auto !important;
-  min-height: 44px !important;
-  border-radius: 10px !important;
-  background: rgba(168,85,247,0.06) !important;
-  border: 1.5px solid transparent !important;
-  cursor: pointer !important;
-  -webkit-tap-highlight-color: transparent !important;
-  transition: all 0.15s ease !important;
-  position: relative !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
+  gap: 2px !important;
   white-space: nowrap !important;
-  float: none !important;
-  clear: none !important;
+  transition: all 0.15s !important;
 }
 
-#accountant-mgr-app .ca-nav-btn::after { display: none !important; }
-
-#accountant-mgr-app .ca-nav-btn .icon {
-  font-size: 17px !important;
-  line-height: 1 !important;
-  display: block !important;
-  margin: 0 !important;
-}
-
-#accountant-mgr-app .ca-nav-btn .label {
-  font-size: 9px !important;
-  font-weight: 800 !important;
-  color: #9ca3af !important;
-  line-height: 1.1 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-}
-
-#accountant-mgr-app .ca-nav-btn.active {
-  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-  border-color: #f59e0b !important;
-  color: #fff !important;
-}
-
-#accountant-mgr-app .ca-nav-btn.active .label {
-  color: #fff !important;
-}
-
-#accountant-mgr-app .ca-nav-btn.active .icon {
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)) !important;
-}
-
-#accountant-mgr-app .ca-nav-btn:active {
-  transform: scale(0.94) !important;
-}
-
-/* Ensure content panels don't overflow */
 #accountant-mgr-app [id^="ca-content-"] {
   display: none !important;
   padding: 12px !important;
-  margin: 0 !important;
-  width: 100% !important;
   box-sizing: border-box !important;
-  clear: both !important;
-  position: relative !important;
+  width: 100% !important;
 }
-
-#accountant-mgr-app [id^="ca-content-"].v91-shown {
+#accountant-mgr-app [id^="ca-content-"].v93-shown {
   display: block !important;
 }
 
-/* Prevent breaking layout */
-#accountant-mgr-app > * {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+.v93-content {
+  padding: 4px 0 !important;
+  direction: rtl !important;
+  font-family: 'Tajawal', sans-serif !important;
 }
-
-/* Mobile responsive */
-@media (max-width: 400px) {
-  #accountant-mgr-app .ca-nav-btn {
-    min-width: 55px !important;
-    padding: 7px 8px !important;
-  }
-  #accountant-mgr-app .ca-nav-btn .icon { font-size: 15px !important; }
-  #accountant-mgr-app .ca-nav-btn .label { font-size: 8px !important; }
+.v93-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
+  margin-bottom: 14px !important;
 }
-
-/* Ensure period bar (اليوم/أسبوع/شهر) stays separate */
-#accountant-mgr-app .ca-period-tabs,
-#accountant-mgr-app [class*="period-tab"] {
-  position: relative !important;
-  z-index: 9 !important;
-  background: rgba(15,10,35,0.98) !important;
-  border-bottom: 1px solid rgba(168,85,247,0.1) !important;
-  padding: 6px 10px !important;
-  overflow-x: auto !important;
-  display: flex !important;
-  gap: 6px !important;
-  white-space: nowrap !important;
+.v93-card-kpi {
+  padding: 12px !important;
+  border-radius: 12px !important;
+  text-align: center !important;
+  border: 1.5px solid !important;
 }
+.v93-kpi-green { background: rgba(16,185,129,0.08) !important; border-color: rgba(16,185,129,0.3) !important; }
+.v93-kpi-green .v93-v { color: #10b981 !important; }
+.v93-kpi-red { background: rgba(239,68,68,0.08) !important; border-color: rgba(239,68,68,0.3) !important; }
+.v93-kpi-red .v93-v { color: #ef4444 !important; }
+.v93-kpi-purple { background: rgba(168,85,247,0.08) !important; border-color: rgba(168,85,247,0.3) !important; }
+.v93-kpi-purple .v93-v { color: #a855f7 !important; }
+.v93-kpi-yellow { background: rgba(245,158,11,0.08) !important; border-color: rgba(245,158,11,0.3) !important; }
+.v93-kpi-yellow .v93-v { color: #f59e0b !important; }
+.v93-l { font-size: 10px !important; color: #9ca3af !important; font-weight: 700 !important; margin-bottom: 4px !important; }
+.v93-v { font-size: 16px !important; font-weight: 900 !important; }
+.v93-row {
+  padding: 12px !important;
+  background: rgba(20,15,45,0.85) !important;
+  border: 1px solid rgba(168,85,247,0.15) !important;
+  border-radius: 12px !important;
+  margin-bottom: 8px !important;
+  font-size: 12px !important;
+}
+.v93-empty { padding: 30px !important; text-align: center !important; color: #6b7280 !important; font-size: 12px !important; }
 </style>
 
-<script id="chz-force-navbar-v91">
+<script id="chz-acct-v93">
 (function(){
   'use strict';
-  console.log('[v91] force navbar loading...');
   
-  var attempts = 0;
+  if (window.__V93Lock) return;
+  window.__V93Lock = true;
   
-  function forceLayout() {
-    attempts++;
-    if (attempts > 50) {
-      console.warn('[v91] gave up after 50 attempts');
-      return;
-    }
+  var NEW_TABS = ['products', 'employees', 'advances', 'report'];
+  var isSwitching = false;
+  var tried = 0;
+  
+  function start() {
+    tried++;
+    if (tried > 40) { console.warn('[v93] gave up'); return; }
     
     var app = document.getElementById('accountant-mgr-app');
-    if (!app) {
-      return setTimeout(forceLayout, 300);
-    }
+    if (!app) return setTimeout(start, 400);
     
-    // 1. Find or create nav bar
     var navBar = app.querySelector('.ca-nav-bar');
     if (!navBar) {
-      // Try to find the parent of all ca-nav-btn
-      var allBtns = app.querySelectorAll('.ca-nav-btn');
-      if (allBtns.length > 0) {
-        navBar = allBtns[0].parentElement;
-        if (navBar) navBar.classList.add('ca-nav-bar');
-      }
+      var btns = app.querySelectorAll('.ca-nav-btn');
+      if (!btns.length) return setTimeout(start, 400);
+      navBar = btns[0].parentElement;
+      if (navBar) navBar.classList.add('ca-nav-bar');
     }
+    if (!navBar) return setTimeout(start, 400);
     
-    if (!navBar) {
-      return setTimeout(forceLayout, 300);
-    }
+    install(app, navBar);
+  }
+  
+  function install(app, navBar) {
+    console.log('[v93] installing...');
     
-    // 2. Move ALL ca-nav-btns to be children of navBar
-    var allButtons = app.querySelectorAll('.ca-nav-btn');
-    var moved = 0;
-    allButtons.forEach(function(btn) {
-      if (btn.parentElement !== navBar) {
-        navBar.appendChild(btn);
-        moved++;
-      }
-    });
-    if (moved > 0) console.log('[v91] moved', moved, 'buttons to nav bar');
-    
-    // 3. Ensure all content panels are direct children of app (not nested)
-    var contentPanels = app.querySelectorAll('[id^="ca-content-"]');
-    var repositioned = 0;
-    contentPanels.forEach(function(panel) {
-      if (panel.parentElement !== app) {
-        app.appendChild(panel);
-        repositioned++;
-      }
-    });
-    if (repositioned > 0) console.log('[v91] repositioned', repositioned, 'content panels');
-    
-    // 4. Ensure nav bar has proper class
-    if (!navBar.classList.contains('ca-nav-bar')) {
-      navBar.classList.add('ca-nav-bar');
-    }
-    
-    // 5. Show only active content
-    var activeBtn = navBar.querySelector('.ca-nav-btn.active');
-    var activeTab = activeBtn ? activeBtn.getAttribute('data-tab') : null;
-    
-    contentPanels.forEach(function(panel) {
-      var panelTab = panel.id.replace('ca-content-', '');
-      if (panelTab === activeTab) {
-        panel.classList.add('v91-shown');
-        panel.style.display = 'block';
-      } else {
-        panel.classList.remove('v91-shown');
-        panel.style.display = 'none';
-      }
-    });
-    
-    // 6. Patch switch tab once
-    if (!window.__caSwitchTab._v91) {
-      var origSwitch = window.__caSwitchTab;
-      if (origSwitch) {
-        window.__caSwitchTab = function(tab, btn) {
-          origSwitch.call(this, tab, btn);
-          setTimeout(function() {
-            document.querySelectorAll('[id^="ca-content-"]').forEach(function(p) {
-              var pt = p.id.replace('ca-content-', '');
-              if (pt === tab) {
-                p.classList.add('v91-shown');
-                p.style.display = 'block';
-              } else {
-                p.classList.remove('v91-shown');
-                p.style.display = 'none';
-              }
-            });
-            // Also call custom renderers
-            if (tab === 'employees' && window.__caRenderEmployees) window.__caRenderEmployees();
-            if (tab === 'advances' && window.__caRenderAdvances) window.__caRenderAdvances();
-            if (tab === 'report' && window.__caRenderReport) window.__caRenderReport();
-            if (tab === 'products' && window.__v88RenderProductsTab) window.__v88RenderProductsTab();
-          }, 30);
-        };
-        window.__caSwitchTab._v91 = true;
-        console.log('[v91] switchTab patched');
-      }
-    }
-    
-    // 7. Add missing buttons
-    var expectedTabs = ['overview', 'orders', 'bookings', 'products', 'suppliers', 'debts', 'reports', 'employees', 'advances', 'report'];
-    var existingTabs = {};
+    // 1. Add buttons (only if missing)
+    var existing = {};
     navBar.querySelectorAll('.ca-nav-btn').forEach(function(b) {
-      existingTabs[b.getAttribute('data-tab')] = true;
+      existing[b.getAttribute('data-tab')] = true;
     });
     
-    var tabsInfo = {
-      'employees': { icon: '👥', label: 'الموظفون' },
-      'advances': { icon: '💳', label: 'التقدمات' },
-      'report': { icon: '📈', label: 'تقرير' }
+    var tabDefs = {
+      products: { icon: '📦', label: 'المنتجات' },
+      employees: { icon: '👥', label: 'الموظفون' },
+      advances: { icon: '💳', label: 'التقدمات' },
+      report: { icon: '📈', label: 'تقرير' }
     };
     
-    Object.keys(tabsInfo).forEach(function(key) {
-      if (!existingTabs[key]) {
-        var btn = document.createElement('button');
-        btn.className = 'ca-nav-btn';
-        btn.setAttribute('data-tab', key);
-        btn.setAttribute('onclick', 'window.__caSwitchTab(\'' + key + '\', this)');
-        btn.innerHTML = '<span class="icon">' + tabsInfo[key].icon + '</span><span class="label">' + tabsInfo[key].label + '</span>';
-        navBar.appendChild(btn);
-        console.log('[v91] added', key, 'button');
-      }
-    });
-    
-    console.log('[v91] ✓ layout fixed (attempt', attempts + ')');
-  }
-  
-  // Observer to keep fixing on DOM changes
-  function startObserver() {
-    if (!document.body) {
-      setTimeout(startObserver, 300);
-      return;
-    }
-    var observer = new MutationObserver(function(muts) {
-      var needsFix = false;
-      muts.forEach(function(m) {
-        if (m.type === 'childList' && m.addedNodes.length > 0) {
-          m.addedNodes.forEach(function(node) {
-            if (node.nodeType === 1 && 
-                (node.classList?.contains('ca-nav-btn') || 
-                 node.id?.startsWith('ca-content-'))) {
-              needsFix = true;
-            }
-          });
-        }
-      });
-      if (needsFix) {
-        attempts = 0;
-        setTimeout(forceLayout, 100);
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    console.log('[v91] observer started');
-  }
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(forceLayout, 1000);
-      setTimeout(forceLayout, 2500);
-      startObserver();
-    });
-  } else {
-    setTimeout(forceLayout, 1000);
-    setTimeout(forceLayout, 2500);
-    startObserver();
-  }
-})();
-</script>
-
-
-<style id="chz-autofix-v92-css">
-/* ═══ v92: FORCE rebuild nav ═══ */
-#accountant-mgr-app .ca-nav-bar-v92 {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  align-items: stretch !important;
-  gap: 6px !important;
-  padding: 8px 10px !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  scrollbar-width: none !important;
-  background: rgba(15,10,35,0.98) !important;
-  border-bottom: 1px solid rgba(168,85,247,0.15) !important;
-  white-space: nowrap !important;
-  height: 64px !important;
-  min-height: 64px !important;
-  max-height: 64px !important;
-  box-sizing: border-box !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 100 !important;
-  order: -1 !important;
-}
-#accountant-mgr-app .ca-nav-bar-v92::-webkit-scrollbar { display: none !important; }
-
-#accountant-mgr-app .ca-nav-bar-v92 .ca-nav-btn {
-  flex: 0 0 auto !important;
-  display: inline-flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 3px !important;
-  padding: 6px 10px !important;
-  min-width: 60px !important;
-  max-width: 82px !important;
-  height: auto !important;
-  min-height: 46px !important;
-  border-radius: 10px !important;
-  background: rgba(168,85,247,0.06) !important;
-  border: 1.5px solid transparent !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  position: relative !important;
-  box-sizing: border-box !important;
-  white-space: nowrap !important;
-  float: none !important;
-  clear: none !important;
-  order: 0 !important;
-}
-
-#accountant-mgr-app .ca-nav-btn-v92-hidden {
-  display: none !important;
-}
-
-#accountant-mgr-app .ca-nav-bar-v92 .ca-nav-btn .icon {
-  font-size: 16px !important;
-  line-height: 1 !important;
-  margin: 0 !important;
-}
-
-#accountant-mgr-app .ca-nav-bar-v92 .ca-nav-btn .label {
-  font-size: 8.5px !important;
-  font-weight: 800 !important;
-  color: #9ca3af !important;
-  line-height: 1.1 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-}
-
-#accountant-mgr-app .ca-nav-bar-v92 .ca-nav-btn.active {
-  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-  border-color: #f59e0b !important;
-}
-#accountant-mgr-app .ca-nav-bar-v92 .ca-nav-btn.active .label {
-  color: #fff !important;
-}
-
-/* Force content stacking */
-#accountant-mgr-app [id^="ca-content-"] {
-  display: none !important;
-  padding: 12px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  clear: both !important;
-  order: 2 !important;
-}
-#accountant-mgr-app [id^="ca-content-"].v92-visible {
-  display: block !important;
-}
-
-#accountant-mgr-app {
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* Debug panel */
-#v92-debug-panel {
-  position: fixed;
-  top: 60px;
-  right: 10px;
-  left: 10px;
-  background: rgba(0,0,0,0.95);
-  color: #10b981;
-  font-family: monospace;
-  font-size: 10px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 2px solid #10b981;
-  z-index: 999999;
-  max-height: 400px;
-  overflow-y: auto;
-  line-height: 1.5;
-  display: none;
-}
-#v92-debug-panel.show { display: block; }
-#v92-debug-panel h3 { color: #f59e0b; margin: 0 0 6px; font-size: 12px; }
-#v92-debug-panel .ok { color: #10b981; }
-#v92-debug-panel .err { color: #ef4444; }
-#v92-debug-panel .warn { color: #f59e0b; }
-#v92-debug-panel .close-btn {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 10px;
-  cursor: pointer;
-}
-</style>
-
-<div id="v92-debug-panel">
-  <button class="close-btn" onclick="document.getElementById('v92-debug-panel').classList.remove('show')">✕</button>
-  <h3>🔧 v92 — تقرير الإصلاح</h3>
-  <div id="v92-debug-content">جاري الفحص...</div>
-</div>
-
-<script id="chz-autofix-v92">
-(function(){
-  'use strict';
-  console.log('[v92] auto-fix starting...');
-  
-  var debugEl = document.getElementById('v92-debug-content');
-  var logLines = [];
-  function log(msg, type) {
-    var prefix = type === 'err' ? '❌ ' : (type === 'warn' ? '⚠️ ' : '✓ ');
-    var cls = type === 'err' ? 'err' : (type === 'warn' ? 'warn' : 'ok');
-    logLines.push('<div class="' + cls + '">' + prefix + msg + '</div>');
-    if (debugEl) debugEl.innerHTML = logLines.join('');
-    console.log('[v92]', msg);
-  }
-  
-  function showDebug() {
-    var panel = document.getElementById('v92-debug-panel');
-    if (panel) panel.classList.add('show');
-  }
-  
-  // ═══ MAIN FIX ═══
-  function fixNow() {
-    logLines = [];
-    log('بدء الفحص والإصلاح...');
-    
-    var app = document.getElementById('accountant-mgr-app');
-    if (!app) {
-      log('لم أجد لوحة المحاسب — تأكد من فتحها', 'err');
-      setTimeout(fixNow, 1000);
-      return false;
-    }
-    log('لوحة المحاسب موجودة ✓');
-    
-    // 1. Count current state
-    var oldButtons = app.querySelectorAll('.ca-nav-btn');
-    var oldContents = app.querySelectorAll('[id^="ca-content-"]');
-    log('عدد الأزرار قبل: ' + oldButtons.length);
-    log('عدد محتويات قبل: ' + oldContents.length);
-    
-    // 2. Find or create nav bar
-    var navBar = app.querySelector('.ca-nav-bar-v92');
-    if (!navBar) {
-      navBar = document.createElement('div');
-      navBar.className = 'ca-nav-bar ca-nav-bar-v92';
-      // Insert as first child
-      app.insertBefore(navBar, app.firstChild);
-      log('إنشاء شريط جديد');
-    } else {
-      log('شريط موجود — إعادة استخدامه');
-    }
-    
-    // 3. Collect all tab definitions (merge with existing buttons' data)
-    var tabDefinitions = {};
-    
-    // From existing buttons
-    oldButtons.forEach(function(btn) {
-      var tab = btn.getAttribute('data-tab');
-      if (!tab) return;
-      var iconEl = btn.querySelector('.icon');
-      var labelEl = btn.querySelector('.label');
-      tabDefinitions[tab] = {
-        icon: iconEl ? iconEl.textContent : '📋',
-        label: labelEl ? labelEl.textContent : tab,
-        active: btn.classList.contains('active')
-      };
-    });
-    log('عدد التبويبات الموجودة: ' + Object.keys(tabDefinitions).length);
-    
-    // Add missing known tabs
-    var knownTabs = {
-      'overview': { icon: '📊', label: 'عامة' },
-      'orders': { icon: '🛒', label: 'الطلبات' },
-      'bookings': { icon: '✈️', label: 'الحجوزات' },
-      'products': { icon: '📦', label: 'المنتجات' },
-      'suppliers': { icon: '🏢', label: 'الموردين' },
-      'debts': { icon: '💳', label: 'الديون' },
-      'reports': { icon: '📈', label: 'تقارير' },
-      'employees': { icon: '👥', label: 'الموظفون' },
-      'advances': { icon: '💳', label: 'التقدمات' },
-      'report': { icon: '📈', label: 'تقرير' }
-    };
-    
-    Object.keys(knownTabs).forEach(function(tab) {
-      if (!tabDefinitions[tab]) {
-        tabDefinitions[tab] = { icon: knownTabs[tab].icon, label: knownTabs[tab].label, active: false };
-        log('إضافة تبويب مفقود: ' + tab, 'warn');
-      }
-    });
-    
-    // Ensure at least one active
-    var hasActive = false;
-    Object.keys(tabDefinitions).forEach(function(k) { if (tabDefinitions[k].active) hasActive = true; });
-    if (!hasActive) {
-      tabDefinitions['overview'].active = true;
-    }
-    
-    // 4. Clear navBar and rebuild
-    navBar.innerHTML = '';
-    var tabOrder = ['overview', 'orders', 'bookings', 'products', 'suppliers', 'debts', 'reports', 'employees', 'advances', 'report'];
-    var sortedTabs = tabOrder.filter(function(t) { return tabDefinitions[t]; });
-    // Add any unknown tabs at end
-    Object.keys(tabDefinitions).forEach(function(t) {
-      if (tabOrder.indexOf(t) === -1) sortedTabs.push(t);
-    });
-    
-    var activeTab = 'overview';
-    sortedTabs.forEach(function(tab) {
-      var def = tabDefinitions[tab];
+    NEW_TABS.forEach(function(key) {
+      if (existing[key]) return;
       var btn = document.createElement('button');
-      btn.className = 'ca-nav-btn' + (def.active ? ' active' : '');
-      btn.setAttribute('data-tab', tab);
-      btn.setAttribute('onclick', 'window.__caSwitchTab(\'' + tab + '\', this)');
-      btn.innerHTML = '<span class="icon">' + def.icon + '</span><span class="label">' + def.label + '</span>';
+      btn.className = 'ca-nav-btn';
+      btn.setAttribute('data-tab', key);
+      btn.setAttribute('onclick', 'window.__caSwitchTab(\'' + key + '\', this)');
+      btn.innerHTML = '<span class="icon">' + tabDefs[key].icon + '</span><span class="label">' + tabDefs[key].label + '</span>';
       navBar.appendChild(btn);
-      if (def.active) activeTab = tab;
-    });
-    log('تم إنشاء ' + sortedTabs.length + ' أزرار');
-    
-    // 5. Hide OLD buttons that were outside navBar (mark them)
-    oldButtons.forEach(function(btn) {
-      if (btn.parentElement !== navBar) {
-        btn.classList.add('ca-nav-btn-v92-hidden');
-        btn.style.display = 'none';
-      }
     });
     
-    // 6. Move all content panels to be direct children of app
-    oldContents.forEach(function(content) {
-      if (content.parentElement !== app) {
-        app.appendChild(content);
-      }
-      // Hide all
-      content.classList.remove('v92-visible');
-      content.style.display = 'none';
+    // 2. Create content panels
+    NEW_TABS.forEach(function(key) {
+      var id = 'ca-content-' + key;
+      if (document.getElementById(id)) return;
+      var panel = document.createElement('div');
+      panel.id = id;
+      panel.className = 'v93-content';
+      app.appendChild(panel);
     });
     
-    // 7. Show active content
-    var activeContent = app.querySelector('#ca-content-' + activeTab);
-    if (activeContent) {
-      activeContent.classList.add('v92-visible');
-      activeContent.style.display = 'block';
-      log('محتوى "' + activeTab + '" مرئي');
-    } else {
-      log('محتوى "' + activeTab + '" غير موجود — إنشاء container', 'warn');
-      var newContent = document.createElement('div');
-      newContent.id = 'ca-content-' + activeTab;
-      newContent.classList.add('v92-visible');
-      newContent.style.cssText = 'padding:12px;display:block;';
-      app.appendChild(newContent);
-    }
-    
-    // 8. Patch __caSwitchTab
-    if (!window.__caSwitchTab._v92) {
-      var orig = window.__caSwitchTab;
+    // 3. Patch __caSwitchTab (guarded against recursion)
+    var orig = window.__caSwitchTab;
+    if (orig && !orig._v93) {
       window.__caSwitchTab = function(tab, btn) {
-        // Hide all
-        app.querySelectorAll('[id^="ca-content-"]').forEach(function(c) {
-          c.classList.remove('v92-visible');
-          c.style.display = 'none';
-        });
-        // Show target
-        var target = document.getElementById('ca-content-' + tab);
-        if (!target) {
-          target = document.createElement('div');
-          target.id = 'ca-content-' + tab;
-          target.style.cssText = 'padding:12px;';
-          app.appendChild(target);
-        }
-        target.classList.add('v92-visible');
-        target.style.display = 'block';
-        
-        // Update button active
-        navBar.querySelectorAll('.ca-nav-btn').forEach(function(b) {
-          b.classList.toggle('active', b.getAttribute('data-tab') === tab);
-        });
-        
-        // Call original
-        try { orig.call(this, tab, btn); } catch(e) {}
-        
-        // Render custom tabs
-        setTimeout(function() {
-          if (tab === 'employees' && window.__caRenderEmployees) window.__caRenderEmployees();
-          if (tab === 'advances' && window.__caRenderAdvances) window.__caRenderAdvances();
-          if (tab === 'report' && window.__caRenderReport) window.__caRenderReport();
-          if (tab === 'products' && window.__v88RenderProductsTab) window.__v88RenderProductsTab();
-        }, 50);
-      };
-      window.__caSwitchTab._v92 = true;
-      log('التبديل بين التبويبات مفعّل');
-    }
-    
-    log('✅ الإصلاح اكتمل!', 'ok');
-    
-    // Show debug panel briefly
-    showDebug();
-    setTimeout(function() {
-      var panel = document.getElementById('v92-debug-panel');
-      if (panel) panel.classList.remove('show');
-    }, 8000);
-    
-    return true;
-  }
-  
-  // Wait for app to load
-  var tries = 0;
-  function tryFix() {
-    tries++;
-    if (tries > 60) { console.warn('[v92] gave up'); return; }
-    
-    var app = document.getElementById('accountant-mgr-app');
-    if (!app) {
-      setTimeout(tryFix, 500);
-      return;
-    }
-    
-    var fixed = fixNow();
-    if (!fixed) {
-      setTimeout(tryFix, 500);
-    }
-  }
-  
-  // Watch for changes (in case accountant panel is destroyed/recreated)
-  function startObserver() {
-    if (!document.body) { setTimeout(startObserver, 500); return; }
-    new MutationObserver(function(muts) {
-      var needs = false;
-      muts.forEach(function(m) {
-        if (m.type === 'childList') {
-          m.addedNodes.forEach(function(n) {
-            if (n.nodeType === 1) {
-              if (n.id === 'accountant-mgr-app' ||
-                  (n.classList && n.classList.contains('ca-nav-btn')) ||
-                  (n.id && n.id.indexOf('ca-content-') === 0)) {
-                needs = true;
-              }
+        if (isSwitching) return;
+        isSwitching = true;
+        try {
+          // Handle new tabs FIRST — orig doesn't know them
+          if (NEW_TABS.indexOf(tab) > -1) {
+            app.querySelectorAll('[id^="ca-content-"]').forEach(function(c) {
+              c.classList.remove('v93-shown');
+              c.style.display = 'none';
+            });
+            var target = document.getElementById('ca-content-' + tab);
+            if (target) {
+              target.classList.add('v93-shown');
+              target.style.display = 'block';
+            }
+            navBar.querySelectorAll('.ca-nav-btn').forEach(function(b) {
+              b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+            });
+            if (tab === 'products') renderProducts(target);
+            if (tab === 'employees') renderEmployees(target);
+            if (tab === 'advances') renderAdvances(target);
+            if (tab === 'report') renderReport(target);
+            return;
+          }
+          
+          // Old tabs — call orig
+          orig.call(this, tab, btn);
+          
+          // Hide new content
+          app.querySelectorAll('[id^="ca-content-"]').forEach(function(c) {
+            if (NEW_TABS.indexOf(c.id.replace('ca-content-', '')) > -1) {
+              c.classList.remove('v93-shown');
+              c.style.display = 'none';
             }
           });
+        } finally {
+          isSwitching = false;
         }
+      };
+      window.__caSwitchTab._v93 = true;
+    }
+    
+    function esc(s) { return String(s || '').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    
+    function renderProducts(t) {
+      var prods = window.A.products || [];
+      if (!prods.length) { t.innerHTML = '<div class="v93-empty">لا منتجات</div>'; return; }
+      
+      var tc = 0, ts = 0, tp = 0, wc = 0;
+      prods.forEach(function(p) {
+        var c = Number(p.costPrice) || 0;
+        var s = Number(p.price) || 0;
+        ts += s;
+        if (c > 0) { tc += c; tp += (s - c); wc++; }
       });
-      if (needs) {
-        setTimeout(fixNow, 200);
-      }
-    }).observe(document.body, { childList: true, subtree: true });
+      var mg = wc > 0 && ts > 0 ? Math.round((tp / ts) * 100) : 0;
+      
+      var html = '<div class="v93-grid">' +
+        '<div class="v93-card-kpi v93-kpi-purple"><div class="v93-l">📦 المنتجات</div><div class="v93-v">' + prods.length + '</div></div>' +
+        '<div class="v93-card-kpi v93-kpi-green"><div class="v93-l">💰 الربح (' + mg + '%)</div><div class="v93-v">' + (wc > 0 ? tp.toLocaleString('ar-EG') : '—') + '</div></div>' +
+        '<div class="v93-card-kpi v93-kpi-red"><div class="v93-l">💵 الجملة</div><div class="v93-v">' + (wc > 0 ? tc.toLocaleString('ar-EG') : '—') + '</div></div>' +
+        '<div class="v93-card-kpi v93-kpi-purple"><div class="v93-l">💵 البيع</div><div class="v93-v">' + ts.toLocaleString('ar-EG') + '</div></div>' +
+      '</div>';
+      
+      prods.forEach(function(p) {
+        var c = Number(p.costPrice) || 0;
+        var s = Number(p.price) || 0;
+        var pr = s - c;
+        var m = c > 0 && s > 0 ? ((pr / s) * 100).toFixed(1) : '—';
+        var col = c > 0 ? (pr > 0 ? (parseFloat(m) >= 20 ? '#10b981' : '#f59e0b') : '#ef4444') : '#6b7280';
+        html += '<div class="v93-row">' +
+          '<div style="font-weight:800;color:#e5e7eb;margin-bottom:4px;">' + esc(p.name) + '</div>' +
+          '<div style="color:#9ca3af;font-size:10px;margin-bottom:6px;">🏢 ' + esc(p.supplierName || '—') + '</div>' +
+          '<div style="display:flex;justify-content:space-between;">' +
+            '<span>جملة: <b style="color:#ef4444;">' + (c > 0 ? c.toLocaleString('ar-EG') : '—') + '</b> · بيع: <b style="color:#a855f7;">' + s.toLocaleString('ar-EG') + '</b></span>' +
+            '<b style="color:' + col + ';">' + (c > 0 ? (pr > 0 ? '+' : '') + pr.toLocaleString('ar-EG') + ' (' + m + '%)' : '—') + '</b>' +
+          '</div>' +
+        '</div>';
+      });
+      t.innerHTML = html;
+    }
+    
+    function renderEmployees(t) {
+      if (!window.FB || !FB.db) { t.innerHTML = '<div class="v93-empty">⚠️ Firebase</div>'; return; }
+      t.innerHTML = '<div class="v93-empty">⏳ تحميل...</div>';
+      FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(50).get().then(function(s) {
+        var emps = [];
+        s.forEach(function(d) { var u = d.data(); u._id = d.id; emps.push(u); });
+        if (!emps.length) { t.innerHTML = '<div class="v93-empty">لا موظفين</div>'; return; }
+        
+        var lbl = { cat_manager: 'مدير قسم', delivery_mgr: 'مندوب', accountant: 'محاسب', bookings_mgr: 'مدير حجوزات' };
+        var html = '<div class="v93-grid"><div class="v93-card-kpi v93-kpi-purple"><div class="v93-l">👥 الموظفون</div><div class="v93-v">' + emps.length + '</div></div></div>';
+        emps.forEach(function(e) {
+          html += '<div class="v93-row"><div style="font-weight:800;color:#e5e7eb;">' + esc(e.name || e.email || 'موظف') + '</div><div style="color:#9ca3af;font-size:10px;">' + (lbl[e.role] || e.role) + (e.assignedCategory ? ' · ' + e.assignedCategory : '') + '</div></div>';
+        });
+        t.innerHTML = html;
+      }).catch(function(e) { t.innerHTML = '<div class="v93-empty">⚠️ ' + e.message + '</div>'; });
+    }
+    
+    function renderAdvances(t) {
+      if (!window.FB || !FB.db) { t.innerHTML = '<div class="v93-empty">⚠️ Firebase</div>'; return; }
+      t.innerHTML = '<div class="v93-empty">⏳ تحميل...</div>';
+      FB.db.collection('transactions').limit(100).get().then(function(s) {
+        var tr = [];
+        s.forEach(function(d) { var x = d.data(); x._id = d.id; tr.push(x); });
+        if (!tr.length) { t.innerHTML = '<div class="v93-empty">لا حركات مالية</div>'; return; }
+        
+        var adv = 0, ded = 0, paid = 0;
+        tr.forEach(function(x) {
+          var a = Number(x.amount) || 0;
+          if (x.type === 'advance') adv += a;
+          else if (x.type === 'deduction') ded += a;
+          else if (x.type === 'paid') paid += a;
+        });
+        
+        var html = '<div class="v93-grid">' +
+          '<div class="v93-card-kpi v93-kpi-yellow"><div class="v93-l">💸 تقدمات</div><div class="v93-v">' + adv.toLocaleString('ar-EG') + '</div></div>' +
+          '<div class="v93-card-kpi v93-kpi-red"><div class="v93-l">📉 خصومات</div><div class="v93-v">' + ded.toLocaleString('ar-EG') + '</div></div>' +
+          '<div class="v93-card-kpi v93-kpi-green"><div class="v93-l">✅ مدفوع</div><div class="v93-v">' + paid.toLocaleString('ar-EG') + '</div></div>' +
+        '</div>';
+        
+        tr.forEach(function(x) {
+          var ic = { advance: '💸', deduction: '📉', paid: '✅' }[x.type] || '📝';
+          html += '<div class="v93-row"><div style="display:flex;justify-content:space-between;"><div><div style="font-weight:800;color:#e5e7eb;">' + ic + ' ' + esc(x.userName || 'موظف') + '</div><div style="color:#9ca3af;font-size:10px;">' + x.type + '</div></div><div style="text-align:left;"><div style="color:#a855f7;font-weight:900;">' + (Number(x.amount) || 0).toLocaleString('ar-EG') + '</div><div style="font-size:10px;">' + (x.status || '') + '</div></div></div></div>';
+        });
+        t.innerHTML = html;
+      }).catch(function(e) { t.innerHTML = '<div class="v93-empty">⚠️ ' + e.message + '</div>'; });
+    }
+    
+    function renderReport(t) {
+      var orders = window.A.orders || [];
+      var prods = window.A.products || [];
+      var now = new Date();
+      var mo = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+      var mOrd = orders.filter(function(o) {
+        var ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
+        return ts >= mo && o.status !== 'cancelled';
+      });
+      var rev = mOrd.reduce(function(s, o) { return s + (Number(o.total) || 0); }, 0);
+      var cost = 0;
+      mOrd.forEach(function(o) {
+        (o.items || []).forEach(function(it) {
+          var p = prods.find(function(x) { return String(x.id) === String(it.id); });
+          if (p && p.costPrice > 0) cost += (Number(p.costPrice) || 0) * (Number(it.qty) || 1);
+        });
+      });
+      var net = rev - cost;
+      var col = net >= 0 ? '#10b981' : '#ef4444';
+      
+      t.innerHTML = '<div class="v93-grid">' +
+        '<div class="v93-card-kpi v93-kpi-green"><div class="v93-l">💰 إيرادات</div><div class="v93-v">' + rev.toLocaleString('ar-EG') + '</div></div>' +
+        '<div class="v93-card-kpi v93-kpi-red"><div class="v93-l">💵 التكلفة</div><div class="v93-v">' + cost.toLocaleString('ar-EG') + '</div></div>' +
+        '<div class="v93-card-kpi v93-kpi-purple"><div class="v93-l">📦 طلبات</div><div class="v93-v">' + mOrd.length + '</div></div>' +
+      '</div>' +
+      '<div class="v93-row" style="text-align:center;padding:24px !important;">' +
+        '<div style="font-size:12px;color:' + col + ';font-weight:800;margin-bottom:8px;">' + (net >= 0 ? '✅ صافي الربح' : '❌ خسارة') + '</div>' +
+        '<div style="font-size:32px;font-weight:900;color:' + col + ';">' + Math.abs(net).toLocaleString('ar-EG') + ' ر.س</div>' +
+      '</div>';
+    }
+    
+    console.log('[v93] ✅ INSTALLED CLEAN');
   }
   
-  // Start
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(tryFix, 1000);
-      startObserver();
-    });
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(start, 1500); });
   } else {
-    setTimeout(tryFix, 1000);
-    startObserver();
+    setTimeout(start, 1500);
   }
-  setTimeout(tryFix, 3000);
-  setTimeout(tryFix, 6000);
-  
-  console.log('[v92] ready');
+  setTimeout(start, 4000);
 })();
 </script>
 
