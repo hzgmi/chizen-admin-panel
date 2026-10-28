@@ -1100,7 +1100,7 @@ function renderMore(){
     {icon:'🏭', lbl:'الموردين', tool:'suppliers'},
     {icon:'🖼️', lbl:'البانرات', tool:'banners'},
     {icon:'💳', lbl:'الديون', tool:'transactions'},
-    {icon:'🏦', lbl:'الصناديق والبنوك', tool:'banks'},
+    {icon:'💳', lbl:'طرق الدفع', tool:'payments'},
     {icon:'🔔', lbl:'الإشعارات', tool:'notifications'},
     {icon:'📊', lbl:'تقارير', tool:'reports'},
     {icon:'👤', lbl:'حسابي', tool:'profile'},
@@ -1130,7 +1130,7 @@ document.addEventListener('click', async function(e){
   if (tool === 'banners') return showBannerManager();
   if (tool === 'transactions') return showTransactionsList();
   if (tool === 'notifications') return showNotificationManager();
-  if (tool === 'banks') return showBankManager();
+  if (tool === 'payments') return showPaymentsManager();
   if (tool === 'reports') return showReports();
   if (tool === 'profile') return showProfile();
   if (tool === 'settings') return showSettings();
@@ -2344,145 +2344,191 @@ function showNotificationComposer(){
 
 
 
-// ═══ v294a: Banks Management ═══
 
-async function __loadBanks(){
+// ═══ v295c: Payment Methods Management (config/payments) ═══
+
+var __v295Payments = [];
+var __v295EditIdx = null;
+
+var PM_ICONS = ["🏦","💳","🏛️","💰","💵","🏪","📱","🔵","🟢","🟡","🟣","⚫","💎","🏧"];
+var PM_COLORS = ["#0d47a1","#10b981","#a855f7","#f59e0b","#ec4899","#ef4444","#0ea5e9","#84cc16","#f43f5e","#14b8a6"];
+var PM_TYPES = {
+  bank:   {label:"🏦 بنك"},
+  wallet: {label:"📱 محفظة"},
+  cash:   {label:"💰 كاش"},
+  other:  {label:"📦 أخرى"}
+};
+
+async function __loadPayments(){
   try {
-    var doc = await db.collection("config").doc("banks").get();
+    var doc = await db.collection("config").doc("payments").get();
     if (!doc.exists) return [];
     return doc.data().list || [];
-  } catch(e){ return []; }
+  } catch(e){ console.error(e); return []; }
 }
 
-async function __saveBanks(list){
-  await db.collection("config").doc("banks").set({
+async function __savePayments(list){
+  await db.collection("config").doc("payments").set({
     list: list,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, {merge: true});
 }
 
-var __v294aBanks = [];
+function __genId(){
+  return "pm_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
+}
 
-var BANK_TYPES = {
-  cash:   {label:"💰 نقدي",   color:"#22c55e"},
-  bank:   {label:"🏦 بنك",    color:"#3b82f6"},
-  wallet: {label:"📱 محفظة",  color:"#a855f7"},
-  other:  {label:"📦 أخرى",   color:"#f59e0b"}
-};
-
-async function showBankManager(){
-  __v294aBanks = await __loadBanks();
-  var banks = __v294aBanks;
+async function showPaymentsManager(){
+  __v295Payments = await __loadPayments();
+  var list = __v295Payments;
   var html = "";
   html += "<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px\">";
-  html += "<div><div style=\"font-size:14px;font-weight:900;color:#fff\">🏦 الصناديق والبنوك</div>";
-  html += "<div style=\"font-size:11px;color:#a78bfa;margin-top:2px\">" + banks.length + " صندوق · " + banks.filter(function(b){return b.active!==false;}).length + " نشط</div></div>";
-  html += "<button onclick=\"showBankForm(null)\" style=\"background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;border:none;padding:10px 16px;border-radius:12px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap\">➕ صندوق جديد</button>";
+  html += "<div><div style=\"font-size:14px;font-weight:900;color:#fff\">💳 طرق الدفع</div>";
+  html += "<div style=\"font-size:11px;color:#a78bfa;margin-top:2px\">" + list.length + " طريقة · تظهر للعملاء عند الدفع</div></div>";
+  html += "<button onclick=\"__showPaymentForm(null)\" style=\"background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;border:none;padding:10px 16px;border-radius:12px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap\">➕ إضافة</button>";
   html += "</div>";
-  if (banks.length === 0) {
-    html += "<div class=\"vempty\"><div class=\"vempty-icon\">🏦</div><div class=\"vempty-txt\">لا توجد صناديق</div></div>";
+
+  if (list.length === 0) {
+    html += "<div style=\"text-align:center;padding:40px 20px;color:#a78bfa\"><div style=\"font-size:48px;margin-bottom:12px\">💳</div><div style=\"font-size:14px;font-weight:700\">لا توجد طرق دفع</div><div style=\"font-size:11px;margin-top:6px\">أضف أول طريقة دفع</div></div>";
   } else {
-    banks.forEach(function(b, i){
-      var t = BANK_TYPES[b.type] || BANK_TYPES.other;
-      var isActive = b.active !== false;
+    list.forEach(function(b, i){
+      var icon = b.icon || "🏦";
+      var color = b.color || "#0d47a1";
       html += "<div style=\"background:linear-gradient(135deg,#1a1230,#121028);border:1px solid rgba(155,77,255,0.25);border-radius:14px;padding:14px;margin-bottom:10px\">";
-      html += "<div style=\"display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px\">";
+      html += "<div style=\"display:flex;gap:12px;align-items:center;margin-bottom:10px\">";
+      if (b.logo) {
+        html += "<img src=\"" + b.logo + "\" style=\"width:48px;height:48px;border-radius:12px;background:#fff;object-fit:contain;padding:4px;flex-shrink:0\" onerror=\"this.style.display=\x27none\x27\">";
+      } else {
+        html += "<div style=\"width:48px;height:48px;border-radius:12px;background:" + color + ";display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 4px 12px " + color + "55\">" + icon + "</div>";
+      }
       html += "<div style=\"flex:1;min-width:0\">";
-      html += "<div style=\"display:flex;align-items:center;gap:6px;margin-bottom:4px\">";
-      html += "<span style=\"font-size:18px\">" + t.label.split(" ")[0] + "</span>";
-      html += "<span style=\"font-size:14px;font-weight:900;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">" + esc(b.name || "—") + "</span>";
-      if (!isActive) html += "<span style=\"background:rgba(107,114,128,0.3);color:#9ca3af;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:800\">مخفي</span>";
+      html += "<div style=\"font-size:14px;font-weight:900;color:#fff;margin-bottom:2px\">" + esc(b.name || "—") + "</div>";
+      html += "<div style=\"font-size:11px;color:#a78bfa;font-family:monospace;direction:ltr;text-align:right\">" + esc(b.account || "غير محدد") + "</div>";
       html += "</div>";
-      html += "<div style=\"font-size:11px;color:#a78bfa\">" + t.label + (b.accountNumber ? " · " + esc(b.accountNumber) : "") + "</div>";
       html += "</div>";
-      html += "<div style=\"text-align:left;flex-shrink:0\">";
-      html += "<div style=\"font-size:18px;font-weight:900;color:" + t.color + "\">" + Math.round(Number(b.balance)||0).toLocaleString("ar-EG") + "</div>";
-      html += "<div style=\"font-size:9px;color:#a78bfa\">رصيد حالي</div>";
-      html += "</div></div>";
       html += "<div style=\"display:flex;gap:6px\">";
-      html += "<button onclick=\"showBankForm(" + i + ")\" style=\"flex:1;background:rgba(155,77,255,0.15);border:1px solid rgba(155,77,255,0.3);color:#a78bfa;padding:8px;border-radius:8px;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer\">✏️ تعديل</button>";
-      html += "<button onclick=\"deleteBank(" + i + ")\" style=\"flex:0 0 40px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:8px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer\">🗑️</button>";
+      html += "<button onclick=\"__showPaymentForm(" + i + ")\" style=\"flex:1;background:rgba(155,77,255,0.15);border:1px solid rgba(155,77,255,0.3);color:#a78bfa;padding:8px;border-radius:8px;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer\">✏️ تعديل</button>";
+      html += "<button onclick=\"__deletePayment(" + i + ")\" style=\"flex:0 0 40px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:8px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer\">🗑️</button>";
       html += "</div></div>";
     });
   }
-  showModal("🏦 الصناديق والبنوك", html);
+  showModal("💳 طرق الدفع", html);
 }
 
-window.showBankForm = function(idx){
+window.__showPaymentForm = function(idx){
+  __v295EditIdx = idx;
   var isEdit = (idx !== null && idx !== undefined);
-  var b = isEdit ? __v294aBanks[idx] : {
-    id: "bank_" + Date.now(), name: "", type: "cash", accountNumber: "",
-    balance: 0, openingBalance: 0, active: true, notes: ""
+  var b = isEdit ? __v295Payments[idx] : {
+    id: __genId(), name: "", account: "", icon: "🏦", color: "#0d47a1", type: "bank", logo: ""
   };
   var iS = "width:100%;padding:12px 14px;background:rgba(10,8,37,0.7);border:1px solid rgba(155,77,255,0.3);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;margin-bottom:12px;box-sizing:border-box";
   var lS = "display:block;font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:6px";
-  var typeOpts = "";
-  Object.keys(BANK_TYPES).forEach(function(k){
-    typeOpts += "<option value=\"" + k + "\" " + (b.type===k?"selected":"") + ">" + BANK_TYPES[k].label + "</option>";
-  });
+
+  var typeOpts = Object.keys(PM_TYPES).map(function(k){
+    return "<option value=\"" + k + "\" " + (b.type===k?"selected":"") + ">" + PM_TYPES[k].label + "</option>";
+  }).join("");
+
+  var iconGrid = PM_ICONS.map(function(ic){
+    var sel = ic === b.icon;
+    return "<button type=\"button\" data-icon=\"" + ic + "\" style=\"padding:8px;border-radius:10px;background:" + (sel?"rgba(155,77,255,0.3)":"rgba(155,77,255,0.08)") + ";border:2px solid " + (sel?"#a78bfa":"rgba(155,77,255,0.2)") + ";font-size:20px;cursor:pointer;font-family:inherit\">" + ic + "</button>";
+  }).join("");
+
+  var colorGrid = PM_COLORS.map(function(c){
+    var sel = c === b.color;
+    return "<button type=\"button\" data-color=\"" + c + "\" style=\"width:32px;height:32px;border-radius:50%;background:" + c + ";border:3px solid " + (sel?"#fff":"transparent") + ";cursor:pointer;box-shadow:0 2px 8px " + c + "66\"></button>";
+  }).join("");
+
   var html = "";
-  html += "<label style=\"" + lS + "\">اسم الصندوق *</label>";
-  html += "<input id=\"bk-name\" type=\"text\" value=\"" + esc(b.name||"") + "\" placeholder=\"مثال: بنك التضامن\" style=\"" + iS + "\">";
-  html += "<label style=\"" + lS + "\">النوع *</label>";
-  html += "<select id=\"bk-type\" style=\"" + iS + "\">" + typeOpts + "</select>";
-  html += "<label style=\"" + lS + "\">رقم الحساب</label>";
-  html += "<input id=\"bk-acc\" type=\"text\" value=\"" + esc(b.accountNumber||"") + "\" placeholder=\"اختياري\" style=\"" + iS + "\">";
-  html += "<label style=\"" + lS + "\">" + (isEdit?"الرصيد الافتتاحي":"الرصيد الافتتاحي *") + "</label>";
-  html += "<input id=\"bk-balance\" type=\"number\" value=\"" + (isEdit ? (Number(b.openingBalance)||0) : 0) + "\" placeholder=\"0\" style=\"" + iS + "\">";
-  html += "<label style=\"display:flex;align-items:center;gap:10px;padding:12px;background:rgba(155,77,255,0.1);border-radius:10px;margin-bottom:12px;cursor:pointer\">";
-  html += "<input id=\"bk-active\" type=\"checkbox\" " + (b.active!==false?"checked":"") + " style=\"width:20px;height:20px;accent-color:#22c55e\">";
-  html += "<span style=\"color:#fff;font-weight:700;font-size:13px\">نشط</span></label>";
-  html += "<label style=\"" + lS + "\">ملاحظات</label>";
-  html += "<textarea id=\"bk-notes\" rows=\"2\" style=\"" + iS + "\">" + esc(b.notes||"") + "</textarea>";
-  var footer = "<button class=\"v101-btn-cancel\" style=\"flex:1\" onclick=\"document.querySelector('.v294a-modal').remove()\">إلغاء</button>";
-  footer += "<button class=\"v101-btn-save\" style=\"flex:2\" onclick=\"saveBank(" + (isEdit ? idx : "null") + ")\">💾 حفظ</button>";
+  html += "<label style=\"" + lS + "\">اسم طريقة الدفع *</label>";
+  html += "<input id=\"pm-name\" type=\"text\" value=\"" + esc(b.name||"") + "\" placeholder=\"مثال: بنك الكريمي\" style=\"" + iS + "\">";
+  html += "<label style=\"" + lS + "\">رقم الحساب / المرجع</label>";
+  html += "<input id=\"pm-account\" type=\"text\" value=\"" + esc(b.account||"") + "\" placeholder=\"1234-567-890\" style=\"" + iS + "\">";
+  html += "<label style=\"" + lS + "\">النوع</label>";
+  html += "<select id=\"pm-type\" style=\"" + iS + "\">" + typeOpts + "</select>";
+  html += "<label style=\"" + lS + "\">الأيقونة</label>";
+  html += "<div id=\"pm-icons\" style=\"display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px\">" + iconGrid + "</div>";
+  html += "<label style=\"" + lS + "\">اللون</label>";
+  html += "<div id=\"pm-colors\" style=\"display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px\">" + colorGrid + "</div>";
+  html += "<label style=\"" + lS + "\">رابط الشعار (اختياري)</label>";
+  html += "<input id=\"pm-logo\" type=\"url\" value=\"" + esc(b.logo||"") + "\" placeholder=\"https://logo.clearbit.com/example.com\" style=\"" + iS + "\">";
+
+  var footer = "<button class=\"v101-btn-cancel\" style=\"flex:1\" onclick=\"document.querySelector(\x27.v295-modal\x27).remove()\">إلغاء</button>";
+  footer += "<button class=\"v101-btn-save\" style=\"flex:2\" onclick=\"__savePayment()\">💾 حفظ</button>";
+
   var ov = document.createElement("div");
-  ov.className = "v294a-modal";
+  ov.className = "v295-modal";
   ov.style.cssText = "position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,0.8);display:flex;align-items:flex-end;justify-content:center;overflow-y:auto";
-  ov.innerHTML = "<div style=\"background:linear-gradient(180deg,#1e1533,#0a0825);width:100%;max-width:560px;border-radius:24px 24px 0 0;max-height:92vh;overflow-y:auto;border:1px solid rgba(155,77,255,0.3);border-bottom:none;color:#fff;font-family:inherit;margin:auto\"><div style=\"position:sticky;top:0;background:#1e1533;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid rgba(155,77,255,0.2);z-index:1\"><h3 style=\"margin:0;font-size:15px;font-weight:900;color:#fff\">" + (isEdit?"✏️ تعديل صندوق":"➕ صندوق جديد") + "</h3><button onclick=\"document.querySelector('.v294a-modal').remove()\" style=\"background:rgba(155,77,255,0.15);border:1px solid rgba(155,77,255,0.3);color:#a78bfa;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:13px\">✕</button></div><div style=\"padding:14px 18px\">" + html + "</div><div style=\"position:sticky;bottom:0;background:#1e1533;padding:12px 18px;border-top:1px solid rgba(155,77,255,0.2);display:flex;gap:8px\">" + footer + "</div></div>";
+  ov.innerHTML = "<div style=\"background:linear-gradient(180deg,#1e1533,#0a0825);width:100%;max-width:560px;border-radius:24px 24px 0 0;max-height:92vh;overflow-y:auto;border:1px solid rgba(155,77,255,0.3);border-bottom:none;color:#fff;font-family:inherit;margin:auto\"><div style=\"position:sticky;top:0;background:#1e1533;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid rgba(155,77,255,0.2);z-index:1\"><h3 style=\"margin:0;font-size:15px;font-weight:900;color:#fff\">" + (isEdit?"✏️ تعديل طريقة دفع":"➕ طريقة دفع جديدة") + "</h3><button onclick=\"document.querySelector(\x27.v295-modal\x27).remove()\" style=\"background:rgba(155,77,255,0.15);border:1px solid rgba(155,77,255,0.3);color:#a78bfa;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:13px\">✕</button></div><div style=\"padding:14px 18px\">" + html + "</div><div style=\"position:sticky;bottom:0;background:#1e1533;padding:12px 18px;border-top:1px solid rgba(155,77,255,0.2);display:flex;gap:8px\">" + footer + "</div></div>";
   document.body.appendChild(ov);
+
+  // ربط اختيار الأيقونة
+  ov.querySelectorAll("[data-icon]").forEach(function(btn){
+    btn.onclick = function(){
+      ov.querySelectorAll("[data-icon]").forEach(function(x){ x.style.background="rgba(155,77,255,0.08)"; x.style.border="2px solid rgba(155,77,255,0.2)"; });
+      this.style.background="rgba(155,77,255,0.3)";
+      this.style.border="2px solid #a78bfa";
+      ov.setAttribute("data-sel-icon", this.getAttribute("data-icon"));
+    };
+  });
+  ov.setAttribute("data-sel-icon", b.icon || "🏦");
+  ov.setAttribute("data-sel-color", b.color || "#0d47a1");
+
+  // ربط اختيار اللون
+  ov.querySelectorAll("[data-color]").forEach(function(btn){
+    btn.onclick = function(){
+      ov.querySelectorAll("[data-color]").forEach(function(x){ x.style.border="3px solid transparent"; });
+      this.style.border="3px solid #fff";
+      ov.setAttribute("data-sel-color", this.getAttribute("data-color"));
+    };
+  });
 };
 
-window.saveBank = async function(idx){
-  var name = document.getElementById("bk-name").value.trim();
-  var type = document.getElementById("bk-type").value;
-  var acc = document.getElementById("bk-acc").value.trim();
-  var opening = Number(document.getElementById("bk-balance").value) || 0;
-  var active = document.getElementById("bk-active").checked;
-  var notes = document.getElementById("bk-notes").value.trim();
-  if (!name) { alert("الاسم مطلوب"); return; }
-  var list = __v294aBanks.slice();
-  var u = firebase.auth().currentUser;
-  if (idx !== null && idx !== undefined && list[idx]) {
-    var old = list[idx];
-    var delta = opening - (Number(old.openingBalance) || 0);
-    list[idx] = Object.assign({}, old, {name:name, type:type, accountNumber:acc, openingBalance:opening, balance:(Number(old.balance)||0)+delta, active:active, notes:notes, updatedAt:new Date()});
+window.__savePayment = async function(){
+  var name = document.getElementById("pm-name").value.trim();
+  var account = document.getElementById("pm-account").value.trim();
+  var type = document.getElementById("pm-type").value;
+  var logo = document.getElementById("pm-logo").value.trim();
+  var ov = document.querySelector(".v295-modal");
+  var icon = ov.getAttribute("data-sel-icon") || "🏦";
+  var color = ov.getAttribute("data-sel-color") || "#0d47a1";
+
+  if (!name) { alert("اسم طريقة الدفع مطلوب"); return; }
+
+  var list = __v295Payments.slice();
+  var newItem = { id: "", name: name, account: account, type: type, icon: icon, color: color, logo: logo };
+
+  if (__v295EditIdx !== null && __v295EditIdx !== undefined && list[__v295EditIdx]) {
+    newItem.id = list[__v295EditIdx].id;
+    list[__v295EditIdx] = newItem;
   } else {
-    list.push({id:"bank_"+Date.now(), name:name, type:type, accountNumber:acc, openingBalance:opening, balance:opening, active:active, notes:notes, createdAt:new Date(), createdBy:u.uid});
+    newItem.id = __genId();
+    list.push(newItem);
   }
+
   try {
-    await __saveBanks(list);
-    var ov = document.querySelector(".v294a-modal");
+    await __savePayments(list);
     if (ov) ov.remove();
     if (typeof toast === "function") toast("✅ تم الحفظ", "success");
-    await showBankManager();
+    else alert("✅ تم الحفظ");
+    await showPaymentsManager();
   } catch(e){ alert("❌ " + e.message); }
 };
 
-window.deleteBank = async function(idx){
-  var b = __v294aBanks[idx];
+window.__deletePayment = async function(idx){
+  var b = __v295Payments[idx];
   if (!b) return;
-  if (!confirm("حذف " + (b.name||"") + "؟")) return;
-  var list = __v294aBanks.slice();
+  if (!confirm("حذف \"" + (b.name||"") + "\"؟ سيختفي من تطبيق العميل.")) return;
+  var list = __v295Payments.slice();
   list.splice(idx, 1);
   try {
-    await __saveBanks(list);
+    await __savePayments(list);
     if (typeof toast === "function") toast("✅ تم الحذف", "success");
-    await showBankManager();
+    else alert("✅ تم الحذف");
+    await showPaymentsManager();
   } catch(e){ alert("❌ " + e.message); }
 };
 
-window.showBankManager = showBankManager;
+window.showPaymentsManager = showPaymentsManager;
 </script>
 </body>
 </html>
