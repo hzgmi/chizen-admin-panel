@@ -9676,66 +9676,56 @@ window.catMgrApp = (function(){
 
 
 
-<script id="v242-router">
+
+
+
+<script id="v243-router">
 (function(){
-  console.log('[V242] Smart router active');
-  
-  var fired = false;
-  function route(){
-    if (fired) return;
-    var u = firebase.auth().currentUser;
-    if (!u) return;
-    
-    fired = true;
-    
-    firebase.firestore().collection('users').doc(u.uid).get().then(function(doc){
-      var role = doc.exists ? (doc.data().role || 'customer') : 'customer';
-      console.log('[V242] role:', role);
-      
-      // 🔑 التوجيه الذكي
-      if (role === 'super_admin') {
-        // سوبر أدمن → dashboard.html (اللوحة الحديثة)
-        setTimeout(function(){
-          window.location.href = 'dashboard.html';
-        }, 800);
-      } else if (role === 'cat_manager') {
-        // مدير قسم → لوحة v100
-        hideAdminPanel();
-        showCatManager();
-      }
-    }).catch(function(e){
-      console.warn('[V242] role check failed:', e);
-    });
-  }
-  
-  function hideAdminPanel(){
-    var am = document.getElementById('am');
-    if (am) am.style.display = 'none';
-    var gs = document.getElementById('gs');
-    if (gs) gs.style.display = 'none';
-  }
-  
-  function showCatManager(){
-    var app = document.getElementById('cat-mgr-app');
-    if (app) {
-      app.style.display = 'block';
-      app.style.zIndex = '999999';
-      app.style.position = 'fixed';
-      app.style.inset = '0';
-      app.style.overflowY = 'auto';
-      app.style.background = '#0a0825';
-    }
-  }
-  
-  // نراقب حالة الدخول
   var tries = 0;
-  var interval = setInterval(function(){
+  function hook(){
     tries++;
-    if (tries > 60) { clearInterval(interval); return; }
-    if (!window.firebase || !firebase.auth || !firebase.auth().currentUser) return;
-    clearInterval(interval);
-    setTimeout(route, 500);
-  }, 200);
+    if(tries > 300) return setTimeout(hook, 100);
+    if(!window.A || !window.A.checkAdmin) return setTimeout(hook, 100);
+    if(window.__v243Ready) return;
+    window.__v243Ready = true;
+
+    var origCheck = window.A.checkAdmin;
+    window.A.checkAdmin = async function(u) {
+      if (!u) return;
+      try {
+        var db = firebase.firestore();
+        var userSnap = await db.collection('users').doc(u.uid).get();
+        if (userSnap.exists) {
+          var ud = userSnap.data();
+          
+          // 1. مدير قسم: عرض v100 حصراً، منع الواجهة القديمة
+          if (ud.role === 'cat_manager') {
+            var am = document.getElementById('am'); if(am) am.style.setProperty('display','none','important');
+            var gs = document.getElementById('gs'); if(gs) gs.style.setProperty('display','none','important');
+            
+            if (window.catMgrApp && window.catMgrApp.init) {
+              window.catMgrApp.init(Object.assign({uid: u.uid}, ud));
+            }
+            return; // 🛑 STOP: لا نستدعي الكود القديم
+          }
+          
+          // 2. سوبر أدمن: تحويل للوحة الحديثة dashboard.html
+          if (ud.role === 'super_admin' || (firebase.auth().currentUser && firebase.auth().currentUser.email === 'hazimchat@gmail.com')) {
+            origCheck(u); // تشغيل القديم لإعداد الجلسة
+            setTimeout(function(){
+              window.location.href = 'dashboard.html';
+            }, 500);
+            return;
+          }
+        }
+      } catch(e) {
+        console.warn('[V243] checkAdmin failed:', e);
+      }
+      return origCheck(u);
+    };
+    console.log('[V243] Strict router active');
+  }
+  hook();
 })();
 </script>
 
