@@ -1140,7 +1140,7 @@ async function showBannerManager(){
           var sc = (b.scale != null) ? Number(b.scale) : 1;
           var px = (b.posX != null) ? Number(b.posX) : 50;
           var py = (b.posY != null) ? Number(b.posY) : 50;
-          return '<div style="flex:0 0 100%;height:100%;position:relative;background-image:url(' + JSON.stringify(b.img) + ');background-size:' + (sc*100) + '% auto;background-position:' + px + '% ' + py + '%;background-repeat:no-repeat;background-color:#111"></div>';
+          return '<div style="flex:0 0 100%;height:100%;position:relative;background-image:url(&quot;' + esc(b.img) + '&quot;);background-size:' + (sc*100) + '% auto;background-position:' + px + '% ' + py + '%;background-repeat:no-repeat;background-color:#111"></div>';
         }).join('')
       + '</div>'
       + '<div id="b276-dots" style="position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:2">'
@@ -1225,7 +1225,7 @@ function __renderBannerList(items){
     var stStyle = isActive ? 'background:rgba(34,197,94,0.9);color:#fff' : 'background:rgba(107,114,128,0.9);color:#fff';
     return '<div style="border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#1a1230,#121028);border:1px solid rgba(155,77,255,0.2);margin-bottom:12px">'
       + '<div style="aspect-ratio:16/9;background:#111;position:relative">'
-      +   (b.img ? (function(){var sc=(b.scale!=null)?Number(b.scale):1;var px=(b.posX!=null)?Number(b.posX):50;var py=(b.posY!=null)?Number(b.posY):50;return '<div style="position:absolute;inset:0;background-image:url(' + JSON.stringify(b.img) + ');background-size:' + (sc*100) + '% auto;background-position:' + px + '% ' + py + '%;background-repeat:no-repeat;background-color:#111"></div>';})() : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;font-size:36px">🖼️</div>')
+      +   (b.img ? (function(){var sc=(b.scale!=null)?Number(b.scale):1;var px=(b.posX!=null)?Number(b.posX):50;var py=(b.posY!=null)?Number(b.posY):50;return '<div style="position:absolute;inset:0;background-image:url(&quot;' + esc(b.img) + '&quot;);background-size:' + (sc*100) + '% auto;background-position:' + px + '% ' + py + '%;background-repeat:no-repeat;background-color:#111"></div>';})() : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;font-size:36px">🖼️</div>')
       +   '<div style="position:absolute;top:6px;right:6px;' + stStyle + ';padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700">' + (isActive ? '● نشط' : '○ مخفي') + '</div>'
       +   '<div style="position:absolute;top:6px;left:6px;background:rgba(10,8,37,0.9);color:#fff;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700">#' + (i+1) + '</div>'
       + '</div>'
@@ -1327,7 +1327,7 @@ function showBannerEditor(banner, index){
     var posY = getPosY();
     var html = '';
     if(img){ 
-      html += '<div style="position:absolute;inset:0;background-image:url(' + JSON.stringify(img) + ');background-size:' + (scale*100) + '% auto;background-position:' + posX + '% ' + posY + '%;background-repeat:no-repeat;background-color:#111"></div>';
+      html += '<div style="position:absolute;inset:0;background-image:url(&quot;' + esc(img) + '&quot;);background-size:' + (scale*100) + '% auto;background-position:' + posX + '% ' + posY + '%;background-repeat:no-repeat;background-color:#111"></div>';
     } else { 
       html += '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#a78bfa;font-size:48px;opacity:0.4">🖼️</div>'; 
     }
