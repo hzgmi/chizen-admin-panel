@@ -10038,13 +10038,24 @@ window.catMgrApp = (function(){
       console.log('[V254] brands loaded:', list.length);
     });
     fetchList('suppliers').then(function(list){
-      suppliers = list;
+      // 🎯 v279: تصفية الموردين حسب قسم مدير القسم
+      var myCat = state.cat;
+      var filtered = list.filter(function(s){
+        var cats = Array.isArray(s.categories) ? s.categories : [];
+        return cats.indexOf(myCat) !== -1;
+      });
+      suppliers = filtered;
       var sel = $('v254-supplier'); if(!sel) return;
       var curId = extractId(p.supplierId) || extractId(p.supplier);
-      sel.innerHTML = '<option value="">— اختر —</option>' + list.map(function(s){
-        return '<option value="'+esc(s.id)+'" data-name="'+esc(s.name)+'" '+(curId===s.id?'selected':'')+'>'+esc(s.name)+'</option>';
+      if (filtered.length === 0) {
+        sel.innerHTML = '<option value="">⚠️ لا يوجد موردون لقسمك — أضف مورداً من الإدارة</option>';
+        console.log('[V279] no suppliers for category:', myCat);
+        return;
+      }
+      sel.innerHTML = '<option value="">— اختر —</option>' + filtered.map(function(s){
+        return '<option value="'+esc(s.id)+'" data-name="'+esc(s.name)+'" '+(curId===s.id?'selected':'')+'>'+esc(s.name)+' (' + (Array.isArray(s.categories)?s.categories.length:0) + ' قسم)</option>';
       }).join('');
-      console.log('[V254] suppliers loaded:', list.length);
+      console.log('[V279] suppliers filtered for ' + myCat + ':', filtered.length, 'of', list.length);
     });
     
     $('v254-upload').onclick = function(){ $('v254-file').click(); };
