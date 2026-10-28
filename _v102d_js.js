@@ -1,6 +1,5 @@
 (function(){
   'use strict';
-  console.log('[V102d] loading...');
   var tries = 0;
   function hook(){
     tries++;
@@ -42,38 +41,32 @@
         headers: { 'Content-Type': 'image/jpeg' },
         body: compressed
       });
-      if(!res.ok) {
-        var txt = await res.text();
-        throw new Error('فشل الرفع: ' + res.status + ' ' + txt.slice(0, 50));
-      }
+      if(!res.ok) throw new Error('فشل الرفع');
       var data = await res.json();
-      if(!data.url) throw new Error('لم يتم إرجاع رابط الصورة');
+      if(!data.url) throw new Error('لم يتم إرجاع رابط');
       return data.url;
     }
 
-    // استبدال دالة الرفع القديمة (التي كانت تطلب توكن) بالدالة الجديدة
+    // استبدال دالة الرفع القديمة
     window.__v102c_uploadBatch = async function(files, category, callbacks){
       callbacks = callbacks || {};
       var onProgress = callbacks.onProgress || function(){};
       var onUrl = callbacks.onUrl || function(){};
       var onError = callbacks.onError || function(e){ console.error(e); };
-
       var total = files.length, success = 0;
       for(var i=0; i<total; i++){
-        var f = files[i];
-        if(f.size > 15*1024*1024){ onError(new Error(f.name + ' حجمها كبير جداً')); continue; }
         try {
-          var url = await uploadToWorker(f);
+          var url = await uploadToWorker(files[i]);
           onUrl(url); success++;
           onProgress(Math.round((i+1)/total*100));
-        } catch(e){
-          onError(e);
-        }
+        } catch(e){ onError(e); }
       }
-      if(success === 0 && total > 0) throw new Error('فشل رفع الصور، تحقق من الاتصال');
+      if(success === 0 && total > 0) throw new Error('فشل الرفع');
     };
 
-    console.log('[V102d] Ready! Uploads go to Cloudflare Worker.');
+    // تعطيل مودال التوكن القديم نهائياً
+    window.__v102b_showTokenModal = function(){ return Promise.resolve("no-token-needed"); };
+    console.log('[V102d] Ready! Cloudflare Worker connected.');
   }
   hook();
 })();
