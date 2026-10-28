@@ -817,34 +817,8 @@ var A={
   },
 
   
-  loginScreen:function(){
-    document.getElementById('gb').innerHTML = 
-      '<div class="v104-card">' +
-        '<div class="v104-logo">CHIZEN</div>' +
-        '<div class="v104-subtitle">ADMIN PANEL</div>' +
-        '<div class="v104-icon">🔐</div>' +
-        '<div class="v104-title">لوحة محمية</div>' +
-        '<div class="v104-desc">سجّل دخول بحسابك الإداري</div>' +
-        '<div class="v104-input-group">' +
-          '<input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="username">' +
-        '</div>' +
-        '<div class="v104-input-group">' +
-          '<input id="login-pass" type="password" placeholder="كلمة السر" autocomplete="current-password">' +
-          '<span class="v104-eye" onclick="var p=document.getElementById(\'login-pass\'); if(p.type===\'password\'){p.type=\'text\';this.innerHTML=\'🙈\'}else{p.type=\'password\';this.innerHTML=\'👁️\'}">👁️</span>' +
-        '</div>' +
-        '<button id="btn-do-login" class="v104-btn" onclick="doLogin()">🔓 تسجيل الدخول</button>' +
-        '<div id="login-err" class="v104-err"></div>' +
-        '<button class="v104-btn-sec" onclick="location.reload()">🔄 إعادة تحميل</button>' +
-      '</div>';
+  loginScreen:function(){ console.log('[V106] Old login screen completely destroyed.'); },
 
-    setTimeout(function(){
-      var passInp = document.getElementById('login-pass');
-      if (passInp) passInp.addEventListener('keypress', function(e){
-        if (e.key === 'Enter') doLogin();
-      });
-    }, 100);
-  },
-  
   gateMsg:function(i,t,d){
     var gb=document.getElementById('gb');
     if(!gb)return;
@@ -11970,13 +11944,14 @@ body { margin: 0; background: #0a0825; overflow: hidden; }
 });
 
 // التحقق من حالة الدخول عند تحميل الصفحة
-setTimeout(function() {
-  if (firebase.auth().currentUser) {
-    document.getElementById('v105-overlay').style.display = 'none';
+firebase.auth().onAuthStateChanged(function(user) {
+  var overlay = document.getElementById('v105-overlay');
+  if (user) {
+    if(overlay) overlay.style.display = 'none';
   } else {
-    document.getElementById('v105-overlay').style.display = 'flex';
+    if(overlay) overlay.style.display = 'flex';
   }
-}, 500);
+});
 </script>
 </body>
 </html>
