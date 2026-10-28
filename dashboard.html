@@ -782,58 +782,69 @@ window.__viewReceipt = function(url){
 };
 
 async function verifyPayment(orderId){
-  if (!confirm('تأكيد الدفع لهذا الطلب؟')) return;
+  var order = state.orders.find(function(o){ return o.id === orderId; });
+  if (!order) return;
+  
+  // 🚨 Layer 2: منع تأكيد الدفع بدون سند
+  if (!order.payment || !order.payment.receiptUrl) {
+    if (window.__chizenToast) window.__chizenToast("❌ لا يمكن تأكيد الدفع", "error", "لا يوجد سند حوالة — يجب رفضه");
+    else alert("لا يمكن تأكيد الدفع: لا يوجد سند حوالة");
+    return;
+  }
+  
+  if (!order.payment.bankId && !order.payment.method) {
+    if (window.__chizenToast) window.__chizenToast("❌ طريقة الدفع غير محددة", "error", "العميل لم يحدد البنك");
+    else alert("طريقة الدفع غير محددة");
+    return;
+  }
+  
+  if (!confirm("تأكيد الدفع لهذا الطلب؟\n\nالسند: موجود ✅")) return;
+  
   try {
-    var order = state.orders.find(function(o){ return o.id === orderId; });
-    if (!order) return;
-    
     var updates = {
-      workflowStatus: 'awaiting_categories',
-      'payment.status': 'verified',
-      'payment.verifiedBy': state.user.uid,
-      'payment.verifiedAt': firebase.firestore.FieldValue.serverTimestamp()
+      workflowStatus: "awaiting_categories",
+      "payment.status": "verified",
+      "payment.verifiedBy": state.user.uid,
+      "payment.verifiedAt": firebase.firestore.FieldValue.serverTimestamp()
     };
-    
     if (order.categories) {
       Object.keys(order.categories).forEach(function(cat){
-        updates['categories.' + cat + '.status'] = 'pending';
+        updates["categories." + cat + ".status"] = "pending";
       });
     }
-    
-    await db.collection('orders').doc(orderId).update(updates);
-    
+    await db.collection("orders").doc(orderId).update(updates);
     var custId = order.customerId || order.userId;
     if (custId) {
-      db.collection('notifications').add({
-        userId: custId,
-        title: '✅ تم تأكيد دفعتك',
-        body: 'طلبك #' + orderId.slice(-6) + ' قيد المعالجة',
-        type: 'order', event: 'payment_verified', icon: '✅',
+      db.collection("notifications").add({
+        userId: custId, title: "✅ تم تأكيد دفعتك",
+        body: "طلبك #" + orderId.slice(-6) + " قيد المعالجة",
+        type: "order", event: "payment_verified", icon: "✅",
         read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp()
       }).catch(function(){});
     }
-    
     if (order.categories) {
       var cats = Object.keys(order.categories);
       for (var i = 0; i < cats.length; i++) {
         try {
-          var mgrs = await db.collection('users').where('role', '==', 'cat_manager').where('assignedCategory', '==', cats[i]).get();
+          var mgrs = await db.collection("users").where("role", "==", "cat_manager").where("assignedCategory", "==", cats[i]).get();
           mgrs.forEach(function(mgr){
-            db.collection('notifications').add({
-              userId: mgr.id,
-              title: '📦 طلب جديد في قسمك',
-              body: 'طلب #' + orderId.slice(-6) + ' — تحقق من التوفر',
-              type: 'order', event: 'cat_order_pending', icon: '📦',
+            db.collection("notifications").add({
+              userId: mgr.id, title: "📦 طلب جديد في قسمك",
+              body: "طلب #" + orderId.slice(-6) + " — تحقق من التوفر",
+              type: "order", event: "cat_order_pending", icon: "📦",
               read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp()
             }).catch(function(){});
           });
         } catch(e){}
       }
     }
-    
-    toast('✅ تم تأكيد الدفع', 'success');
+    if (window.__chizenToast) window.__chizenToast("✅ تم تأكيد الدفع", "success");
+    else alert("✅ تم تأكيد الدفع");
     await reloadData();
-  } catch(e){ toast('❌ ' + e.message, 'error'); }
+  } catch(e){ 
+    if (window.__chizenToast) window.__chizenToast("❌ " + e.message, "error");
+    else alert("❌ " + e.message);
+  }
 }
 
 async function rejectPayment(orderId, reason){
