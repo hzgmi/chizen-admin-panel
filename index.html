@@ -7772,7 +7772,7 @@ window.catMgrApp = (function(){
     const o=state.pending.find(x=>x.id===orderId);if(!o)return;
     try{
       await db.runTransaction(async tx=>{
-        const ref=db.collection('orders').doc(orderId);const doc=await tx.get(ref);if(!doc.exists)throw new Error('اختفى');
+        const ref=db.collection('orders').doc(orderId);const doc=await tx.get(ref);if(!doc.exists)throw new Error('MISSING_DOC');
         const data=doc.data();const categories=data.categories||{};const catObj=Object.assign({},categories[state.cat]||{});
         catObj.items=(catObj.items||[]).map(i=>({...i,_catStatus:i._catStatus!==false}));
         catObj.status='confirmed';catObj.confirmedBy=state.user.uid;catObj.confirmedByName=state.user.name||'';
@@ -7796,7 +7796,7 @@ window.catMgrApp = (function(){
     if(!reason){toast('⚠️ أدخل سبب الرفض');if(el)el.focus();return;}
     try{
       await db.runTransaction(async tx=>{
-        const ref=db.collection('orders').doc(orderId);const doc=await tx.get(ref);if(!doc.exists)throw new Error('اختفى');
+        const ref=db.collection('orders').doc(orderId);const doc=await tx.get(ref);if(!doc.exists)throw new Error('MISSING_DOC');
         const data=doc.data();const catObj=Object.assign({},(data.categories||{})[state.cat]||{});
         catObj.status='rejected';catObj.rejectReason=reason;catObj.rejectedBy=state.user.uid;catObj.rejectedByName=state.user.name||'';
         catObj.rejectedAt=firebase.firestore.FieldValue.serverTimestamp();
@@ -8199,7 +8199,7 @@ window.catMgrApp = (function(){
       db.runTransaction(async function(tx){
         var ref = db.collection('orders').doc(oid);
         var doc = await tx.get(ref);
-        if(!doc.exists) throw new Error('اختفى');
+        if(!doc.exists) throw new Error('MISSING_DOC');
         var data = doc.data();
         var catObj = Object.assign({}, (data.categories||{})[state.cat]||{});
         catObj.status = 'rejected';
