@@ -596,8 +596,53 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 
 
 
-<style id="v120-css">
-#gb { display: none !important; }
+
+
+
+<style id="v123-css">
+#gs { background: #0a0825 !important; overflow: hidden; display: block; position: fixed; inset: 0; z-index: 99999; }
+.v123-bg { position: absolute; inset: 0; z-index: 0; }
+.v123-bg::before, .v123-bg::after {
+  content: ''; position: absolute; border-radius: 50%; filter: blur(80px); animation: v123float 10s infinite alternate ease-in-out;
+}
+.v123-bg::before { width: 300px; height: 300px; background: rgba(124,58,237,0.4); top: -10%; left: -10%; }
+.v123-bg::after { width: 250px; height: 250px; background: rgba(236,72,153,0.3); bottom: -10%; right: -10%; animation-delay: -5s; }
+@keyframes v123float { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(50px,50px) scale(1.2); } }
+.v123-card {
+  position: relative; z-index: 10;
+  background: rgba(20, 15, 45, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 24px; padding: 40px 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  width: 90%; max-width: 380px; margin: 10vh auto; text-align: center; color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.v123-logo { font-size: 32px; font-weight: 900; letter-spacing: 2px; margin-bottom: 5px; text-shadow: 0 0 20px rgba(168,85,247,0.5); color: #fff; }
+.v123-subtitle { font-size: 12px; letter-spacing: 4px; color: #a78bfa; margin-bottom: 30px; font-weight: 700; }
+.v123-icon { font-size: 50px; margin-bottom: 15px; }
+.v123-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; color: #fff; }
+.v123-desc { font-size: 13px; color: #a78bfa; margin-bottom: 30px; }
+.v123-input-group { position: relative; margin-bottom: 15px; }
+.v123-input-group input {
+  width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;
+  border-radius: 12px; padding: 15px; font-size: 14px; transition: 0.3s; font-family: inherit;
+}
+.v123-input-group input:focus { border-color: #a78bfa; box-shadow: 0 0 15px rgba(167,139,250,0.2); outline: none; background: rgba(0,0,0,0.5); }
+.v123-input-group input::placeholder { color: rgba(255,255,255,0.4); }
+.v123-eye { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; opacity: 0.6; }
+.v123-btn {
+  background: linear-gradient(135deg, #7c3aed, #ec4899); border: none; color: #fff;
+  padding: 16px; border-radius: 12px; font-size: 15px; font-weight: 800;
+  cursor: pointer; width: 100%; margin-top: 10px; box-shadow: 0 8px 20px rgba(124,58,237,0.4);
+  transition: transform 0.2s; font-family: inherit;
+}
+.v123-btn:active { transform: scale(0.97); }
+.v123-btn-sec {
+  background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+  padding: 12px; border-radius: 12px; font-size: 13px; width: 100%;
+  margin-top: 15px; cursor: pointer; font-family: inherit; opacity: 0.7;
+}
+.v123-err { color: #f87171; font-size: 12px; min-height: 16px; margin-top: 10px; font-weight: bold; }
 </style>
 
 </head>
@@ -735,7 +780,37 @@ var A={
   },
 
   
-  loginScreen:function(){ if(document.getElementById('v110-overlay')){ document.getElementById('v110-overlay').style.display='flex'; document.getElementById('gb').style.display='none'; } },
+  
+  loginScreen:function(){
+    var gs = document.getElementById('gs');
+    if (gs) {
+      gs.style.display = 'block';
+      gs.innerHTML = '<div class="v123-bg"></div>' +
+        '<div class="v123-card">' +
+          '<div class="v123-logo">CHIZEN</div>' +
+          '<div class="v123-subtitle">ADMIN PANEL</div>' +
+          '<div class="v123-icon">🔐</div>' +
+          '<div class="v123-title">لوحة محمية</div>' +
+          '<div class="v123-desc">سجّل دخول بحسابك الإداري</div>' +
+          '<div class="v123-input-group"><input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="username"></div>' +
+          '<div class="v123-input-group">' +
+            '<input id="login-pass" type="password" placeholder="كلمة السر" autocomplete="current-password">' +
+            '<span class="v123-eye" onclick="var p=document.getElementById(\'login-pass\'); if(p.type===\'password\'){p.type=\'text\';this.innerHTML=\'🙈\'}else{p.type=\'password\';this.innerHTML=\'👁️\'}">👁️</span>' +
+          '</div>' +
+          '<button id="btn-do-login" class="v123-btn" onclick="doLogin()">🔓 تسجيل الدخول</button>' +
+          '<div id="login-err" class="v123-err"></div>' +
+          '<button class="v123-btn-sec" onclick="location.reload()">🔄 تحديث</button>' +
+        '</div>';
+      setTimeout(function(){
+        var passInp = document.getElementById('login-pass');
+        if (passInp) passInp.addEventListener('keypress', function(e){
+          if (e.key === 'Enter') doLogin();
+        });
+      }, 100);
+    }
+    var am = document.getElementById('am');
+    if (am) am.style.display = 'none';
+  },
 
   gateMsg:function(i,t,d){
     var gb=document.getElementById('gb');
@@ -8282,288 +8357,22 @@ window.catMgrApp = (function(){
 
 
 
-<style id="v110-css">
-#gb { display: none !important; }
-body { margin: 0; background: #0a0825; font-family: system-ui, -apple-system, sans-serif; }
-#v110-overlay {
-    position: fixed; inset: 0; z-index: 9999999;
-    display: flex; justify-content: center; align-items: center;
-    background: #0a0825;
-}
-#v110-overlay::before, #v110-overlay::after {
-    content: ''; position: absolute; border-radius: 50%; filter: blur(80px); z-index: -1;
-    animation: float110 10s infinite alternate ease-in-out;
-}
-#v110-overlay::before { width: 300px; height: 300px; background: rgba(124,58,237,0.4); top: -10%; left: -10%; }
-#v110-overlay::after { width: 250px; height: 250px; background: rgba(236,72,153,0.3); bottom: -10%; right: -10%; animation-delay: -5s; }
-@keyframes float110 { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(50px,50px) scale(1.2); } }
-.v110-card {
-    background: rgba(20, 15, 45, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 24px; padding: 40px 30px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    width: 90%; max-width: 380px; text-align: center; color: #fff;
-}
-.v110-logo { font-size: 32px; font-weight: 900; letter-spacing: 2px; margin-bottom: 5px; text-shadow: 0 0 20px rgba(168,85,247,0.5); }
-.v110-subtitle { font-size: 12px; letter-spacing: 4px; color: #a78bfa; margin-bottom: 30px; font-weight: 700; }
-.v110-icon { font-size: 50px; margin-bottom: 15px; }
-.v110-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
-.v110-desc { font-size: 13px; color: #a78bfa; margin-bottom: 30px; }
-.v110-input-group { position: relative; margin-bottom: 15px; }
-.v110-input-group input {
-    width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;
-    border-radius: 12px; padding: 15px; font-size: 14px; transition: 0.3s; font-family: inherit;
-}
-.v110-input-group input:focus { border-color: #a78bfa; box-shadow: 0 0 15px rgba(167,139,250,0.2); outline: none; background: rgba(0,0,0,0.5); }
-.v110-input-group input::placeholder { color: rgba(255,255,255,0.4); }
-.v110-eye { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; opacity: 0.6; }
-.v110-btn {
-    background: linear-gradient(135deg, #7c3aed, #ec4899); border: none; color: #fff;
-    padding: 16px; border-radius: 12px; font-size: 15px; font-weight: 800;
-    cursor: pointer; width: 100%; margin-top: 10px; box-shadow: 0 8px 20px rgba(124,58,237,0.4);
-    transition: transform 0.2s; font-family: inherit;
-}
-.v110-btn:active { transform: scale(0.97); }
-.v110-err { color: #f87171; font-size: 12px; min-height: 16px; margin-top: 10px; font-weight: bold; }
-</style>
-
-<div id="v110-overlay">
-  <div class="v110-card">
-    <div class="v110-logo">CHIZEN</div>
-    <div class="v110-subtitle">ADMIN PANEL</div>
-    <div class="v110-icon">🔐</div>
-    <div class="v110-title">لوحة محمية</div>
-    <div class="v110-desc">سجّل دخول بحسابك الإداري</div>
-    <div class="v110-input-group">
-      <input id="v110-email" type="email" placeholder="البريد الإلكتروني">
-    </div>
-    <div class="v110-input-group">
-      <input id="v110-pass" type="password" placeholder="كلمة السر">
-      <span class="v110-eye" onclick="var p=document.getElementById('v110-pass'); if(p.type==='password'){p.type='text';this.innerHTML='🙈'}else{p.type='password';this.innerHTML='👁️'}">👁️</span>
-    </div>
-    <button id="v110-btn" class="v110-btn" onclick="v110_login()">🔓 تسجيل الدخول</button>
-    <div id="v110-err" class="v110-err"></div>
-  </div>
-</div>
-
-<script id="v110-js">
-window.v110_login = function() {
-  var email = document.getElementById('v110-email').value.trim();
-  var pass = document.getElementById('v110-pass').value;
-  var btn = document.getElementById('v110-btn');
-  var err = document.getElementById('v110-err');
-  if(!email || !pass) { err.textContent = 'يرجى إدخال البريد وكلمة المرور'; return; }
-  btn.disabled = true; btn.textContent = '⏳ جاري الدخول...'; err.textContent = '';
-  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-    .then(function() { return firebase.auth().signInWithEmailAndPassword(email, pass); })
-    .then(function(userCred) { window.location.reload(); })
-    .catch(function(error) {
-      btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول';
-      err.textContent = '❌ خطأ: ' + (error.message || 'تحقق من البيانات');
-    });
-};
-document.getElementById('v110-pass').addEventListener('keypress', function(e) { if (e.key === 'Enter') v110_login(); });
-if (typeof firebase !== 'undefined') {
-    firebase.auth().onAuthStateChanged(function(user) {
-        var overlay = document.getElementById('v110-overlay');
-        var gb = document.getElementById('gb');
-        if (user) {
-            if(overlay) overlay.style.setProperty('display', 'none', 'important');
-            if(gb) gb.style.setProperty('display', 'block', 'important');
-        } else {
-            if(overlay) overlay.style.setProperty('display', 'flex', 'important');
-            if(gb) gb.style.setProperty('display', 'none', 'important');
-        }
-    });
-}
-</script>
 
 
 
 
 
-<script id="v114-final-fix">
-(function(){
-  var tries = 0;
-  function hook(){
-    tries++;
-    if(tries > 400) return setTimeout(hook, 100);
-    if(!window.catMgrApp || !window.catMgrApp.state) return setTimeout(hook, 100);
-    if(window.__v114Ready) return;
-    window.__v114Ready = true;
-
-    var db = firebase.firestore();
-
-    window.catMgrApp.confirm = async function(orderId){
-      var state = window.catMgrApp.state;
-      var o = state.pending.find(x => x.id === orderId);
-      if(!o) return;
-
-      try {
-        await db.runTransaction(async tx => {
-          var ref = db.collection('orders').doc(orderId);
-          var doc = await tx.get(ref);
-          if(!doc.exists) throw new Error('MISSING_DOC');
-          
-          var data = doc.data();
-          var catObj = Object.assign({}, (data.categories||{})[state.cat]||{});
-          catObj.items = (catObj.items||[]).map(i => ({...i, _catStatus: i._catStatus !== false}));
-          catObj.status = 'confirmed';
-          catObj.confirmedBy = state.user.uid;
-          catObj.confirmedByName = state.user.name || '';
-          catObj.confirmedAt = firebase.firestore.FieldValue.serverTimestamp();
-          var updates = {};
-          updates['categories.' + state.cat] = catObj;
-
-          var merged = Object.assign({}, data.categories || {}, {[state.cat]: catObj});
-          var allResolved = Object.keys(merged).every(k => {
-            var s = merged[k] && merged[k].status;
-            return s === 'confirmed' || s === 'rejected';
-          });
-          var anyRejected = Object.keys(merged).some(k => merged[k] && merged[k].status === 'rejected');
-          if(allResolved) updates.workflowStatus = anyRejected ? 'payment_rejected' : 'ready_to_send';
-          tx.update(ref, updates);
-        });
-
-        if(o.customerId) {
-          await db.collection('notifications').add({
-            userId: o.customerId, title: '✅ تم تأكيد توفر منتجاتك', body: 'طلبك #' + String(orderId).slice(-6) + ' جاهز',
-            type: 'order', event: 'cat_confirmed', icon: '✅', read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        var dSnap = await db.collection('users').where('role', '==', 'delivery_mgr').get();
-        dSnap.forEach(u => {
-          db.collection('notifications').add({
-            userId: u.id, title: '📦 طلب بحاجة لجدولة توصيل', body: '#' + String(orderId).slice(-6) + ' — أكّد',
-            type: 'order', event: 'cat_confirmed', icon: '📦', read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        });
-        alert('✅ تم التأكيد بنجاح');
-      } catch(e) {
-        if(e.message === 'MISSING_DOC' || e.message.indexOf('MISSING_DOC') !== -1) {
-          state.pending = state.pending.filter(x => x.id !== orderId);
-          if(window.__v100Tab) window.__v100Tab(state.activeTab || 'pending');
-          alert('⚠️ هذا الطلب لم يعد موجوداً (تم تأكيده أو حذفه). تم تحديث القائمة.');
-          return;
-        }
-        alert('❌ خطأ: ' + (e.message || 'حدث خطأ'));
-      }
-    };
-
-    window.catMgrApp.reject = async function(orderId){
-      var state = window.catMgrApp.state;
-      var o = state.pending.find(x => x.id === orderId);
-      if(!o) return;
-      var el = document.getElementById('v100-reason-' + orderId) || document.getElementById('cm-reason-' + orderId);
-      var reason = el ? el.value.trim() : '';
-      if(!reason) { alert('⚠️ أدخل سبب الرفض أولاً'); if(el) el.focus(); return; }
-
-      try {
-        await db.runTransaction(async tx => {
-          var ref = db.collection('orders').doc(orderId);
-          var doc = await tx.get(ref);
-          if(!doc.exists) throw new Error('MISSING_DOC');
-          
-          var data = doc.data();
-          var catObj = Object.assign({}, (data.categories||{})[state.cat]||{});
-          catObj.status = 'rejected';
-          catObj.rejectReason = reason;
-          catObj.rejectedBy = state.user.uid;
-          catObj.rejectedByName = state.user.name || '';
-          catObj.rejectedAt = firebase.firestore.FieldValue.serverTimestamp();
-          var updates = {};
-          updates['categories.' + state.cat] = catObj;
-          updates.workflowStatus = 'payment_rejected';
-          tx.update(ref, updates);
-        });
-
-        if(o.customerId) {
-          await db.collection('notifications').add({
-            userId: o.customerId, title: '⚠️ تحديث بخصوص طلبك', body: 'قسم: ' + reason,
-            type: 'warning', event: 'cat_rejected', icon: '⚠️', important: true, read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        alert('تم الرفض');
-      } catch(e) {
-        if(e.message === 'MISSING_DOC' || e.message.indexOf('MISSING_DOC') !== -1) {
-          state.pending = state.pending.filter(x => x.id !== orderId);
-          if(window.__v100Tab) window.__v100Tab(state.activeTab || 'pending');
-          alert('⚠️ هذا الطلب لم يعد موجوداً (تم تأكيده أو حذفه). تم تحديث القائمة.');
-          return;
-        }
-        alert('❌ خطأ: ' + (e.message || 'حدث خطأ'));
-      }
-    };
-    console.log('[V114] Final missing order handler ready.');
-  }
-  hook();
-})();
-</script>
 
 
 
 
 
-<script id="v120-js">
-(function(){
-  document.addEventListener('DOMContentLoaded', function() {
-    // ننتظر حتى يتم تحميل Firebase
-    setTimeout(function() {
-      var btn = document.getElementById('v110-btn');
-      if (!btn) return;
 
-      // استبدال حدث الضغط على الزر بالكامل
-      var newBtn = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newBtn, btn);
-      
-      newBtn.addEventListener('click', function() {
-        var email = document.getElementById('v110-email').value.trim();
-        var pass = document.getElementById('v110-pass').value;
-        var err = document.getElementById('v110-err');
-        
-        if(!email || !pass) { err.textContent = 'يرجى إدخال البريد وكلمة المرور'; return; }
-        
-        newBtn.disabled = true; newBtn.textContent = '⏳ جاري الدخول...'; err.textContent = '';
-        
-        firebase.auth().signInWithEmailAndPassword(email, pass)
-          .then(async function(userCred) {
-            var user = userCred.user;
-            var db = firebase.firestore();
-            var doc = await db.collection('users').doc(user.uid).get();
-            
-            var overlay = document.getElementById('v110-overlay');
-            if(overlay) overlay.style.setProperty('display', 'none', 'important');
-            
-            if (doc.exists && doc.data().role === 'cat_manager') {
-               // إذا كان مدير قسم: افتح اللوحة البنفسجية
-               var catApp = document.getElementById('cat-mgr-app');
-               if(catApp) catApp.style.setProperty('display', 'block', 'important');
-               if(window.catMgrApp && window.catMgrApp.init) {
-                 window.catMgrApp.init(Object.assign({uid: user.uid}, doc.data()));
-               }
-            } else {
-               // إذا كان سوبر أدمن: افتح لوحة الإدارة العامة
-               var gb = document.getElementById('gb');
-               if(gb) gb.style.setProperty('display', 'block', 'important');
-               if(window.FB && window.FB.checkAdmin) {
-                  window.FB.checkAdmin(user);
-               }
-            }
-          })
-          .catch(function(error) {
-            newBtn.disabled = false; newBtn.textContent = '🔓 تسجيل الدخول';
-            err.textContent = '❌ خطأ: ' + (error.message || 'تحقق من البيانات');
-          });
-      });
 
-      // دعم زر Enter
-      document.getElementById('v110-pass').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') newBtn.click();
-      });
-      
-    }, 1000);
-  });
-})();
-</script>
+
+
+
+
+
 </body>
 </html>
