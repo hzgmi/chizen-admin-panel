@@ -723,6 +723,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 </style>
 
 <!-- v219-applied -->
+<!-- v220-applied -->
 </head>
 <body>
 
@@ -1022,13 +1023,13 @@ var A={
 '<div class="more-grid" id="more-grid"></div>'+
 '</div>'+
 `<div class="sc active" id="sc-dash">
-<div id="dash-v2"></div>
+<div id="dash-v2"></div><div style="background:linear-gradient(135deg,#7c3aed 0%,#ec4899 100%);border-radius:22px;padding:24px 20px;margin:0 0 18px;color:#fff;box-shadow:0 12px 36px rgba(168,85,247,0.4);position:relative;overflow:hidden"><div style="font-size:32px;margin-bottom:8px;line-height:1">👋</div><h2 style="margin:0 0 6px;font-size:19px;font-weight:900;color:#fff;letter-spacing:-0.3px">مرحباً بك في CHIZEN</h2><p style="margin:0;font-size:12px;opacity:0.95;color:#fff;font-weight:500">لوحة الإدارة العامة — نظرة سريعة على أداء اليوم</p></div>
 `+
-        '<div class="sg">'+
-          '<div class="scd" style="border-top:3px solid #ec4899;padding-top:12px"><div class="sl">المبيعات</div><div class="sv" id="d-sales">0 ر.س</div><div class="ss" id="d-sales-s">—</div></div>'+
-          '<div class="scd" style="border-top:3px solid #7c3aed;padding-top:12px"><div class="sl">الطلبات</div><div class="sv" id="d-orders">0</div><div class="ss" id="d-orders-s">—</div></div>'+
-          '<div class="scd" style="border-top:3px solid #a855f7;padding-top:12px"><div class="sl">المنتجات</div><div class="sv" id="d-products">0</div><div class="ss" id="d-products-s">—</div></div>'+
-          '<div class="scd" style="border-top:3px solid #06b6d4;padding-top:12px"><div class="sl">المستخدمين</div><div class="sv" id="d-users">0</div><div class="ss" id="d-users-s">—</div></div>'+
+                '<div class="sg" style="display:grid !important;grid-template-columns:repeat(auto-fit,minmax(140px,1fr)) !important;gap:12px !important;margin-bottom:18px">'+
+          '<div class="scd" style="background:linear-gradient(135deg,rgba(236,72,153,0.15) 0%,rgba(10,8,37,0.4) 100%);border:1px solid rgba(236,72,153,0.35);border-radius:16px;padding:16px 12px;position:relative;box-shadow:0 6px 24px rgba(236,72,153,0.15)"><div style="font-size:24px;margin-bottom:8px;line-height:1">💰</div><div class="sv" id="d-sales" style="font-size:22px;font-weight:900;color:#fff;margin:0 0 4px;line-height:1.1">0 ر.س</div><div class="sl" style="font-size:11px;color:#f0abfc;font-weight:800;letter-spacing:0.3px">المبيعات</div><div class="ss" id="d-sales-s" style="font-size:10px;color:#a78bfa;margin-top:4px;opacity:0.7">—</div></div>'+
+          '<div class="scd" style="background:linear-gradient(135deg,rgba(124,58,237,0.15) 0%,rgba(10,8,37,0.4) 100%);border:1px solid rgba(124,58,237,0.35);border-radius:16px;padding:16px 12px;position:relative;box-shadow:0 6px 24px rgba(124,58,237,0.15)"><div style="font-size:24px;margin-bottom:8px;line-height:1">📦</div><div class="sv" id="d-orders" style="font-size:22px;font-weight:900;color:#fff;margin:0 0 4px;line-height:1.1">0</div><div class="sl" style="font-size:11px;color:#c4b5fd;font-weight:800;letter-spacing:0.3px">الطلبات</div><div class="ss" id="d-orders-s" style="font-size:10px;color:#a78bfa;margin-top:4px;opacity:0.7">—</div></div>'+
+          '<div class="scd" style="background:linear-gradient(135deg,rgba(168,85,247,0.15) 0%,rgba(10,8,37,0.4) 100%);border:1px solid rgba(168,85,247,0.35);border-radius:16px;padding:16px 12px;position:relative;box-shadow:0 6px 24px rgba(168,85,247,0.15)"><div style="font-size:24px;margin-bottom:8px;line-height:1">🛍️</div><div class="sv" id="d-products" style="font-size:22px;font-weight:900;color:#fff;margin:0 0 4px;line-height:1.1">0</div><div class="sl" style="font-size:11px;color:#d8b4fe;font-weight:800;letter-spacing:0.3px">المنتجات</div><div class="ss" id="d-products-s" style="font-size:10px;color:#a78bfa;margin-top:4px;opacity:0.7">—</div></div>'+
+          '<div class="scd" style="background:linear-gradient(135deg,rgba(6,182,212,0.15) 0%,rgba(10,8,37,0.4) 100%);border:1px solid rgba(6,182,212,0.35);border-radius:16px;padding:16px 12px;position:relative;box-shadow:0 6px 24px rgba(6,182,212,0.15)"><div style="font-size:24px;margin-bottom:8px;line-height:1">👥</div><div class="sv" id="d-users" style="font-size:22px;font-weight:900;color:#fff;margin:0 0 4px;line-height:1.1">0</div><div class="sl" style="font-size:11px;color:#67e8f9;font-weight:800;letter-spacing:0.3px">المستخدمين</div><div class="ss" id="d-users-s" style="font-size:10px;color:#a78bfa;margin-top:4px;opacity:0.7">—</div></div>'+
         '</div>'+
         '<div class="sg3">'+
           '<div class="scd"><div class="sl">معلقة</div><div class="sv" id="d-pending" style="font-size:16px;">0</div></div>'+
