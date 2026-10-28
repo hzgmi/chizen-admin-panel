@@ -11869,7 +11869,7 @@ window.catMgrApp = (function(){
 
 <style id="v105-login-css">
 /* إخفاء الواجهة القديمة حتى يتم تسجيل الدخول */
-#gb { display: none !important; }
+
 body { margin: 0; background: #0a0825; overflow: hidden; }
 
 #v105-overlay {
@@ -11939,31 +11939,33 @@ body { margin: 0; background: #0a0825; overflow: hidden; }
 </div>
 
 <script id="v105-login-js">
-window.v105_login = function() {
-  var email = document.getElementById('v105-email').value.trim();
-  var pass = document.getElementById('v105-pass').value;
-  var btn = document.getElementById('v105-btn');
-  var err = document.getElementById('v105-err');
-  
-  if(!email || !pass) { err.textContent = 'يرجى إدخال البريد وكلمة المرور'; return; }
-  
-  btn.disabled = true; btn.textContent = '⏳ جاري الدخول...'; err.textContent = '';
-  
-  firebase.auth().signInWithEmailAndPassword(email, pass)
-    .then(function(userCred) {
-      // بمجرد النجاح، نخفي الشاشة ونظهر اللوحة
-      document.getElementById('v105-overlay').style.display = 'none';
-      document.getElementById('gb').style.display = 'block';
-      // إعادة تحميل خفيفة لتشغيل سكربتات الإدارة
-      window.location.reload();
-    })
-    .catch(function(error) {
-      btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول';
-      err.textContent = '❌ خطأ: ' + (error.message || 'تحقق من البيانات');
-    });
-};
 
-document.getElementById('v105-pass').addEventListener('keypress', function(e) {
+  window.v105_login = function() {
+    var email = document.getElementById('v105-email').value.trim();
+    var pass = document.getElementById('v105-pass').value;
+    var btn = document.getElementById('v105-btn');
+    var err = document.getElementById('v105-err');
+    
+    if(!email || !pass) { err.textContent = 'يرجى إدخال البريد وكلمة المرور'; return; }
+    
+    btn.disabled = true; btn.textContent = '⏳ جاري الدخول...'; err.textContent = '';
+    
+    // 🔑 إضافة الحفظ المحلي لحل مشكلة الشبكة
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .then(function() {
+        return firebase.auth().signInWithEmailAndPassword(email, pass);
+      })
+      .then(function(userCred) {
+        document.getElementById('v105-overlay').style.display = 'none';
+        window.location.reload(); // إعادة التحميل لتشغيل اللوحة
+      })
+      .catch(function(error) {
+        btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول';
+        err.textContent = '❌ خطأ: ' + (error.message || 'تحقق من البيانات');
+      });
+  };
+
+  document.getElementById('v105-pass').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') v105_login();
 });
 
@@ -11971,7 +11973,6 @@ document.getElementById('v105-pass').addEventListener('keypress', function(e) {
 setTimeout(function() {
   if (firebase.auth().currentUser) {
     document.getElementById('v105-overlay').style.display = 'none';
-    document.getElementById('gb').style.display = 'block';
   } else {
     document.getElementById('v105-overlay').style.display = 'flex';
   }
