@@ -595,6 +595,11 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 
 
 
+
+<style id="v120-css">
+#gb { display: none !important; }
+</style>
+
 </head>
 <body>
 <div class="v104-bg-anim"></div>
@@ -8495,125 +8500,69 @@ if (typeof firebase !== 'undefined') {
 })();
 </script>
 
-<script id="v118-bypass">
+
+
+
+
+<script id="v120-js">
 (function(){
-  var tries = 0;
-  function hook(){
-    tries++;
-    if(tries > 300) return setTimeout(hook, 100);
-    if(!window.FB || !window.FB.checkAdmin) return setTimeout(hook, 100);
-    if(window.__v118Ready) return;
-    window.__v118Ready = true;
+  document.addEventListener('DOMContentLoaded', function() {
+    // ننتظر حتى يتم تحميل Firebase
+    setTimeout(function() {
+      var btn = document.getElementById('v110-btn');
+      if (!btn) return;
 
-    var origCheckAdmin = window.FB.checkAdmin;
-    var db = firebase.firestore();
-
-    window.FB.checkAdmin = async function(u) {
-      try {
-        var doc = await db.collection('users').doc(u.uid).get();
-        if(doc.exists && doc.data().role === 'cat_manager') {
-           document.getElementById('v110-overlay').style.display = 'none';
-           document.getElementById('gb').style.display = 'none';
-           if(window.catMgrApp && window.catMgrApp.init) {
-             window.catMgrApp.init(Object.assign({uid: u.uid}, doc.data()));
-           }
-           return; // منع الكود القديم من تسجيل الخروج
-        }
-      } catch(e) {
-        console.warn('[V118] cat_manager check failed', e);
-      }
+      // استبدال حدث الضغط على الزر بالكامل
+      var newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
       
-      // إذا لم يكن مدير قسم، استخدم الكود القديم (للـ super_admin)
-      return origCheckAdmin(u);
-    };
-    console.log('[V118] checkAdmin patched safely');
-  }
-  hook();
-})();
-</script>
-
-<script id="v119-smart-login">
-(function(){
-  var tries = 0;
-  function hook(){
-    tries++;
-    if(tries > 300) return setTimeout(hook, 100);
-    if(!window.firebase || !window.firebase.auth) return setTimeout(hook, 100);
-    if(window.__v119Ready) return;
-    window.__v119Ready = true;
-
-    // 1. إصلاح زر الدخول: منع إعادة تحميل الصفحة، والسماح للمراقب بالعمل
-    if(window.v110_login) {
-      window.v110_login = function() {
+      newBtn.addEventListener('click', function() {
         var email = document.getElementById('v110-email').value.trim();
         var pass = document.getElementById('v110-pass').value;
-        var btn = document.getElementById('v110-btn');
         var err = document.getElementById('v110-err');
+        
         if(!email || !pass) { err.textContent = 'يرجى إدخال البريد وكلمة المرور'; return; }
         
-        btn.disabled = true; btn.textContent = '⏳ جاري الدخول...'; err.textContent = '';
+        newBtn.disabled = true; newBtn.textContent = '⏳ جاري الدخول...'; err.textContent = '';
         
-        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-          .then(function() { return firebase.auth().signInWithEmailAndPassword(email, pass); })
-          .then(function() {
-             btn.textContent = '✅ تم الدخول';
-             // لا نقوم بعمل reload هنا! المراقب (onAuthStateChanged) سيتولى إظهار اللوحة
+        firebase.auth().signInWithEmailAndPassword(email, pass)
+          .then(async function(userCred) {
+            var user = userCred.user;
+            var db = firebase.firestore();
+            var doc = await db.collection('users').doc(user.uid).get();
+            
+            var overlay = document.getElementById('v110-overlay');
+            if(overlay) overlay.style.setProperty('display', 'none', 'important');
+            
+            if (doc.exists && doc.data().role === 'cat_manager') {
+               // إذا كان مدير قسم: افتح اللوحة البنفسجية
+               var catApp = document.getElementById('cat-mgr-app');
+               if(catApp) catApp.style.setProperty('display', 'block', 'important');
+               if(window.catMgrApp && window.catMgrApp.init) {
+                 window.catMgrApp.init(Object.assign({uid: user.uid}, doc.data()));
+               }
+            } else {
+               // إذا كان سوبر أدمن: افتح لوحة الإدارة العامة
+               var gb = document.getElementById('gb');
+               if(gb) gb.style.setProperty('display', 'block', 'important');
+               if(window.FB && window.FB.checkAdmin) {
+                  window.FB.checkAdmin(user);
+               }
+            }
           })
           .catch(function(error) {
-            btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول';
+            newBtn.disabled = false; newBtn.textContent = '🔓 تسجيل الدخول';
             err.textContent = '❌ خطأ: ' + (error.message || 'تحقق من البيانات');
           });
-      };
-    }
+      });
 
-    // 2. المراقب الذكي: التعرف على "مدير القسم" وتوجيهه فوراً
-    firebase.auth().onAuthStateChanged(async function(user) {
-      if (!user) return;
-      try {
-        var db = firebase.firestore();
-        var doc = await db.collection('users').doc(user.uid).get();
-        
-        if (doc.exists && doc.data().role === 'cat_manager') {
-           // إخفاء شاشة الدخول
-           var overlay = document.getElementById('v110-overlay');
-           if(overlay) overlay.style.setProperty('display', 'none', 'important');
-           
-           // إخفاء واجهة الإدارة العامة (السوبر أدمن)
-           var gb = document.getElementById('gb');
-           if(gb) gb.style.setProperty('display', 'none', 'important');
-           
-           // إظهار لوحة مدير القسم (v100)
-           var catApp = document.getElementById('cat-mgr-app');
-           if(catApp) catApp.style.display = 'block';
-           
-           // تشغيل بيانات اللوحة
-           if(window.catMgrApp && window.catMgrApp.init) {
-             window.catMgrApp.init(Object.assign({uid: user.uid}, doc.data()));
-           }
-        } else {
-           // إذا كان سوبر أدمن أو غيره، نترك الأكواد القديمة تعمل (لأننا لم نخفِ gb)
-           if (window.FB && typeof window.FB.checkAdmin === 'function') {
-              // السماح للنظام القديم بالعمل
-           }
-        }
-      } catch(e) { console.warn('[V119] Routing error:', e); }
-    });
-
-    // 3. تعطيل "الطرد" القديم (checkAdmin) لمديري الأقسام فقط
-    if (window.FB && window.FB.checkAdmin) {
-      var origCheck = window.FB.checkAdmin;
-      window.FB.checkAdmin = async function(u) {
-        var db = firebase.firestore();
-        var doc = await db.collection('users').doc(u.uid).get();
-        if(doc.exists && doc.data().role === 'cat_manager') {
-           return; // نتجاهل الكود القديم لأنه يطردهم
-        }
-        return origCheck(u);
-      };
-    }
-    console.log('[V119] Smart routing active.');
-  }
-  hook();
+      // دعم زر Enter
+      document.getElementById('v110-pass').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') newBtn.click();
+      });
+      
+    }, 1000);
+  });
 })();
 </script>
 </body>
