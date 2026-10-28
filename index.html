@@ -682,6 +682,14 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 
 
 
+
+<style id="v108-css">
+/* إخفاء الشاشة القديمة بكل قوة */
+#gb, .login-container, .chz-reset-link { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
+/* إظهار الشاشة الجديدة */
+#v105-overlay { display: flex !important; }
+</style>
+
 </head>
 <body>
 <div class="v104-bg-anim"></div>
@@ -11953,5 +11961,28 @@ firebase.auth().onAuthStateChanged(function(user) {
   }
 });
 </script>
+
+<script id="v108-js">
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    if (typeof firebase !== 'undefined') {
+      firebase.auth().onAuthStateChanged(function(user) {
+        var overlay = document.getElementById('v105-overlay');
+        var gb = document.getElementById('gb');
+        if (user) {
+          // بعد تسجيل الدخول: إخفاء الشاشة الزجاجية وإظهار لوحة التحكم
+          if(overlay) overlay.style.setProperty('display', 'none', 'important');
+          if(gb) gb.style.setProperty('display', 'block', 'important');
+        } else {
+          // قبل تسجيل الدخول: إظهار الشاشة الزجاجية وإخفاء لوحة التحكم
+          if(overlay) overlay.style.setProperty('display', 'flex', 'important');
+          if(gb) gb.style.setProperty('display', 'none', 'important');
+        }
+      });
+    }
+  }, 1000);
+});
+</script>
+
 </body>
 </html>
