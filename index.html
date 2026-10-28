@@ -10097,24 +10097,7 @@ window.catMgrApp = (function(){
 </script>
 
 <!-- V97B_OVERRIDE -->
-<style id="v97b-theme">
-#cat-mgr-app {
-  --bg: #0a0825 !important;
-  --card: #151b3a !important;
-  --border: rgba(168,85,247,0.3) !important;
-  --muted: #9ca3af !important;
-  background: var(--bg) !important;
-  color: #fff !important;
-}
-#cat-mgr-app .cm-header { background: var(--bg) !important; }
-#cat-mgr-app .cm-header h2 { color: #fff; }
-#cat-mgr-app .cm-kpi { color: #fff; }
-#cat-mgr-app .cm-kpi b { color: #a855f7; }
-#cat-mgr-app .cm-item-info b { color: #fff; }
-#cat-mgr-app .cm-product-info b { color: #fff; }
-#cat-mgr-app .cm-order-head b { color: #a855f7; }
-#cat-mgr-app .cm-reason { color: #fff !important; background: #0a0825 !important; }
-</style>
+
 <script id="chz-catmgr-override-v97b">
 (function(){
   'use strict';
@@ -10153,27 +10136,7 @@ window.catMgrApp = (function(){
 </script>
 
 <!-- V97C_PRODUCTS -->
-<style id="v97c-css">
-.v97c-actions{margin:14px 0;display:flex;gap:8px}
-.v97c-btn{flex:1;padding:12px;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
-.v97c-btn-add{background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff}
-.v97c-product-actions{display:flex;gap:6px;margin-top:8px;width:100%}
-.v97c-product-actions button{flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
-.v97c-edit{background:#3b82f6;color:#fff}
-.v97c-del{background:#ef4444;color:#fff}
-#v97c-form{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100001;display:none;overflow-y:auto;padding:14px;direction:rtl}
-#v97c-form.open{display:block}
-#v97c-form-inner{background:linear-gradient(180deg,#151b3a,#0a0825);border:1px solid rgba(168,85,247,0.3);border-radius:16px;padding:16px;max-width:520px;margin:0 auto;color:#fff}
-#v97c-form h3{margin:0 0 16px;color:#a855f7;font-size:16px}
-.v97c-field{margin-bottom:12px}
-.v97c-field label{display:block;font-size:12px;font-weight:700;color:#a855f7;margin-bottom:6px}
-.v97c-field input,.v97c-field select,.v97c-field textarea{width:100%;padding:11px;border-radius:10px;border:1.5px solid rgba(168,85,247,0.3);background:#0a0825;color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box}
-.v97c-field textarea{min-height:70px;resize:vertical}
-.v97c-form-actions{display:flex;gap:8px;margin-top:16px}
-.v97c-form-actions button{flex:1;padding:13px;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
-.v97c-save{background:#22c55e;color:#fff}
-.v97c-cancel{background:#6b7280;color:#fff}
-</style>
+
 <div id="v97c-form"><div id="v97c-form-inner"></div></div>
 <script id="chz-catmgr-products-v97c">
 (function(){
@@ -10469,328 +10432,14 @@ window.catMgrApp = (function(){
 
 <!-- V97E_REDESIGN -->
 
-<style id="v97e-pro">
-#cat-mgr-app { background: linear-gradient(180deg, #0f0a24 0%, #0a0825 100%) !important; padding: 0 !important; color: #fff !important; }
-.cm-header { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%) !important; padding: 18px 16px !important; margin: 0 0 16px !important; border: none !important; border-radius: 0 0 20px 20px !important; box-shadow: 0 4px 20px rgba(168,85,247,0.3) !important; }
-.cm-header h2 { color: #fff !important; font-size: 17px !important; text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important; }
-.cm-back { background: rgba(255,255,255,0.15) !important; border: 1px solid rgba(255,255,255,0.35) !important; color: #fff !important; font-weight: 700 !important; }
-.cm-badge { background: #fff !important; color: #7c3aed !important; font-weight: 900 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important; }
-.cm-kpis { padding: 0 16px !important; margin: 16px 0 !important; gap: 10px !important; }
-.cm-kpi { background: linear-gradient(135deg, #1e1533 0%, #151b3a 100%) !important; border: 1px solid rgba(168,85,247,0.25) !important; padding: 18px 12px !important; border-radius: 16px !important; position: relative !important; overflow: hidden !important; }
-.cm-kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #7c3aed, #ec4899); }
-.cm-kpi b { color: #fff !important; font-size: 26px !important; }
-.cm-kpi small { color: #a78bfa !important; font-weight: 700 !important; font-size: 11px !important; }
-.cm-tabs { padding: 0 16px !important; margin: 16px 0 !important; gap: 8px !important; background: transparent !important; flex-wrap: wrap !important; }
-.cm-tabs button { padding: 12px 10px !important; border-radius: 30px !important; background: rgba(168,85,247,0.1) !important; border: 1px solid rgba(168,85,247,0.3) !important; color: #c4b5fd !important; font-weight: 700 !important; font-size: 13px !important; transition: all 0.2s !important; min-width: 90px !important; }
-.cm-tabs button.active { background: linear-gradient(135deg, #7c3aed, #ec4899) !important; color: #fff !important; border-color: transparent !important; box-shadow: 0 4px 12px rgba(168,85,247,0.4) !important; transform: translateY(-1px) !important; }
-#cm-content { padding: 0 16px 100px !important; }
-.cm-empty { color: #a78bfa !important; padding: 60px 20px !important; font-size: 15px !important; }
-.cm-order { background: linear-gradient(135deg, #1e1533 0%, #151b3a 100%) !important; border: 1px solid rgba(168,85,247,0.25) !important; border-radius: 16px !important; padding: 16px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important; margin-bottom: 12px !important; }
-.cm-order-head { border-bottom: 1px solid rgba(168,85,247,0.15) !important; padding-bottom: 12px !important; margin-bottom: 12px !important; }
-.cm-order-head b { color: #a78bfa !important; font-size: 16px !important; }
-.cm-order-head div b { color: #ec4899 !important; font-size: 18px !important; }
-.cm-order-meta { color: #9ca3af !important; }
-.cm-item { padding: 10px 0 !important; border-bottom: 1px solid rgba(168,85,247,0.1) !important; }
-.cm-item-info b { color: #fff !important; font-size: 14px !important; }
-.cm-item-info span { color: #a78bfa !important; }
-.cm-item-price { color: #fbbf24 !important; font-size: 14px !important; }
-.cm-reason { background: rgba(15,10,36,0.8) !important; border: 1.5px solid rgba(168,85,247,0.3) !important; color: #fff !important; border-radius: 12px !important; }
-.cm-reason:focus { border-color: #a855f7 !important; outline: none !important; box-shadow: 0 0 0 3px rgba(168,85,247,0.15) !important; }
-.cm-order-foot button { border-radius: 12px !important; padding: 14px !important; font-size: 14px !important; }
-.cm-btn-ok { background: linear-gradient(135deg, #10b981, #059669) !important; box-shadow: 0 4px 12px rgba(16,185,129,0.3) !important; }
-.cm-btn-warn { background: linear-gradient(135deg, #ef4444, #dc2626) !important; box-shadow: 0 4px 12px rgba(239,68,68,0.3) !important; }
-.cm-product { background: linear-gradient(135deg, #1e1533 0%, #151b3a 100%) !important; border: 1px solid rgba(168,85,247,0.2) !important; border-radius: 16px !important; padding: 14px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important; margin-bottom: 12px !important; }
-.cm-product-info b { color: #fff !important; font-size: 15px !important; }
-.cm-product-info span { color: #a78bfa !important; }
-.v97e-fab { position: fixed; bottom: 24px; left: 24px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #ec4899); color: #fff; border: none; font-size: 30px; font-weight: 900; box-shadow: 0 8px 24px rgba(168,85,247,0.5); cursor: pointer; z-index: 99998; display: none; align-items: center; justify-content: center; line-height: 1; }
-.v97e-welcome { background: linear-gradient(135deg, rgba(124,58,237,0.25) 0%, rgba(236,72,153,0.25) 100%); border: 1px solid rgba(168,85,247,0.3); border-radius: 20px; padding: 20px; margin-bottom: 16px; color: #fff; }
-.v97e-welcome h3 { margin: 0 0 8px; font-size: 19px; color: #fff; }
-.v97e-welcome p { margin: 0; color: #c4b5fd; font-size: 13px; }
-.v97e-section-title { color: #a78bfa; font-size: 14px; font-weight: 800; margin: 20px 0 10px; padding-right: 4px; }
-.v97e-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
-.v97e-action { background: rgba(30,21,51,0.8); border: 1px solid rgba(168,85,247,0.25); border-radius: 14px; padding: 16px 12px; text-align: center; cursor: pointer; color: #fff; transition: all 0.2s; }
-.v97e-action:active { background: rgba(168,85,247,0.3); transform: scale(0.97); }
-.v97e-action .icon { font-size: 28px; display: block; margin-bottom: 6px; }
-.v97e-action .label { font-size: 12px; font-weight: 700; color: #c4b5fd; }
-.v97e-summary { background: linear-gradient(135deg, #1e1533, #151b3a); border: 1px solid rgba(168,85,247,0.2); border-radius: 16px; padding: 16px; color: #c4b5fd; font-size: 13px; }
-.v97e-summary .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(168,85,247,0.1); }
-.v97e-summary .row:last-child { border-bottom: none; }
-</style>
 
 
-<script id="v97e-redesign-js">
-(function(){
-  var tries = 0;
-  function hook(){
-    tries++;
-    if(tries > 150) return;
-    if(!window.catMgrApp || !window.catMgrApp.state) return setTimeout(hook, 100);
-    if(window.__v97eReady) return;
-    window.__v97eReady = true;
-    var db = firebase.firestore();
 
-    window.catMgrApp.loadProducts = async function(){
-      var st = window.catMgrApp.state;
-      var cat = st.cat;
-      try {
-        var snap = await db.collection('products').where('category','==',cat).get();
-        if(snap.empty){
-          try { snap = await db.collection('products').where('categories','array-contains',cat).get(); } catch(e){}
-        }
-        if(snap.empty){
-          var allSnap = await db.collection('products').limit(500).get();
-          st.products = allSnap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); }).filter(function(pr){
-            return pr.category === cat || (Array.isArray(pr.categories) && pr.categories.indexOf(cat) !== -1);
-          });
-        } else {
-          st.products = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
-        }
-        var kp = document.getElementById('cm-kpi-products');
-        if(kp) kp.textContent = st.products.length;
-      } catch(e){ console.warn('[V97E]', e); }
-    };
 
-    window.catMgrApp.loadProducts();
-
-    var origSwitch = window.catMgrApp.switchTab;
-    window.catMgrApp.switchTab = function(t){
-      if(t === 'home'){
-        window.catMgrApp.state.activeTab = 'home';
-        document.querySelectorAll('.cm-tabs button').forEach(function(b){
-          b.classList.toggle('active', b.getAttribute('data-cm-tab') === 'home');
-        });
-        renderHome();
-        hideFab();
-        return;
-      }
-      origSwitch.call(window.catMgrApp, t);
-      if(t === 'products'){ showFab(); }
-      else { hideFab(); }
-    };
-
-    function showFab(){
-      var fab = document.getElementById('v97e-fab');
-      if(!fab){
-        fab = document.createElement('button');
-        fab.id = 'v97e-fab';
-        fab.className = 'v97e-fab';
-        fab.textContent = '+';
-        fab.onclick = function(){ if(window.__v97cOpenForm) window.__v97cOpenForm(); };
-        document.body.appendChild(fab);
-      }
-      fab.style.display = 'flex';
-    }
-    function hideFab(){
-      var fab = document.getElementById('v97e-fab');
-      if(fab) fab.style.display = 'none';
-    }
-
-    function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-
-    function renderHome(){
-      var content = document.getElementById('cm-content');
-      if(!content) return;
-      var st = window.catMgrApp.state;
-      var hour = new Date().getHours();
-      var greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء النور' : 'مساء الخير';
-      var emoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌙';
-      var catLabels = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',sports:'أدوات رياضية',beauty:'جمال وعطور',kids:'مستلزمات أطفال',tools:'أدوات منزلية',home:'منزل وأثاث'};
-      var catName = catLabels[st.cat] || st.cat;
-      var pendingCount = st.pending.length;
-      var prodCount = st.products.length;
-      var lowStock = st.products.filter(function(pr){ return Number(pr.stock) > 0 && Number(pr.stock) <= 3; }).length;
-      var html = '';
-      html += '<div class="v97e-welcome"><h3>' + emoji + ' ' + greeting + ' ' + esc(st.user.name || 'مدير القسم') + '</h3>';
-      html += '<p>لوحة إدارة قسم <b style="color:#ec4899;">' + esc(catName) + '</b></p></div>';
-      html += '<div class="v97e-section-title">⚡ إجراءات سريعة</div>';
-      html += '<div class="v97e-actions">';
-      html += '<div class="v97e-action" data-go="add"><span class="icon">➕</span><div class="label">إضافة منتج</div></div>';
-      html += '<div class="v97e-action" data-go="pending"><span class="icon">📦</span><div class="label">مراجعة الطلبات</div></div>';
-      html += '<div class="v97e-action" data-go="products"><span class="icon">🛍️</span><div class="label">منتجاتي</div></div>';
-      html += '<div class="v97e-action" data-go="logout"><span class="icon">🚪</span><div class="label">تسجيل خروج</div></div>';
-      html += '</div>';
-      html += '<div class="v97e-section-title">📊 ملخص اليوم</div>';
-      html += '<div class="v97e-summary">';
-      html += '<div class="row"><span>📦 طلبات بانتظارك</span><b style="color:#fbbf24;">' + pendingCount + '</b></div>';
-      html += '<div class="row"><span>🛍️ إجمالي منتجاتك</span><b style="color:#ec4899;">' + prodCount + '</b></div>';
-      html += '<div class="row"><span>⚠️ مخزون منخفض</span><b style="color:#ef4444;">' + lowStock + '</b></div>';
-      html += '</div>';
-      content.innerHTML = html;
-      content.querySelectorAll('.v97e-action').forEach(function(el){
-        el.onclick = function(){
-          var go = el.getAttribute('data-go');
-          if(go === 'logout'){ window.catMgrApp.back(); }
-          else if(go === 'add'){ if(window.__v97cOpenForm) window.__v97cOpenForm(); }
-          else { window.catMgrApp.switchTab(go); }
-        };
-      });
-    }
-
-    setTimeout(function(){
-      var tabs = document.querySelector('.cm-tabs');
-      if(tabs && !tabs.querySelector('[data-cm-tab="home"]')){
-        var homeBtn = document.createElement('button');
-        homeBtn.setAttribute('data-cm-tab','home');
-        homeBtn.textContent = '🏠 الرئيسية';
-        homeBtn.onclick = function(){ window.catMgrApp.switchTab('home'); };
-        tabs.insertBefore(homeBtn, tabs.firstChild);
-        setTimeout(function(){ window.catMgrApp.switchTab('home'); }, 300);
-      }
-    }, 700);
-
-    console.log('[V97E] ready');
-  }
-  hook();
-})();
-</script>
 
 <!-- V97F_DASHBOARD -->
-<style id="v97f-css">
-.v97f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px; margin-top: 10px; }
-.v97f-card { background: linear-gradient(135deg, #1e1533 0%, #151b3a 100%); border: 1px solid rgba(168,85,247,0.3); border-radius: 16px; padding: 20px 12px; text-align: center; cursor: pointer; transition: transform 0.1s; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-.v97f-card:active { transform: scale(0.95); background: rgba(168,85,247,0.2); }
-.v97f-icon { font-size: 32px; margin-bottom: 8px; display: block; }
-.v97f-label { font-size: 13px; font-weight: 700; color: #fff; }
-</style>
-<script id="v97f-dashboard">
-(function(){
-  var tries = 0;
-  function hook(){
-    tries++;
-    if(tries > 150) return;
-    if(!window.catMgrApp) return setTimeout(hook, 100);
-    if(window.__v97fReady) return;
-    window.__v97fReady = true;
-    var db = firebase.firestore();
 
-    window.catMgrApp.loadProducts = async function(){
-      var st = window.catMgrApp.state;
-      try {
-        var snap = await db.collection('products').get();
-        st.products = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); })
-          .filter(function(p){ return p.category === st.cat || (Array.isArray(p.categories) && p.categories.indexOf(st.cat) !== -1); });
-        var kp = document.getElementById('cm-kpi-products');
-        if(kp) kp.textContent = st.products.length;
-        if(st.activeTab === 'home') renderHome();
-      } catch(e){ console.warn('[V97F] products:', e); }
-    };
 
-    window.catMgrApp.subscribeOrders = function(){
-      var st = window.catMgrApp.state;
-      if(st.unsub) st.unsub();
-      st.unsub = db.collection('orders')
-        .where('workflowStatus','==','awaiting_categories')
-        .onSnapshot(function(snap){
-          var pending = [];
-          snap.forEach(function(d){
-            var data = d.data();
-            var c = data.categories && data.categories[st.cat];
-            if(c && c.status === 'pending') pending.push(Object.assign({id:d.id}, data));
-          });
-          st.pending = pending;
-          var ko = document.getElementById('cm-kpi-orders');
-          if(ko) ko.textContent = pending.length;
-          if(st.activeTab === 'home') renderHome();
-          if(st.activeTab === 'pending') window.catMgrApp.switchTab('pending');
-        }, function(err){ console.warn('[V97F] orders:', err); });
-    };
-
-    function renderHome(){
-      var st = window.catMgrApp.state;
-      var content = document.getElementById('cm-content');
-      if(!content) return;
-      
-      var html = '';
-      html += '<div style="background:linear-gradient(135deg,#7c3aed,#ec4899);padding:20px;border-radius:20px;margin:0 16px 16px;color:#fff;box-shadow:0 8px 24px rgba(168,85,247,0.3);">';
-      html += '<h2 style="margin:0 0 6px;font-size:20px;">👋 أهلاً ' + (st.user.name || 'مدير القسم') + '</h2>';
-      html += '<p style="margin:0;opacity:0.9;font-size:14px;">قسم: ' + st.cat + '</p>';
-      html += '</div>';
-
-      html += '<div class="v97f-grid">';
-      var btn = function(icon, label, onclick){
-        return '<div class="v97f-card" onclick="' + onclick + '">' +
-               '<span class="v97f-icon">' + icon + '</span>' +
-               '<div class="v97f-label">' + label + '</div></div>';
-      };
-
-      html += btn('➕', 'إضافة منتج', 'window.__v97cOpenForm()');
-      html += btn('🏭', 'إضافة مورد', 'window.__v97fAddSupplier()');
-      html += btn('🏷️', 'إضافة ماركة', 'window.__v97fAddBrand()');
-      html += btn('📦', 'طلبات (' + st.pending.length + ')', 'window.catMgrApp.switchTab(\'pending\')');
-      html += btn('🛍️', 'منتجاتي (' + st.products.length + ')', 'window.catMgrApp.switchTab(\'products\')');
-      html += btn('🚪', 'تسجيل خروج', 'window.catMgrApp.back()');
-
-      html += '</div>';
-      content.innerHTML = html;
-    }
-
-    var origSwitch = window.catMgrApp.switchTab;
-    window.catMgrApp.switchTab = function(t){
-      var st = window.catMgrApp.state;
-      st.activeTab = t;
-      document.querySelectorAll('.cm-tabs button').forEach(function(b){
-        b.classList.toggle('active', b.getAttribute('data-cm-tab') === t);
-      });
-      if(t === 'home'){
-        var fab = document.getElementById('v97e-fab');
-        if(fab) fab.style.display = 'none';
-        renderHome();
-        return;
-      }
-      origSwitch.call(window.catMgrApp, t);
-    };
-
-    window.__v97fAddSupplier = async function(){
-      var name = prompt('اسم المورد:');
-      if(!name) return;
-      var phone = prompt('رقم الهاتف (اختياري):') || '';
-      try {
-        var docRef = db.collection('config').doc('suppliers');
-        var doc = await docRef.get();
-        var list = doc.exists ? (doc.data().list || []) : [];
-        list.push({
-          id: 'sup_' + Date.now(),
-          name: name.trim(),
-          phone: phone.trim(),
-          categories: [window.catMgrApp.state.cat],
-          balance: 0, history: [], products: []
-        });
-        await docRef.set({list: list, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}, {merge: true});
-        alert('✅ تم إضافة المورد');
-      } catch(e){ alert('❌ ' + e.message); }
-    };
-
-    window.__v97fAddBrand = async function(){
-      var nameAr = prompt('اسم الماركة (بالعربي):');
-      if(!nameAr) return;
-      var nameEn = prompt('اسم الماركة (بالإنجليزي - اختياري):') || nameAr;
-      try {
-        var docRef = db.collection('config').doc('brands');
-        var doc = await docRef.get();
-        var list = doc.exists ? (doc.data().list || []) : [];
-        list.push({nameAr: nameAr.trim(), nameEn: nameEn.trim(), active: true});
-        await docRef.set({list: list, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}, {merge: true});
-        alert('✅ تم إضافة الماركة');
-      } catch(e){ alert('❌ ' + e.message); }
-    };
-
-    setTimeout(function(){
-      var tabs = document.querySelector('.cm-tabs');
-      if(tabs && !tabs.querySelector('[data-cm-tab="home"]')){
-        var hb = document.createElement('button');
-        hb.setAttribute('data-cm-tab', 'home');
-        hb.textContent = '🏠 الرئيسية';
-        hb.onclick = function(){ window.catMgrApp.switchTab('home'); };
-        tabs.insertBefore(hb, tabs.firstChild);
-      }
-      window.catMgrApp.switchTab('home');
-    }, 1200);
-
-    console.log('[V97F] ready');
-  }
-  hook();
-})();
-</script>
 
 <!-- V97G_KILL_LEGACY -->
 <script id="chz-kill-legacy-v97g">
@@ -10843,35 +10492,7 @@ window.catMgrApp = (function(){
 </script>
 
 <!-- V97H_LOGIN -->
-<style id="v97h-css">
-#v97h-login { position:fixed; inset:0; z-index:9999999; background:radial-gradient(circle at 50% 0%, #1a0f3d 0%, #0a0825 70%); display:none; align-items:center; justify-content:center; padding:20px; direction:rtl; font-family:'Tajawal','Cairo',system-ui,sans-serif; overflow-y:auto; animation:v97hFade 0.35s ease-out; }
-#v97h-login * { box-sizing:border-box; }
-#v97h-login .v97h-card { width:100%; max-width:400px; margin:auto; }
-#v97h-login .v97h-logo-wrap { text-align:center; margin-bottom:28px; }
-#v97h-login .v97h-logo { display:inline-block; padding:18px 30px; background:linear-gradient(135deg,#7c3aed 0%,#ec4899 100%); border-radius:24px; font-size:26px; font-weight:900; letter-spacing:3px; color:#fff; box-shadow:0 12px 40px rgba(168,85,247,0.5), inset 0 1px 0 rgba(255,255,255,0.25); }
-#v97h-login .v97h-sub { color:#a78bfa; font-size:13px; margin-top:10px; letter-spacing:1px; }
-#v97h-login .v97h-form { background:rgba(30,21,51,0.7); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(168,85,247,0.3); border-radius:24px; padding:26px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
-#v97h-login .v97h-form h2 { margin:0 0 22px; color:#fff; font-size:19px; text-align:center; font-weight:700; }
-#v97h-login .v97h-field { margin-bottom:16px; position:relative; }
-#v97h-login .v97h-field label { display:block; color:#a78bfa; font-size:12px; font-weight:700; margin-bottom:7px; letter-spacing:0.3px; }
-#v97h-login .v97h-field input { width:100%; padding:14px 16px; border-radius:12px; border:1.5px solid rgba(168,85,247,0.3); background:rgba(10,8,37,0.85); color:#fff; font-family:inherit; font-size:14px; transition:all 0.2s; }
-#v97h-login .v97h-field input:focus { outline:none; border-color:#a855f7; box-shadow:0 0 0 3px rgba(168,85,247,0.2); background:rgba(10,8,37,1); }
-#v97h-login .v97h-field input::placeholder { color:#6b7280; }
-#v97h-login .v97h-pass-wrap { position:relative; }
-#v97h-login .v97h-pass-wrap input { padding-left:46px; }
-#v97h-login .v97h-toggle { position:absolute; left:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#a78bfa; cursor:pointer; font-size:18px; padding:6px; border-radius:8px; }
-#v97h-login .v97h-toggle:active { background:rgba(168,85,247,0.15); }
-#v97h-login .v97h-btn { width:100%; padding:16px; border:none; border-radius:12px; background:linear-gradient(135deg,#7c3aed 0%,#ec4899 100%); color:#fff; font-family:inherit; font-size:16px; font-weight:900; cursor:pointer; box-shadow:0 8px 24px rgba(168,85,247,0.4); transition:all 0.2s; margin-top:6px; }
-#v97h-login .v97h-btn:active:not(:disabled) { transform:scale(0.98); box-shadow:0 4px 12px rgba(168,85,247,0.3); }
-#v97h-login .v97h-btn:disabled { opacity:0.6; cursor:not-allowed; }
-#v97h-login .v97h-msg { padding:12px 14px; border-radius:10px; margin-bottom:16px; font-size:13px; text-align:center; display:none; line-height:1.5; }
-#v97h-login .v97h-msg.err { background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; display:block; }
-#v97h-login .v97h-msg.ok { background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#86efac; display:block; }
-#v97h-login .v97h-footer { text-align:center; margin-top:20px; color:#6b7280; font-size:11px; line-height:1.8; }
-#v97h-login .v97h-link { color:#a78bfa; text-decoration:none; cursor:pointer; font-weight:700; }
-#v97h-login .v97h-link:hover { text-decoration:underline; }
-@keyframes v97hFade { from { opacity:0; transform:scale(1.02); } to { opacity:1; transform:scale(1); } }
-</style>
+
 
 <div id="v97h-login">
   <div class="v97h-card">
@@ -10998,12 +10619,7 @@ window.catMgrApp = (function(){
 </script>
 
 <!-- V97I2_FORCE -->
-<style id="v97i2-css">
-#v97h-login { display:flex !important; z-index:2147483647 !important; }
-#v97h-login.v97i-hidden { display:none !important; }
-.gtt, .gbtn, #btn-do-login { display:none !important; }
-[data-v97i2-old-hidden] { display:none !important; }
-</style>
+
 <script id="chz-force-v97i2">
 (function(){
   'use strict';
@@ -12493,186 +12109,31 @@ window.catMgrApp = (function(){
 })();
 </script>
 
-<script id="v102c-main">(function(){
-  'use strict';
-  console.log('[V102c] loading...');
 
-  var GH_USER = 'hzgmi';
-  var GH_BRANCH = 'main';
-  var TOKEN_KEY = 'chizen_gh_token';
-  var ROT_KEY = 'chizen_gh_rot';
 
-  var REPOS = {
-    products: ['chizen-assets-1','chizen-assets-2','chizen-assets-3','chizen-assets-4','chizen-assets-5','chizen-products-1','chizen-products-2','chizen-products-3','chizen-products-4'],
-    listings: ['chizen-listings-1'],
-    receipts: ['chizen-products-4'],
-    vouchers: ['chizen-products-3'],
-    misc:     ['chizen-assets-5']
-  };
 
-  function getToken(){ try{ return localStorage.getItem(TOKEN_KEY) || ''; }catch(e){ return ''; } }
-  function setToken(t){ try{ localStorage.setItem(TOKEN_KEY, t); }catch(e){} }
-  function clearToken(){ try{ localStorage.removeItem(TOKEN_KEY); }catch(e){} }
 
-  function toast(m){
-    var t=document.createElement('div'); t.className='v101-toast'; t.textContent=m;
-    document.body.appendChild(t);
-    setTimeout(function(){ t.style.opacity='0'; }, 2200);
-    setTimeout(function(){ if(t.parentNode)t.remove(); }, 2600);
-  }
+<style id="v102e-css">
+.v102-img-thumb { cursor: pointer; position: relative; border: 2px solid transparent; transition: border 0.2s; }
+.v102-img-thumb:hover { border-color: #a78bfa; }
+.v102-img-thumb:not(:has(.v102-badge-primary))::after {
+  content: 'اضغط كرئيسية'; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  background: rgba(10,8,37,0.85); color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 4px;
+  pointer-events: none; opacity: 0; transition: opacity 0.2s; white-space: nowrap;
+}
+.v102-img-thumb:hover::after { opacity: 1; }
+</style>
 
-  function promptToken(){
-    return new Promise(function(resolve){
-      var overlay=document.createElement('div');
-      overlay.className='v101-modal-overlay active';
-      overlay.innerHTML = ''
-        + '<div class="v101-modal">'
-        +   '<div class="v101-m-head"><h3>🔐 مفتاح GitHub للرفع</h3></div>'
-        +   '<div class="v101-m-body">'
-        +     '<p style="font-size:13px;color:#a78bfa;margin:0 0 12px;line-height:1.7">الصق توكن GitHub (يبدأ بـ <code style="color:#fff;background:rgba(155,77,255,.2);padding:2px 6px;border-radius:4px">ghp_</code> أو <code style="color:#fff;background:rgba(155,77,255,.2);padding:2px 6px;border-radius:4px">github_pat_</code>).<br>يُحفظ في متصفحك فقط — لن يُرسل لأي خادم.</p>'
-        +     '<textarea id="v102b-token-input" rows="3" placeholder="ghp_..." style="width:100%;box-sizing:border-box;padding:12px;background:rgba(10,8,37,.7);border:1px solid rgba(155,77,255,.3);border-radius:12px;color:#fff;font-family:monospace;font-size:12px;resize:vertical"></textarea>'
-        +     '<p style="font-size:11px;color:#888;margin:8px 0 0;line-height:1.6">🔒 يُطلب مرة واحدة فقط على هذا الجهاز.<br>لمسحه لاحقاً: امسح <code style="color:#a78bfa">localStorage.chizen_gh_token</code></p>'
-        +   '</div>'
-        +   '<div class="v101-m-foot">'
-        +     '<button class="v101-btn-cancel" type="button" id="v102b-cancel">إلغاء</button>'
-        +     '<button class="v101-btn-save" type="button" id="v102b-save">💾 حفظ</button>'
-        +   '</div>'
-        + '</div>';
-      document.body.appendChild(overlay);
-      overlay.querySelector('#v102b-cancel').onclick = function(){ overlay.remove(); resolve(''); };
-      overlay.querySelector('#v102b-save').onclick = function(){
-        var t = overlay.querySelector('#v102b-token-input').value.trim();
-        if(!t){ alert('⚠️ الصق التوكن أولاً'); return; }
-        if(t.length < 20){ alert('⚠️ التوكن قصير جداً — تحقق'); return; }
-        setToken(t); overlay.remove(); toast('✅ حُفظ التوكن'); resolve(t);
-      };
-    });
-  }
-
-  function pickRepo(category){
-    var group = REPOS.products;
-    if(REPOS[category]) group = REPOS[category];
-    else if(['listings','cars','phones','car','phone'].indexOf(category) !== -1) group = REPOS.listings;
-    var rot = parseInt(localStorage.getItem(ROT_KEY) || '0', 10) || 0;
-    var repo = group[rot % group.length];
-    try{ localStorage.setItem(ROT_KEY, String((rot + 1) % 100000)); }catch(e){}
-    return repo;
-  }
-
-  function compressImage(file, maxDim, quality){
-    return new Promise(function(resolve, reject){
-      var img=new Image(); var url=URL.createObjectURL(file);
-      img.onload=function(){
-        URL.revokeObjectURL(url);
-        var w=img.width, h=img.height;
-        if(w>maxDim || h>maxDim){
-          if(w>h){ h=Math.round(h*maxDim/w); w=maxDim; }
-          else { w=Math.round(w*maxDim/h); h=maxDim; }
-        }
-        var canvas=document.createElement('canvas');
-        canvas.width=w; canvas.height=h;
-        canvas.getContext('2d').drawImage(img,0,0,w,h);
-        canvas.toBlob(function(blob){
-          if(!blob) return reject(new Error('compress failed'));
-          resolve(blob);
-        }, 'image/jpeg', quality);
-      };
-      img.onerror=function(){ URL.revokeObjectURL(url); reject(new Error('load failed')); };
-      img.src=url;
-    });
-  }
-
-  function blobToBase64(blob){
-    return new Promise(function(resolve, reject){
-      var reader=new FileReader();
-      reader.onload=function(){ resolve(reader.result.split(',')[1]); };
-      reader.onerror=reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  async function uploadOne(file, category, token){
-    var repo = pickRepo(category);
-    var compressed = await compressImage(file, 1200, 0.82);
-    var base64 = await blobToBase64(compressed);
-    var now = new Date();
-    var filename = now.getTime() + '_' + Math.random().toString(36).slice(2,8) + '.jpg';
-    var path = category + '/' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '/' + filename;
-
-    var res = await fetch('https://api.github.com/repos/'+GH_USER+'/'+repo+'/contents/'+path, {
-      method: 'PUT',
-      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: 'upload ' + filename, content: base64, branch: GH_BRANCH })
-    });
-
-    if(!res.ok){
-      var txt = await res.text();
-      if(res.status===401){ clearToken(); throw new Error('التوكن غير صالح — أعد إدخاله'); }
-      if(res.status===403){ throw new Error('تجاوزت حد GitHub — انتظر دقائق'); }
-      if(res.status===422){ throw new Error('الملف موجود — أعد المحاولة'); }
-      throw new Error('GitHub ' + res.status + ': ' + txt.slice(0,60));
-    }
-    return 'https://cdn.jsdelivr.net/gh/'+GH_USER+'/'+repo+'@'+GH_BRANCH+'/'+path;
-  }
-
-  window.__v102c_uploadBatch = async function(files, category, callbacks){
-    callbacks = callbacks || {};
-    var onProgress = callbacks.onProgress || function(){};
-    var onUrl = callbacks.onUrl || function(){};
-    var onError = callbacks.onError || function(e){ console.error(e); };
-
-    var token = getToken();
-    if(!token){
-      token = await promptToken();
-      if(!token) throw new Error('رفضت إدخال التوكن');
-    }
-
-    var total = files.length, success = 0;
-    for(var i=0; i<total; i++){
-      var f = files[i];
-      if(f.size > 15*1024*1024){ onError(new Error(f.name + ' > 15MB')); continue; }
-      try {
-        var url = await uploadOne(f, category, token);
-        onUrl(url); success++;
-        onProgress(Math.round((i+1)/total*100));
-      } catch(e){
-        if(e.message && e.message.indexOf('التوكن غير صالح') !== -1){
-          var nt = await promptToken();
-          if(!nt){ onError(new Error('لا يمكن الرفع بدون التوكن')); break; }
-          token = nt;
-          try {
-            var u2 = await uploadOne(f, category, token);
-            onUrl(u2); success++;
-            onProgress(Math.round((i+1)/total*100));
-          } catch(e2){ onError(e2); }
-        } else {
-          onError(e);
-        }
-      }
-    }
-    if(success===0 && total>0) throw new Error('فشل رفع كل الصور');
-  };
-
-  window.__v102c_hasToken = function(){ return !!getToken(); };
-  window.__v102c_clearToken = function(){ clearToken(); toast('✅ تم مسح التوكن'); };
-  window.__v102c_showTokenModal = function(){ return promptToken(); };
-
-  console.log('[V102c] ready | products:', REPOS.products.length, 'repos');
-})();
-</script>
-
-<script id="v102d-main">(function(){
-  'use strict';
-  console.log('[V102d] loading...');
+<script id="v102f-main">
+(function(){
+  var WORKER_URL = "https://chizen-uploader.hazimchat.workers.dev";
   var tries = 0;
   function hook(){
     tries++;
     if(tries > 300) return setTimeout(hook, 100);
-    if(!window.__v102cReady) return setTimeout(hook, 100);
-    if(window.__v102dReady) return;
-    window.__v102dReady = true;
-    
-    var WORKER_URL = "https://chizen-uploader.hazimchat.workers.dev";
+    if(!window.catMgrApp || !window.catMgrApp.state) return setTimeout(hook, 100);
+    if(window.__v102fReady) return;
+    window.__v102fReady = true;
 
     function compressImage(file, maxDim, quality) {
       return new Promise(function(resolve, reject){
@@ -12705,52 +12166,32 @@ window.catMgrApp = (function(){
         headers: { 'Content-Type': 'image/jpeg' },
         body: compressed
       });
-      if(!res.ok) {
-        var txt = await res.text();
-        throw new Error('فشل الرفع: ' + res.status + ' ' + txt.slice(0, 50));
-      }
+      if(!res.ok) throw new Error('فشل الرفع');
       var data = await res.json();
-      if(!data.url) throw new Error('لم يتم إرجاع رابط الصورة');
+      if(!data.url) throw new Error('لم يتم إرجاع رابط');
       return data.url;
     }
 
-    // استبدال دالة الرفع القديمة (التي كانت تطلب توكن) بالدالة الجديدة
+    // تعريف الدالة التي يتوقعها نموذج المنتج v102
     window.__v102c_uploadBatch = async function(files, category, callbacks){
       callbacks = callbacks || {};
       var onProgress = callbacks.onProgress || function(){};
       var onUrl = callbacks.onUrl || function(){};
       var onError = callbacks.onError || function(e){ console.error(e); };
-
       var total = files.length, success = 0;
       for(var i=0; i<total; i++){
-        var f = files[i];
-        if(f.size > 15*1024*1024){ onError(new Error(f.name + ' حجمها كبير جداً')); continue; }
         try {
-          var url = await uploadToWorker(f);
+          var url = await uploadToWorker(files[i]);
           onUrl(url); success++;
           onProgress(Math.round((i+1)/total*100));
-        } catch(e){
-          onError(e);
-        }
+        } catch(e){ onError(e); }
       }
-      if(success === 0 && total > 0) throw new Error('فشل رفع الصور، تحقق من الاتصال');
+      if(success === 0 && total > 0) throw new Error('فشل الرفع');
     };
-
-    console.log('[V102d] Ready! Uploads go to Cloudflare Worker.');
+    console.log('[V102f] Clean uploader ready.');
   }
   hook();
 })();
 </script>
-
-<style id="v102e-css">
-.v102-img-thumb { cursor: pointer; position: relative; border: 2px solid transparent; transition: border 0.2s; }
-.v102-img-thumb:hover { border-color: #a78bfa; }
-.v102-img-thumb:not(:has(.v102-badge-primary))::after {
-  content: 'اضغط كرئيسية'; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
-  background: rgba(10,8,37,0.85); color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 4px;
-  pointer-events: none; opacity: 0; transition: opacity 0.2s; white-space: nowrap;
-}
-.v102-img-thumb:hover::after { opacity: 1; }
-</style>
 </body>
 </html>
