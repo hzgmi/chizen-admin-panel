@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:#0a0825;color:#fff;font-family:'Tajawal',system-ui,sans-serif;overflow-x:hidden}
@@ -340,7 +341,7 @@ function renderTransactions(){
 function renderSuppliers(){
   var CATS = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',shoes_bags:'أحذية',beauty:'جمال',kids_sports:'أطفال',home:'منزل',supermarket:'سوبرماركت'};
   return '<div style="display:flex;gap:8px;margin-bottom:14px">'
-    + '<button class="acc-btn" onclick="showSupplierForm()" style="flex:1">➕ مورد جديد</button>'
+    + '<button class="acc-btn" onclick="showSupplierForm()" style="flex:1">➕ مورد جديد</button>' + '<button class="acc-btn" style="background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);color:#4ade80;flex:1" onclick="showSupplierPaymentPicker()">💵 دفع</button>'
     + '</div>'
     + Object.keys(CATS).map(function(cat){
         var inCat = state.suppliers.filter(function(s){
@@ -561,7 +562,7 @@ window.showTransactionForm = async function(){
     + '<select id="tx-type" class="acc-form-in">'
     +   '<option value="advance">📤 تقدمة / سلفة</option>'
     +   '<option value="deduction">➖ خصم</option>'
-    +   '<option value="paid">✅ دفعة / راتب</option>'
+    +   '<option value="salary">💵 راتب شهري</option><option value="paid">✅ دفعة</option>'
     +   '<option value="expense">💸 مصروف عام</option>'
     +   '<option value="income">💰 إيراد إضافي</option>'
     + '</select>'
@@ -793,31 +794,54 @@ window.exportPDFReport = function(){
   } catch(e){ toast('❌ '+e.message,'error'); }
 };
 
+/* v293-clean */
 window.exportCSV = function(type){
-  var csv = '';
-  if(type === 'orders'){
-    csv = 'ID,العميل,الهاتف,المبلغ,الحالة,التاريخ\n';
+  if (!window.XLSX) { toast('مكتبة Excel لم تُحمّل','error'); return; }
+  try {
+    var wb = XLSX.utils.book_new();
+    var ws;
+    var filename = 'CHIZEN_' + type + '_' + new Date().toISOString().slice(0,10);
     var s = calcStats();
-    s.filtered.forEach(function(o){
-      csv += '"'+o.id+'","'+(o.customerName||'')+'","'+(o.phone||'')+'","'+(Number(o.total)||0)+'","'+(o.status||'')+'","'+fmtDate(o.createdAt)+'"\n';
-    });
-  } else if(type === 'transactions'){
-    csv = 'ID,النوع,المستخدم,المبلغ,السبب,الحالة,التاريخ\n';
-    calcStats().filteredTx.forEach(function(t){
-      csv += '"'+t.id+'","'+(t.type||'')+'","'+(t.userName||'')+'","'+(Number(t.amount)||0)+'","'+(t.reason||'')+'","'+(t.status||'')+'","'+fmtDate(t.createdAt)+'"\n';
-    });
-  } else if(type === 'suppliers'){
-    csv = 'ID,الاسم,الهاتف,الأقسام,الرصيد\n';
-    state.suppliers.forEach(function(s){
-      csv += '"'+s.id+'","'+(s.name||'')+'","'+(s.phone||'')+'","'+(s.categories||[]).join('|')+'","'+(s.balance||0)+'"\n';
-    });
-  }
-  var blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = 'CHIZEN_'+type+'_'+Date.now()+'.csv'; a.click();
-  URL.revokeObjectURL(url);
-  toast('✅ تم التصدير','success');
+    var typeLabels = {advance:'تقدمة',deduction:'خصم',paid:'دفعة',expense:'مصروف',income:'إيراد',salary:'راتب'};
+    
+    if (type === 'orders') {
+      var rows = [['رقم الطلب','العميل','الهاتف','المبلغ','الحالة','التاريخ','العنوان']];
+      s.filtered.forEach(function(o){
+        rows.push(['#' + o.id.slice(-6), o.customerName || '—', o.phone || '—', Number(o.total) || 0, o.status || '—', fmtDate(o.createdAt), o.address || o.pickup || '—']);
+      });
+      ws = XLSX.utils.aoa_to_sheet(rows);
+    } else if (type === 'transactions') {
+      var rows = [['النوع','الموظف','الدور','المبلغ','السبب','الحالة','التاريخ']];
+      s.filteredTx.forEach(function(t){
+        rows.push([typeLabels[t.type] || t.type || '—', t.userName || '—', t.userRole || '—', Number(t.amount) || 0, t.reason || '—', t.status === 'approved' ? 'معتمد' : (t.status === 'pending' ? 'معلق' : 'مرفوض'), fmtDate(t.createdAt)]);
+      });
+      ws = XLSX.utils.aoa_to_sheet(rows);
+    } else if (type === 'suppliers') {
+      var rows = [['الاسم','الهاتف','الأقسام','طريقة الدفع','الرصيد','عدد المنتجات']];
+      state.suppliers.forEach(function(sup){
+        rows.push([sup.name || '—', sup.phone || '—', (sup.categories||[]).join(' | '), sup.paymentType === 'cash' ? 'نقدي' : (sup.paymentType === 'credit' ? 'آجل' : sup.paymentType || '—'), Number(sup.balance) || 0, (sup.products||[]).length]);
+      });
+      ws = XLSX.utils.aoa_to_sheet(rows);
+    } else if (type === 'financial_summary') {
+      var rows = [
+        ['ملخص مالي — ' + new Date().toLocaleDateString('ar-YE')],
+        [],
+        ['البند', 'المبلغ'],
+        ['الإيرادات', Math.round(s.revenue)],
+        ['تكلفة المنتجات', Math.round(s.cogs)],
+        ['المصروفات', Math.round(s.expenses)],
+        ['صافي الربح', Math.round(s.profit)],
+        [],
+        ['عدد الطلبات', s.filtered.length],
+        ['المعلقة', s.pending]
+      ];
+      ws = XLSX.utils.aoa_to_sheet(rows);
+    }
+    
+    XLSX.utils.book_append_sheet(wb, ws, type);
+    XLSX.writeFile(wb, filename + '.xlsx');
+    toast('✅ تم التصدير','success');
+  } catch(e){ toast('❌ ' + e.message,'error'); }
 };
 
 function showModal(title, body, footer){
@@ -983,6 +1007,60 @@ function applyCustomPeriod(){
   state.period = 'custom';
   closeModal();
   renderTab(state.activeTab);
+}
+
+// ═══ v293 functions ═══
+
+function showSupplierPaymentPicker(){
+  var withBalance = state.suppliers.filter(function(s){ return Number(s.balance) > 0; });
+  if (withBalance.length === 0) {
+    if (state.suppliers.length === 0) { toast('لا يوجد موردون','error'); return; }
+    if (!confirm('كل الموردين بدون رصيد. المتابعة على أي حال؟')) return;
+    withBalance = state.suppliers;
+  }
+  var opts = withBalance.map(function(s){
+    return '<option value="' + s.id + '">' + esc(s.name||'—') + ' — رصيد: ' + fmt(s.balance||0) + ' ر.ي</option>';
+  }).join('');
+  var html = '<div>'
+    + '<label class="acc-form-lbl">المورد *</label>'
+    + '<select id="sp-sup" class="acc-form-in">' + opts + '</select>'
+    + '<label class="acc-form-lbl">المبلغ المدفوع (ر.ي) *</label>'
+    + '<input id="sp-amt" type="number" min="1" class="acc-form-in" placeholder="0">'
+    + '<label class="acc-form-lbl">ملاحظات</label>'
+    + '<textarea id="sp-note" rows="2" class="acc-form-in" placeholder="رقم الحوالة..."></textarea>'
+    + '</div>';
+  var footer = '<button class="acc-btn-sec" onclick="closeModal()" style="flex:1">إلغاء</button><button class="acc-btn" onclick="saveSupplierPayment()" style="flex:2">💾 تسجيل</button>';
+  showModal('💵 دفع لمورد', html, footer);
+}
+
+async function saveSupplierPayment(){
+  var supId = document.getElementById('sp-sup').value;
+  var amount = Number(document.getElementById('sp-amt').value) || 0;
+  var note = (document.getElementById('sp-note').value || '').trim();
+  if (!supId) { toast('اختر مورداً','error'); return; }
+  if (amount <= 0) { toast('المبلغ مطلوب','error'); return; }
+  var idx = state.suppliers.findIndex(function(s){ return s.id === supId; });
+  if (idx === -1) { toast('المورد غير موجود','error'); return; }
+  var sup = state.suppliers[idx];
+  try {
+    await db.collection('transactions').add({
+      type: 'paid', userId: '', userName: 'مورد: ' + (sup.name || '—'),
+      userRole: 'supplier', supplierId: sup.id, supplierName: sup.name,
+      amount: amount, reason: 'دفعة لمورد' + (note ? ' — ' + note : ''),
+      status: 'approved', approvedBy: state.user.uid,
+      approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    var newBalance = Math.max(0, (Number(sup.balance) || 0) - amount);
+    var list = state.suppliers.slice();
+    list[idx] = Object.assign({}, sup, {balance: newBalance});
+    await db.collection('config').doc('suppliers').set({list: list}, {merge:true});
+    await logAudit('دفعة لمورد', sup.id, (sup.name||'') + ' — ' + amount + ' ر.ي');
+    toast('✅ تم الدفع — متبقي: ' + fmt(newBalance) + ' ر.ي','success');
+    closeModal();
+    await loadAll();
+    renderTab('suppliers');
+  } catch(e){ toast('❌ ' + e.message,'error'); }
 }
 
 document.getElementById('btn-logout').onclick = function(){
