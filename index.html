@@ -10293,206 +10293,205 @@ window.catMgrApp = (function(){
 })();
 </script>
 
-<script id="v285-accountant-plus">
+
+
+<script id="v287-charts">
 (function(){
   if (!window.CA) { setTimeout(arguments.callee, 500); return; }
-  console.log('[V285] Enhancing accountant panel...');
+  console.log('[V287] Charts module loading...');
 
-  // ═══════════ 1. إضافة زر "المعاملات" في التبويبات ═══════════
-  setTimeout(function(){
-    var navBar = document.querySelector('#accountant-mgr-app .ca-nav');
-    if (navBar && !navBar.querySelector('[data-tab="transactions"]')) {
-      var transactionsBtn = document.createElement('button');
-      transactionsBtn.className = 'ca-nav-btn';
-      transactionsBtn.setAttribute('data-tab', 'transactions');
-      transactionsBtn.innerHTML = '<span class="icon">💸</span><span class="label">معاملات</span>';
-      transactionsBtn.onclick = function(){ window.__caSwitchTab('transactions', this); };
-      
-      var reportsBtn = navBar.querySelector('[data-tab="reports"]');
-      if (reportsBtn) navBar.insertBefore(transactionsBtn, reportsBtn);
-      else navBar.appendChild(transactionsBtn);
-      
-      console.log('[V285] ✅ Transactions tab added');
-    }
-  }, 1500);
-
-  // ═══════════ 2. اعتراض renderContent ═══════════
-  var origRender = window.CA && window.CA.renderContent;
-  
-  // البحث عن renderContent داخل النطاق — غير متاح خارجياً
-  // البديل: اعتراض __caSwitchTab
-  var origSwitch = window.__caSwitchTab;
-  window.__caSwitchTab = function(tab, btn){
-    if (tab === 'transactions') {
-      // إخفاء محتوى كل التبويبات
-      document.querySelectorAll('#accountant-mgr-app [id^="ca-content-"]').forEach(function(c){
-        c.style.display = 'none';
-        c.classList.remove('v93-shown');
-      });
-      // إخفاء الأزرار النشطة
-      document.querySelectorAll('#accountant-mgr-app .ca-nav-btn').forEach(function(b){
-        b.classList.remove('active');
-      });
-      // تفعيل الزر
-      if (btn) btn.classList.add('active');
-      // عرض محتوى المعاملات
-      renderTransactions();
-      return;
-    }
-    return origSwitch.apply(this, arguments);
-  };
-
-  // ═══════════ 3. محتوى المعاملات ═══════════
-  async function renderTransactions(){
-    var main = document.querySelector('#accountant-mgr-app .ca-main');
-    if (!main) return;
-    
-    main.innerHTML = '<div style="text-align:center;padding:40px;color:#f59e0b">⏳ جاري التحميل...</div>';
-    
-    try {
-      var db = firebase.firestore();
-      var snap = await db.collection('transactions').orderBy('createdAt', 'desc').limit(100).get();
-      var items = snap.docs.map(function(d){ return Object.assign({}, d.data(), {id: d.id}); });
-      
-      var totalIn = 0, totalOut = 0, pending = 0;
-      items.forEach(function(t){
-        var amt = Number(t.amount) || 0;
-        if (t.type === 'income' || t.type === 'paid') totalIn += amt;
-        else if (t.type === 'expense' || t.type === 'deduction' || t.type === 'advance') totalOut += amt;
-        if (t.status === 'pending') pending++;
-      });
-      
-      var listHtml = items.length ? items.map(function(t){
-        var typeLabels = {advance:'تقدمة', deduction:'خصم', paid:'دفعة', expense:'مصروف', income:'إيراد'};
-        var typeColors = {advance:'#f59e0b', deduction:'#ef4444', paid:'#22c55e', expense:'#ec4899', income:'#3b82f6'};
-        var statusColors = {pending:'#fbbf24', approved:'#22c55e', rejected:'#ef4444'};
-        var statusLabels = {pending:'معلق', approved:'معتمد', rejected:'مرفوض'};
-        var date = t.createdAt && t.createdAt.toDate ? t.createdAt.toDate().toLocaleDateString('ar-YE', {month:'short', day:'numeric'}) : '—';
-        return '<div style="background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(217,119,6,0.03));border:1px solid rgba(245,158,11,0.25);border-radius:14px;padding:12px;margin-bottom:8px">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">'
-          +   '<div style="flex:1;min-width:0">'
-          +     '<div style="font-size:13px;font-weight:800;color:' + (typeColors[t.type]||'#fff') + '">' + (typeLabels[t.type] || t.type || '—') + '</div>'
-          +     '<div style="font-size:11px;color:#b8c0d8">' + (t.userName || '—') + ' · ' + date + '</div>'
-          +   '</div>'
-          +   '<div style="text-align:left">'
-          +     '<div style="font-size:16px;font-weight:900;color:#fff">' + (Number(t.amount)||0).toFixed(0) + ' ر</div>'
-          +     '<div style="font-size:10px;color:' + (statusColors[t.status]||'#fff') + ';font-weight:700">' + (statusLabels[t.status] || t.status || '') + '</div>'
-          +   '</div>'
-          + '</div>'
-          + (t.reason ? '<div style="font-size:11px;color:#b8c0d8;padding:6px 8px;background:rgba(0,0,0,0.2);border-radius:8px;margin-top:6px">📝 ' + esc(t.reason) + '</div>' : '')
-          + '</div>';
-      }).join('') : '<div style="text-align:center;padding:60px 20px;color:#6b7591"><div style="font-size:48px;margin-bottom:12px">💸</div><div>لا توجد معاملات بعد</div></div>';
-      
-      main.innerHTML = ''
-        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
-        +   '<div style="font-size:16px;font-weight:900;color:#fff">💸 المعاملات المالية</div>'
-        +   '<button onclick="window.__caAddTransaction()" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;padding:10px 16px;border-radius:12px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer">➕ جديدة</button>'
-        + '</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">'
-        +   '<div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:10px;text-align:center">'
-        +     '<div style="font-size:11px;color:#22c55e;font-weight:700;margin-bottom:4px">داخل</div>'
-        +     '<div style="font-size:16px;font-weight:900;color:#22c55e">' + Math.round(totalIn).toLocaleString('ar-EG') + '</div>'
-        +   '</div>'
-        +   '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:10px;text-align:center">'
-        +     '<div style="font-size:11px;color:#ef4444;font-weight:700;margin-bottom:4px">خارج</div>'
-        +     '<div style="font-size:16px;font-weight:900;color:#ef4444">' + Math.round(totalOut).toLocaleString('ar-EG') + '</div>'
-        +   '</div>'
-        +   '<div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:10px;text-align:center">'
-        +     '<div style="font-size:11px;color:#fbbf24;font-weight:700;margin-bottom:4px">معلق</div>'
-        +     '<div style="font-size:16px;font-weight:900;color:#fbbf24">' + pending + '</div>'
-        +   '</div>'
-        + '</div>'
-        + '<div>' + listHtml + '</div>';
-    } catch(e) {
-      main.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444">❌ ' + esc(e.message) + '</div>';
-    }
+  // ═══ 1. تحميل Chart.js ═══
+  if (!window.Chart) {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    s.onload = function(){ console.log('[V287] Chart.js loaded ✓'); tryInject(); };
+    s.onerror = function(){ console.warn('[V287] Chart.js load failed'); };
+    document.head.appendChild(s);
   }
 
-  // ═══════════ 4. نموذج إضافة معاملة ═══════════
-  window.__caAddTransaction = async function(){
-    var db = firebase.firestore();
-    var usersSnap = await db.collection('users').get();
-    var users = usersSnap.docs.map(function(d){ return Object.assign({}, d.data(), {id: d.id}); });
+  // ═══ 2. اعتراض __caSwitchTab لإضافة الرسوم ═══
+  setTimeout(function(){
+    var origSwitch = window.__caSwitchTab;
+    if (!origSwitch || origSwitch.__v287) return;
     
-    var iS = 'width:100%;padding:12px;background:rgba(15,10,35,0.9);border:1px solid rgba(245,158,11,0.4);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;margin-bottom:12px;box-sizing:border-box';
-    var lS = 'display:block;font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:6px';
-    
-    var userOpts = users.map(function(u){ return '<option value="' + u.id + '">' + (u.name || u.email) + ' — ' + (u.role || '') + '</option>'; }).join('');
-    
-    var modal = document.createElement('div');
-    modal.className = 'ca-modal';
-    modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.8);display:flex;align-items:flex-end;justify-content:center';
-    modal.innerHTML = '<div style="background:#151b3a;width:100%;max-width:560px;border-radius:24px 24px 0 0;max-height:90vh;overflow-y:auto;color:#fff;border:1px solid rgba(245,158,11,0.3);border-bottom:none">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid rgba(245,158,11,0.2);position:sticky;top:0;background:#151b3a">'
-      +   '<h3 style="margin:0;font-size:16px;font-weight:900">➕ معاملة جديدة</h3>'
-      +   '<button onclick="this.closest(\'.ca-modal\').remove()" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>'
-      + '</div>'
-      + '<div style="padding:16px 20px">'
-      +   '<label style="' + lS + '">نوع المعاملة *</label>'
-      +   '<select id="cat-type" style="' + iS + '">'
-      +     '<option value="advance">📤 تقدمة</option>'
-      +     '<option value="deduction">➖ خصم</option>'
-      +     '<option value="paid">✅ دفعة</option>'
-      +     '<option value="expense">💸 مصروف</option>'
-      +     '<option value="income">💰 إيراد</option>'
-      +   '</select>'
-      +   '<label style="' + lS + '">المستخدم *</label>'
-      +   '<select id="cat-user" style="' + iS + '"><option value="">— اختر —</option>' + userOpts + '</select>'
-      +   '<label style="' + lS + '">المبلغ (ر.ي) *</label>'
-      +   '<input id="cat-amount" type="number" min="1" placeholder="0" style="' + iS + '">'
-      +   '<label style="' + lS + '">السبب / الملاحظات</label>'
-      +   '<textarea id="cat-reason" rows="2" placeholder="..." style="' + iS + 'resize:vertical"></textarea>'
-      +   '<button id="cat-save" style="width:100%;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:14px;border-radius:12px;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;border:none;margin-top:8px">💾 حفظ</button>'
-      + '</div>'
-      + '</div>';
-    document.body.appendChild(modal);
-    
-    document.getElementById('cat-save').onclick = async function(){
-      var type = document.getElementById('cat-type').value;
-      var userId = document.getElementById('cat-user').value;
-      var amount = Number(document.getElementById('cat-amount').value) || 0;
-      var reason = document.getElementById('cat-reason').value.trim();
-      
-      if (!userId) { alert('⚠️ اختر مستخدماً'); return; }
-      if (amount <= 0) { alert('⚠️ المبلغ مطلوب'); return; }
-      
-      var user = users.find(function(u){ return u.id === userId; });
-      var btn = this; btn.disabled = true; btn.textContent = '⏳...';
-      
-      try {
-        var currentUser = firebase.auth().currentUser;
-        await db.collection('transactions').add({
-          type: type, userId: userId,
-          userName: user ? (user.name || user.email) : '—',
-          userRole: user ? user.role : '',
-          amount: amount, reason: reason,
-          status: 'approved',
-          approvedBy: currentUser.uid,
-          approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        if (user) {
-          db.collection('notifications').add({
-            userId: userId,
-            title: '💼 معاملة جديدة',
-            body: (type === 'advance' ? 'تقدمة' : type === 'deduction' ? 'خصم' : type === 'paid' ? 'دفعة' : 'مصروف/إيراد') + ': ' + amount.toFixed(0) + ' ر.ي',
-            type: 'info', icon: '💼', read: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          }).catch(function(){});
-        }
-        
-        modal.remove();
-        alert('✅ تم الحفظ');
-        renderTransactions();
-      } catch(e){
-        btn.disabled = false; btn.textContent = '💾 حفظ';
-        alert('❌ ' + e.message);
+    var wrapped = function(tab, btn){
+      var result = origSwitch.apply(this, arguments);
+      if (tab === 'overview' || tab === 'reports') {
+        setTimeout(tryInject, 600);
       }
+      return result;
     };
-  };
+    wrapped.__v287 = true;
+    window.__caSwitchTab = wrapped;
+    console.log('[V287] Switch hook installed');
+  }, 2500);
 
-  console.log('[V285] ✅ Ready');
+  function tryInject(){
+    if (!window.Chart) return;
+    var main = document.querySelector('#accountant-mgr-app .ca-main');
+    if (!main) return;
+    if (main.querySelector('#v287-charts')) return;
+    
+    var orders = (window.CA && window.CA.orders) ? window.CA.orders : [];
+    if (!orders.length) { console.log('[V287] no orders yet'); return; }
+    
+    var container = document.createElement('div');
+    container.id = 'v287-charts';
+    container.style.cssText = 'margin: 16px 0; padding: 0 4px;';
+    container.innerHTML = 
+      '<div style="font-size: 15px; font-weight: 900; color: #f59e0b; margin-bottom: 12px">📊 الرسوم البيانية</div>'
+      + '<div style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 16px; padding: 14px; margin-bottom: 12px">'
+      +   '<div style="font-size: 12px; color: #b8c0d8; font-weight: 700; margin-bottom: 10px">📈 مبيعات آخر 7 أيام</div>'
+      +   '<div style="height: 180px; position: relative"><canvas id="v287-line"></canvas></div>'
+      + '</div>'
+      + '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px">'
+      +   '<div style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 16px; padding: 12px">'
+      +     '<div style="font-size: 11px; color: #b8c0d8; font-weight: 700; margin-bottom: 8px">🥧 الطلبات</div>'
+      +     '<div style="height: 140px; position: relative"><canvas id="v287-pie"></canvas></div>'
+      +   '</div>'
+      +   '<div style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 16px; padding: 12px">'
+      +     '<div style="font-size: 11px; color: #b8c0d8; font-weight: 700; margin-bottom: 8px">📊 حسب القسم</div>'
+      +     '<div style="height: 140px; position: relative"><canvas id="v287-bar"></canvas></div>'
+      +   '</div>'
+      + '</div>';
+    
+    main.insertBefore(container, main.firstChild);
+    drawAll(orders);
+    console.log('[V287] ✅ Charts injected for', orders.length, 'orders');
+  }
+
+  function drawAll(orders){
+    var isDark = document.body.getAttribute('data-theme') !== 'light';
+    var textColor = isDark ? '#b8c0d8' : '#4b5563';
+    var gridColor = isDark ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.08)';
+    
+    Chart.defaults.color = textColor;
+    Chart.defaults.font.family = 'Tajawal, system-ui, sans-serif';
+    Chart.defaults.font.size = 10;
+    
+    // ══════ 1. مبيعات آخر 7 أيام (Line) ══════
+    var days = [];
+    var salesByDay = [];
+    var today = new Date();
+    today.setHours(23,59,59,999);
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(today.getTime() - i*24*60*60*1000);
+      days.push(d.toLocaleDateString('ar-YE', {weekday:'short'}));
+      salesByDay.push(0);
+    }
+    
+    orders.forEach(function(o){
+      if (o.status !== 'completed') return;
+      var ts = o.createdAt && o.createdAt.toDate ? o.createdAt.toDate().getTime() : 0;
+      if (!ts) return;
+      var diff = Math.floor((today.getTime() - ts) / (24*60*60*1000));
+      if (diff >= 0 && diff <= 6) {
+        salesByDay[6 - diff] += Number(o.total) || 0;
+      }
+    });
+    
+    new Chart(document.getElementById('v287-line'), {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [{
+          label: 'المبيعات (ر.ي)',
+          data: salesByDay,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245,158,11,0.15)',
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#f59e0b',
+          pointRadius: 4,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { font: { size: 9 } } },
+          x: { grid: { display: false }, ticks: { font: { size: 9 } } }
+        }
+      }
+    });
+    
+    // ══════ 2. الطلبات حسب الحالة (Doughnut) ══════
+    var pending = 0, completed = 0, cancelled = 0, shipped = 0;
+    orders.forEach(function(o){
+      if (o.status === 'completed') completed++;
+      else if (o.status === 'cancelled') cancelled++;
+      else if (o.status === 'shipped') shipped++;
+      else pending++;
+    });
+    
+    new Chart(document.getElementById('v287-pie'), {
+      type: 'doughnut',
+      data: {
+        labels: ['معلق', 'مشحون', 'مكتمل', 'ملغى'],
+        datasets: [{
+          data: [pending, shipped, completed, cancelled],
+          backgroundColor: ['#fbbf24', '#3b82f6', '#22c55e', '#ef4444'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 9 }, padding: 6, boxWidth: 10 } } }
+      }
+    });
+    
+    // ══════ 3. المبيعات حسب القسم (Bar) ══════
+    var CATS = {
+      electronics: 'إلكترونيات', fashion: 'أزياء', clothing: 'ملابس',
+      shoes_bags: 'أحذية', beauty: 'جمال', kids_sports: 'أطفال',
+      home: 'منزل', supermarket: 'سوبرماركت'
+    };
+    var catSales = {};
+    Object.keys(CATS).forEach(function(k){ catSales[k] = 0; });
+    
+    orders.forEach(function(o){
+      if (o.status !== 'completed') return;
+      if (o.categories) {
+        Object.keys(o.categories).forEach(function(cat){
+          var c = o.categories[cat];
+          if (c && c.subtotal) catSales[cat] = (catSales[cat] || 0) + Number(c.subtotal);
+        });
+      }
+    });
+    
+    var cats = Object.keys(catSales).filter(function(k){ return catSales[k] > 0; });
+    if (!cats.length) cats = Object.keys(CATS).slice(0, 4);
+    
+    new Chart(document.getElementById('v287-bar'), {
+      type: 'bar',
+      data: {
+        labels: cats.map(function(k){ return CATS[k] || k; }),
+        datasets: [{
+          data: cats.map(function(k){ return catSales[k]; }),
+          backgroundColor: ['#7c3aed', '#ec4899', '#a855f7', '#3b82f6', '#22c55e', '#f59e0b', '#06b6d4', '#f43f5e'],
+          borderRadius: 6,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { font: { size: 9 } } },
+          x: { grid: { display: false }, ticks: { font: { size: 8 } } }
+        }
+      }
+    });
+  }
+
+  // محاولة أولى بعد التحميل
+  setTimeout(tryInject, 4000);
+  setTimeout(tryInject, 6000);
 })();
 </script>
 </body>
