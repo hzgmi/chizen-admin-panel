@@ -9679,53 +9679,76 @@ window.catMgrApp = (function(){
 
 
 
-<script id="v243-router">
-(function(){
-  var tries = 0;
-  function hook(){
-    tries++;
-    if(tries > 300) return setTimeout(hook, 100);
-    if(!window.A || !window.A.checkAdmin) return setTimeout(hook, 100);
-    if(window.__v243Ready) return;
-    window.__v243Ready = true;
 
-    var origCheck = window.A.checkAdmin;
-    window.A.checkAdmin = async function(u) {
-      if (!u) return;
-      try {
-        var db = firebase.firestore();
-        var userSnap = await db.collection('users').doc(u.uid).get();
-        if (userSnap.exists) {
-          var ud = userSnap.data();
+
+
+<script id="v244-enforcer">
+(function(){
+  console.log('[V244] Enforcer active');
+  
+  var checks = 0;
+  var maxChecks = 20; // 20 × 800ms = 16 ثانية
+  var redirecting = false;
+  var initFired = false;
+  
+  function enforce(){
+    checks++;
+    
+    var u = firebase && firebase.auth && firebase.auth().currentUser;
+    if (!u) {
+      if (checks >= maxChecks) clearInterval(intervalId);
+      return;
+    }
+    
+    firebase.firestore().collection('users').doc(u.uid).get().then(function(doc){
+      if (!doc.exists) return;
+      var data = doc.data();
+      var role = data.role || 'customer';
+      
+      if (role === 'cat_manager') {
+        // 🔒 إخفاء الإدارة القديمة
+        var am = document.getElementById('am');
+        if (am) am.style.setProperty('display', 'none', 'important');
+        var gs = document.getElementById('gs');
+        if (gs) gs.style.setProperty('display', 'none', 'important');
+        
+        // 🔓 إظهار لوحة مدير القسم
+        var app = document.getElementById('cat-mgr-app');
+        if (app) {
+          app.style.setProperty('display', 'block', 'important');
+          app.style.setProperty('z-index', '999999', 'important');
+          app.style.setProperty('position', 'fixed', 'important');
+          app.style.setProperty('inset', '0', 'important');
+          app.style.setProperty('overflow-y', 'auto', 'important');
+          app.style.setProperty('background', '#0a0825', 'important');
           
-          // 1. مدير قسم: عرض v100 حصراً، منع الواجهة القديمة
-          if (ud.role === 'cat_manager') {
-            var am = document.getElementById('am'); if(am) am.style.setProperty('display','none','important');
-            var gs = document.getElementById('gs'); if(gs) gs.style.setProperty('display','none','important');
-            
-            if (window.catMgrApp && window.catMgrApp.init) {
-              window.catMgrApp.init(Object.assign({uid: u.uid}, ud));
-            }
-            return; // 🛑 STOP: لا نستدعي الكود القديم
-          }
-          
-          // 2. سوبر أدمن: تحويل للوحة الحديثة dashboard.html
-          if (ud.role === 'super_admin' || (firebase.auth().currentUser && firebase.auth().currentUser.email === 'hazimchat@gmail.com')) {
-            origCheck(u); // تشغيل القديم لإعداد الجلسة
+          // إن كان فارغاً، شغّل init مرة واحدة
+          if (app.children.length === 0 && !initFired) {
+            initFired = true;
             setTimeout(function(){
-              window.location.href = 'dashboard.html';
-            }, 500);
-            return;
+              if (window.catMgrApp && window.catMgrApp.init) {
+                window.catMgrApp.init(Object.assign({uid: u.uid}, data));
+              }
+            }, 50);
           }
         }
-      } catch(e) {
-        console.warn('[V243] checkAdmin failed:', e);
+      } else if (role === 'super_admin') {
+        // تحويل لـ dashboard.html
+        if (location.pathname.indexOf('dashboard.html') === -1 && !redirecting) {
+          redirecting = true;
+          setTimeout(function(){ window.location.href = 'dashboard.html'; }, 400);
+        }
       }
-      return origCheck(u);
-    };
-    console.log('[V243] Strict router active');
+      
+      // توقف بعد 16 ثانية
+      if (checks >= maxChecks) clearInterval(intervalId);
+    }).catch(function(e){
+      if (checks >= maxChecks) clearInterval(intervalId);
+    });
   }
-  hook();
+  
+  var intervalId = setInterval(enforce, 800);
+  setTimeout(enforce, 2500);
 })();
 </script>
 
