@@ -876,7 +876,7 @@ var A={
       var b = document.createElement('div');
       b.id = 'role-indicator';
       b.style.cssText = 'position:fixed;top:8px;right:8px;background:linear-gradient(135deg,#ff4d94,#a855f7);color:#fff;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:900;z-index:99999;box-shadow:0 4px 12px rgba(255,77,148,0.4);';
-      var catNames = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'جمال',kids:'أطفال',sports:'رياضة',tools:'أدوات'};
+      var catNames = {electronics:'إلكترونيات والهواتف',fashion:'الأزياء والموضة',clothing:'الملابس والإكسسوارات',shoes_bags:'أحذية والشنط',beauty:'جمال وعطور',kids_sports:'أطفال ورياضية',home:'منزل وأثاث',supermarket:'السوبر ماركت'};
       var lbl = role === 'cat_manager' 
         ? ('📦 ' + (catNames[category] || category || 'قسم')) 
         : '📋 مندوب طلبات';
@@ -887,7 +887,7 @@ var A={
     // مؤشر إضافي في الشاشة الرئيسية
     var dash = document.getElementById('dash-c');
     if (dash) {
-      var catNames2 = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'جمال',kids:'أطفال',sports:'رياضة',tools:'أدوات'};
+      var catNames2 = {electronics:'إلكترونيات والهواتف',fashion:'الأزياء والموضة',clothing:'الملابس والإكسسوارات',shoes_bags:'أحذية والشنط',beauty:'جمال وعطور',kids_sports:'أطفال ورياضية',home:'منزل وأثاث',supermarket:'السوبر ماركت'};
       var welcome = role === 'cat_manager'
         ? '📦 مرحباً — أنت مسؤول قسم ' + (catNames2[category] || category)
         : '📋 مرحباً — أنت مندوب الطلبات';
@@ -1784,7 +1784,7 @@ var A={
     try {
       var snap = await FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr']).get();
       if (snap.empty) { c.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">لا يوجد موظفون بعد</div>'; return; }
-      var catNames = {electronics:'إلكترونيات',fashion:'أزياء',home:'منزل',beauty:'جمال',kids:'أطفال',sports:'رياضة',tools:'أدوات'};
+      var catNames = {electronics:'إلكترونيات والهواتف',fashion:'الأزياء والموضة',clothing:'الملابس والإكسسوارات',shoes_bags:'أحذية والشنط',beauty:'جمال وعطور',kids_sports:'أطفال ورياضية',home:'منزل وأثاث',supermarket:'السوبر ماركت'};
       var h = '';
       snap.forEach(function(doc) {
         var d = doc.data();
@@ -3442,7 +3442,7 @@ document.addEventListener('click', function(e) {
       var catKeys = Object.keys(cats);
       var di = order.deliveryInfo || {};
       
-      var catNames = {electronics:'إلكترونيات', fashion:'أزياء', home:'منزل', beauty:'جمال', kids:'أطفال', sports:'رياضة', tools:'أدوات'};
+      var catNames = {electronics:'إلكترونيات والهواتف',fashion:'الأزياء والموضة',clothing:'الملابس والإكسسوارات',shoes_bags:'أحذية والشنط',beauty:'جمال وعطور',kids_sports:'أطفال ورياضية',home:'منزل وأثاث',supermarket:'السوبر ماركت'};
       
       var body = 
         '<div style="background:linear-gradient(135deg,rgba(168,85,247,0.1),rgba(236,72,153,0.05));border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:14px;margin-bottom:14px;">' +
@@ -4147,7 +4147,7 @@ document.addEventListener('click', function(e) {
     
     var cats = order.categories || {};
     var catKeys = Object.keys(cats);
-    var catNames = {electronics:'إلكترونيات', fashion:'أزياء', home:'منزل', beauty:'جمال', kids:'أطفال', sports:'رياضة', tools:'أدوات'};
+    var catNames = {electronics:'إلكترونيات والهواتف',fashion:'الأزياء والموضة',clothing:'الملابس والإكسسوارات',shoes_bags:'أحذية والشنط',beauty:'جمال وعطور',kids_sports:'أطفال ورياضية',home:'منزل وأثاث',supermarket:'السوبر ماركت'};
     var itemsHtml = '';
     catKeys.forEach(function(k) {
       var c = cats[k];
@@ -7677,7 +7677,7 @@ if ('serviceWorker' in navigator) {
 
 <script>
 window.catMgrApp = (function(){
-  const CAT_LABELS = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',sports:'أدوات رياضية',beauty:'جمال وعطور',kids:'مستلزمات أطفال',tools:'أدوات منزلية',home:'منزل وأثاث',cars:'سيارات',phones:'هواتف',books:'كتب',health:'صحة'};
+  const CAT_LABELS = {electronics:'إلكترونيات والهواتف',fashion:'الأزياء والموضة',clothing:'الملابس والإكسسوارات',shoes_bags:'أحذية والشنط',beauty:'جمال وعطور',kids_sports:'أطفال ورياضية',home:'منزل وأثاث',supermarket:'السوبر ماركت'};
   const state = {user:null,cat:null,activeTab:'pending',pending:[],products:[],unsub:null,initialized:false};
   const $ = id => document.getElementById(id);
   const label = c => CAT_LABELS[c] || c || '—';
@@ -7985,7 +7985,7 @@ window.catMgrApp = (function(){
   function setup(){
     var db = firebase.firestore();
     var state = window.catMgrApp.state;
-    var CATS = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',sports:'أدوات رياضية',beauty:'جمال وعطور',kids:'مستلزمات أطفال',tools:'أدوات منزلية',home:'منزل وأثاث'};
+    var CATS = {electronics:'إلكترونيات والهواتف',fashion:'الأزياء والموضة',clothing:'الملابس والإكسسوارات',shoes_bags:'أحذية والشنط',beauty:'جمال وعطور',kids_sports:'أطفال ورياضية',home:'منزل وأثاث',supermarket:'السوبر ماركت'};
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
     function fmtDate(ts){ try{ var d = ts && ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('ar-YE'); } catch(e){ return '—'; } }
     function catLabel(c){ return CATS[c] || c || '—'; }
