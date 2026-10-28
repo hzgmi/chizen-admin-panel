@@ -9682,73 +9682,50 @@ window.catMgrApp = (function(){
 
 
 
-<script id="v244-enforcer">
+
+
+
+<script id="v245-override">
 (function(){
-  console.log('[V244] Enforcer active');
-  
-  var checks = 0;
-  var maxChecks = 20; // 20 × 800ms = 16 ثانية
-  var redirecting = false;
-  var initFired = false;
-  
-  function enforce(){
-    checks++;
-    
-    var u = firebase && firebase.auth && firebase.auth().currentUser;
-    if (!u) {
-      if (checks >= maxChecks) clearInterval(intervalId);
-      return;
-    }
-    
-    firebase.firestore().collection('users').doc(u.uid).get().then(function(doc){
-      if (!doc.exists) return;
-      var data = doc.data();
-      var role = data.role || 'customer';
-      
-      if (role === 'cat_manager') {
-        // 🔒 إخفاء الإدارة القديمة
-        var am = document.getElementById('am');
-        if (am) am.style.setProperty('display', 'none', 'important');
-        var gs = document.getElementById('gs');
-        if (gs) gs.style.setProperty('display', 'none', 'important');
-        
-        // 🔓 إظهار لوحة مدير القسم
-        var app = document.getElementById('cat-mgr-app');
-        if (app) {
-          app.style.setProperty('display', 'block', 'important');
-          app.style.setProperty('z-index', '999999', 'important');
-          app.style.setProperty('position', 'fixed', 'important');
-          app.style.setProperty('inset', '0', 'important');
-          app.style.setProperty('overflow-y', 'auto', 'important');
-          app.style.setProperty('background', '#0a0825', 'important');
-          
-          // إن كان فارغاً، شغّل init مرة واحدة
-          if (app.children.length === 0 && !initFired) {
-            initFired = true;
-            setTimeout(function(){
-              if (window.catMgrApp && window.catMgrApp.init) {
-                window.catMgrApp.init(Object.assign({uid: u.uid}, data));
-              }
-            }, 50);
+  var tries = 0;
+  function hook(){
+    tries++;
+    if(tries > 300) return setTimeout(hook, 100);
+    if(!window.A || typeof window.A.access !== 'function') return setTimeout(hook, 100);
+    if(window.__v245Ready) return;
+    window.__v245Ready = true;
+
+    var origAccess = window.A.access;
+    window.A.access = function(u) {
+      // مدير القسم: تجاوز A.access تماماً، عرض v100 فقط
+      if (window.CURRENT_ROLE === 'cat_manager') {
+        try {
+          var gs = document.getElementById('gs'); if(gs) gs.style.setProperty('display','none','important');
+          var am = document.getElementById('am'); if(am) am.style.setProperty('display','none','important');
+          var app = document.getElementById('cat-mgr-app');
+          if (app) {
+            app.style.setProperty('display','block','important');
+            app.style.setProperty('position','fixed','important');
+            app.style.setProperty('inset','0','important');
+            app.style.setProperty('z-index','999999','important');
+            app.style.setProperty('overflow-y','auto','important');
+            app.style.setProperty('background','#0a0825','important');
           }
-        }
-      } else if (role === 'super_admin') {
-        // تحويل لـ dashboard.html
-        if (location.pathname.indexOf('dashboard.html') === -1 && !redirecting) {
-          redirecting = true;
-          setTimeout(function(){ window.location.href = 'dashboard.html'; }, 400);
-        }
+          var db = firebase.firestore();
+          db.collection('users').doc(u.uid).get().then(function(doc){
+            if (doc.exists && window.catMgrApp && window.catMgrApp.init) {
+              window.catMgrApp.init(Object.assign({uid: u.uid}, doc.data()));
+            }
+          }).catch(function(e){ console.warn('[V245] init:', e); });
+        } catch(e) { console.warn('[V245]', e); }
+        return; // 🛑 منع الاستدعاء الأصلي
       }
-      
-      // توقف بعد 16 ثانية
-      if (checks >= maxChecks) clearInterval(intervalId);
-    }).catch(function(e){
-      if (checks >= maxChecks) clearInterval(intervalId);
-    });
+      // بقية الأدوار: استخدم A.access الأصلي
+      return origAccess.call(this, u);
+    };
+    console.log('[V245] A.access overridden — cat_manager routes to v100');
   }
-  
-  var intervalId = setInterval(enforce, 800);
-  setTimeout(enforce, 2500);
+  hook();
 })();
 </script>
 
