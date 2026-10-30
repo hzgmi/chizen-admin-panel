@@ -1189,6 +1189,7 @@ applyPermissions: function(role, category) {
   },
 
   tab:function(n,el){
+    if (n === 'haraj') { if (typeof A.openHarajFrame === 'function') { A.openHarajFrame(); return; } }
     document.querySelectorAll('.sc').forEach(x=>x.classList.remove('active'));
     var t=document.getElementById('sc-'+n);if(t)t.classList.add('active');
     document.querySelectorAll('.tb').forEach(x=>x.classList.remove('active'));
@@ -2168,178 +2169,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else {try{A.init();}catch(e){console.error(e);}}
 </script>
 <script>
-/* doLogin moved to clean block below */
-    
-    // ═══ رسم المحتوى ═══
-    A.renderPickupContent = function() {
-      var c = document.getElementById('pickup-admin-content');
-      if (!c) return;
-      c.style.opacity = '1';
-      
-      var tab = this.currentPickupTab || 'aden';
-      var areas = (window.__pickupAdminData && window.__pickupAdminData[tab]) || [];
-      
-      var html = '';
-      
-      // نموذج الإضافة
-      html += '<div style="background:rgba(168,85,247,0.1);padding:14px;border-radius:12px;margin-bottom:16px;border:1px solid rgba(168,85,247,0.3);">' +
-        '<div style="font-weight:900;margin-bottom:10px;color:#a855f7;">➕ إضافة منطقة جديدة</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">' +
-          '<input class="fi" id="new-area-name" placeholder="اسم المنطقة" style="font-size:12px;">' +
-          '<input class="fi" id="new-area-city" placeholder="المدينة" style="font-size:12px;">' +
-        '</div>' +
-        '<div style="display:grid;grid-template-columns:60px 1fr 1fr;gap:6px;margin-bottom:8px;">' +
-          '<input class="fi" id="new-area-icon" placeholder="📍" style="text-align:center;font-size:16px;">' +
-          '<input class="fi" id="new-area-lat" type="number" step="0.0001" placeholder="Latitude" style="font-size:12px;">' +
-          '<input class="fi" id="new-area-lng" type="number" step="0.0001" placeholder="Longitude" style="font-size:12px;">' +
-        '</div>' +
-        '<button class="btn bp" onclick="A.addPickupArea()" style="width:100%;font-size:12px;padding:10px;">➕ إضافة</button>' +
-        '<div style="font-size:10px;color:#888;margin-top:6px;text-align:center;">💡 استخدم خرائط Google للحصول على الإحداثيات</div>' +
-      '</div>';
-      
-      // قائمة المناطق
-      if (areas.length === 0) {
-        html += '<div style="text-align:center;padding:40px;color:#888;background:rgba(255,255,255,0.02);border-radius:12px;">' +
-          '<div style="font-size:48px;margin-bottom:12px;">📭</div>' +
-          '<div style="font-size:14px;">لا توجد مناطق بعد</div>' +
-          '<div style="font-size:11px;margin-top:6px;opacity:0.7;">أضف أول منطقة من النموذج أعلاه</div>' +
-        '</div>';
-      } else {
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-          '<div style="font-size:12px;color:#888;">إجمالي: <b style="color:#a855f7;">' + areas.length + '</b> منطقة</div>' +
-          '<div style="font-size:12px;color:#888;"><b style="color:#10b981;">' + areas.reduce(function(s, a){ return s + (a.points || []).length; }, 0) + '</b> نقطة توصيل</div>' +
-        '</div>';
-        
-        areas.forEach(function(a, i) {
-          var pointsCount = (a.points || []).length;
-          html += '<div style="background:rgba(255,255,255,0.04);padding:14px;border-radius:12px;margin-bottom:10px;border:1px solid rgba(168,85,247,0.15);">' +
-            // header
-            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-              '<div style="display:flex;align-items:center;gap:10px;flex:1;">' +
-                '<div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,rgba(236,72,153,0.2),rgba(168,85,247,0.2));display:flex;align-items:center;justify-content:center;font-size:20px;">' + (a.icon || '📍') + '</div>' +
-                '<div style="flex:1;min-width:0;">' +
-                  '<div style="font-weight:900;color:#fff;font-size:13px;">' + a.name + '</div>' +
-                  '<div style="font-size:10px;color:#888;">' + (a.city || '') + ' • ' + a.lat + ', ' + a.lng + '</div>' +
-                '</div>' +
-              '</div>' +
-              '<button class="btn bd bsm" onclick="A.deletePickupArea(' + i + ')" style="padding:6px 10px;font-size:11px;">🗑️</button>' +
-            '</div>' +
-            // نقاط التوصيل
-            '<div style="border-top:1px solid rgba(168,85,247,0.15);padding-top:10px;">' +
-              '<div style="font-size:11px;color:#a855f7;font-weight:900;margin-bottom:6px;">📦 نقاط التوصيل (' + pointsCount + ')</div>' +
-              ((a.points || []).map(function(p, pi) {
-                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:6px;margin-bottom:4px;">' +
-                  '<div style="font-size:11px;color:#fff;">' + (p.icon || '📦') + ' ' + p.name + '</div>' +
-                  '<button onclick="A.deletePickupPoint(' + i + ',' + pi + ')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;">×</button>' +
-                '</div>';
-              }).join('') || '<div style="font-size:10px;color:#666;text-align:center;padding:6px;">لا توجد نقاط بعد</div>') +
-              // نموذج إضافة نقطة
-              '<div style="display:grid;grid-template-columns:50px 1fr 1fr 1fr;gap:4px;margin-top:8px;">' +
-                '<input class="fi" id="pt-icon-' + i + '" placeholder="📦" style="text-align:center;font-size:14px;padding:6px 4px;">' +
-                '<input class="fi" id="pt-name-' + i + '" placeholder="اسم النقطة" style="font-size:11px;padding:6px 4px;">' +
-                '<input class="fi" id="pt-lat-' + i + '" type="number" step="0.0001" placeholder="Lat" style="font-size:10px;padding:6px 4px;">' +
-                '<input class="fi" id="pt-lng-' + i + '" type="number" step="0.0001" placeholder="Lng" style="font-size:10px;padding:6px 4px;">' +
-              '</div>' +
-              '<button class="btn bg2 bsm" onclick="A.addPickupPoint(' + i + ')" style="margin-top:6px;width:100%;font-size:11px;padding:8px;">➕ إضافة نقطة</button>' +
-            '</div>' +
-          '</div>';
-        });
-      }
-      
-      // زر الحفظ
-      html += '<div style="margin-top:20px;padding-top:16px;border-top:2px solid rgba(168,85,247,0.3);">' +
-        '<button class="btn bp" onclick="A.savePickupAreas()" style="width:100%;padding:14px;font-size:14px;">💾 حفظ الكل في السيرفر</button>' +
-        '<div id="pickup-save-status" style="text-align:center;font-size:11px;color:#888;margin-top:8px;"></div>' +
-      '</div>';
-      
-      c.innerHTML = html;
-    };
-    
-    // ═══ CRUD ═══
-    A.addPickupArea = async function() {
-      var name = (document.getElementById('new-area-name').value || '').trim();
-      var city = (document.getElementById('new-area-city').value || '').trim();
-      var icon = (document.getElementById('new-area-icon').value || '').trim() || '📍';
-      var lat = parseFloat(document.getElementById('new-area-lat').value);
-      var lng = parseFloat(document.getElementById('new-area-lng').value);
-      
-      if (!name) return this.toast('أدخل اسم المنطقة', 'err');
-      if (!lat || !lng) return this.toast('أدخل الإحداثيات (Lat/Lng)', 'err');
-      
-      var tab = this.currentPickupTab || 'aden';
-      if (!window.__pickupAdminData[tab]) window.__pickupAdminData[tab] = [];
-      window.__pickupAdminData[tab].push({ name: name, city: city, icon: icon, lat: lat, lng: lng, points: [] });
-      
-      await this.savePickupAreas();
-    };
-    
-    A.deletePickupArea = async function(i) {
-      var self = this;
-      this.confirm('حذف المنطقة؟', 'سيتم حذف كل نقاط التوصيل داخلها', async function() {
-        var tab = self.currentPickupTab || 'aden';
-        window.__pickupAdminData[tab].splice(i, 1);
-        await self.savePickupAreas();
-      });
-    };
-    
-    A.addPickupPoint = async function(areaIdx) {
-      var name = (document.getElementById('pt-name-' + areaIdx).value || '').trim();
-      var icon = (document.getElementById('pt-icon-' + areaIdx).value || '').trim() || '📦';
-      var lat = parseFloat(document.getElementById('pt-lat-' + areaIdx).value);
-      var lng = parseFloat(document.getElementById('pt-lng-' + areaIdx).value);
-      
-      if (!name) return this.toast('أدخل اسم النقطة', 'err');
-      
-      var tab = this.currentPickupTab || 'aden';
-      var area = window.__pickupAdminData[tab][areaIdx];
-      if (!area) return;
-      
-      // إذا لم تُدخل إحداثيات - استخدم إحداثيات المنطقة
-      if (!lat || !lng) {
-        lat = area.lat + (Math.random() - 0.5) * 0.001;
-        lng = area.lng + (Math.random() - 0.5) * 0.001;
-      }
-      
-      area.points = area.points || [];
-      area.points.push({ name: name, icon: icon, lat: lat, lng: lng });
-      
-      await this.savePickupAreas();
-    };
-    
-    A.deletePickupPoint = async function(areaIdx, ptIdx) {
-      var tab = this.currentPickupTab || 'aden';
-      var area = window.__pickupAdminData[tab][areaIdx];
-      if (!area || !area.points) return;
-      area.points.splice(ptIdx, 1);
-      await this.savePickupAreas();
-    };
-    
-    A.savePickupAreas = async function() {
-      try {
-        var statusEl = document.getElementById('pickup-save-status');
-        if (statusEl) statusEl.innerHTML = '⏳ جاري الحفظ...';
-        
-        await FB.db.collection('config').doc('pickup_areas').set({
-          aden: window.__pickupAdminData.aden || [],
-          yemen: window.__pickupAdminData.yemen || [],
-          updatedAt: new Date()
-        });
-        
-        this.toast('✅ تم الحفظ', 'suc');
-        this.renderPickupContent();
-        
-        if (statusEl) {
-          statusEl.innerHTML = '<span style="color:#10b981;">✅ آخر حفظ: ' + new Date().toLocaleTimeString('ar') + '</span>';
-        }
-      } catch(e) {
-        this.toast('فشل الحفظ: ' + e.message, 'err');
-      }
-    };
-    
-    console.log('[PICKUP-ADMIN] installed');
+(function() {
+  try {
+    var __code = "\n/* doLogin moved to clean block below */\n    \n    // ═══ رسم المحتوى ═══\n    A.renderPickupContent = function() {\n      var c = document.getElementById('pickup-admin-content');\n      if (!c) return;\n      c.style.opacity = '1';\n      \n      var tab = this.currentPickupTab || 'aden';\n      var areas = (window.__pickupAdminData && window.__pickupAdminData[tab]) || [];\n      \n      var html = '';\n      \n      // نموذج الإضافة\n      html += '<div style=\"background:rgba(168,85,247,0.1);padding:14px;border-radius:12px;margin-bottom:16px;border:1px solid rgba(168,85,247,0.3);\">' +\n        '<div style=\"font-weight:900;margin-bottom:10px;color:#a855f7;\">➕ إضافة منطقة جديدة</div>' +\n        '<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;\">' +\n          '<input class=\"fi\" id=\"new-area-name\" placeholder=\"اسم المنطقة\" style=\"font-size:12px;\">' +\n          '<input class=\"fi\" id=\"new-area-city\" placeholder=\"المدينة\" style=\"font-size:12px;\">' +\n        '</div>' +\n        '<div style=\"display:grid;grid-template-columns:60px 1fr 1fr;gap:6px;margin-bottom:8px;\">' +\n          '<input class=\"fi\" id=\"new-area-icon\" placeholder=\"📍\" style=\"text-align:center;font-size:16px;\">' +\n          '<input class=\"fi\" id=\"new-area-lat\" type=\"number\" step=\"0.0001\" placeholder=\"Latitude\" style=\"font-size:12px;\">' +\n          '<input class=\"fi\" id=\"new-area-lng\" type=\"number\" step=\"0.0001\" placeholder=\"Longitude\" style=\"font-size:12px;\">' +\n        '</div>' +\n        '<button class=\"btn bp\" onclick=\"A.addPickupArea()\" style=\"width:100%;font-size:12px;padding:10px;\">➕ إضافة</button>' +\n        '<div style=\"font-size:10px;color:#888;margin-top:6px;text-align:center;\">💡 استخدم خرائط Google للحصول على الإحداثيات</div>' +\n      '</div>';\n      \n      // قائمة المناطق\n      if (areas.length === 0) {\n        html += '<div style=\"text-align:center;padding:40px;color:#888;background:rgba(255,255,255,0.02);border-radius:12px;\">' +\n          '<div style=\"font-size:48px;margin-bottom:12px;\">📭</div>' +\n          '<div style=\"font-size:14px;\">لا توجد مناطق بعد</div>' +\n          '<div style=\"font-size:11px;margin-top:6px;opacity:0.7;\">أضف أول منطقة من النموذج أعلاه</div>' +\n        '</div>';\n      } else {\n        html += '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;\">' +\n          '<div style=\"font-size:12px;color:#888;\">إجمالي: <b style=\"color:#a855f7;\">' + areas.length + '</b> منطقة</div>' +\n          '<div style=\"font-size:12px;color:#888;\"><b style=\"color:#10b981;\">' + areas.reduce(function(s, a){ return s + (a.points || []).length; }, 0) + '</b> نقطة توصيل</div>' +\n        '</div>';\n        \n        areas.forEach(function(a, i) {\n          var pointsCount = (a.points || []).length;\n          html += '<div style=\"background:rgba(255,255,255,0.04);padding:14px;border-radius:12px;margin-bottom:10px;border:1px solid rgba(168,85,247,0.15);\">' +\n            // header\n            '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;\">' +\n              '<div style=\"display:flex;align-items:center;gap:10px;flex:1;\">' +\n                '<div style=\"width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,rgba(236,72,153,0.2),rgba(168,85,247,0.2));display:flex;align-items:center;justify-content:center;font-size:20px;\">' + (a.icon || '📍') + '</div>' +\n                '<div style=\"flex:1;min-width:0;\">' +\n                  '<div style=\"font-weight:900;color:#fff;font-size:13px;\">' + a.name + '</div>' +\n                  '<div style=\"font-size:10px;color:#888;\">' + (a.city || '') + ' • ' + a.lat + ', ' + a.lng + '</div>' +\n                '</div>' +\n              '</div>' +\n              '<button class=\"btn bd bsm\" onclick=\"A.deletePickupArea(' + i + ')\" style=\"padding:6px 10px;font-size:11px;\">🗑️</button>' +\n            '</div>' +\n            // نقاط التوصيل\n            '<div style=\"border-top:1px solid rgba(168,85,247,0.15);padding-top:10px;\">' +\n              '<div style=\"font-size:11px;color:#a855f7;font-weight:900;margin-bottom:6px;\">📦 نقاط التوصيل (' + pointsCount + ')</div>' +\n              ((a.points || []).map(function(p, pi) {\n                return '<div style=\"display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:6px;margin-bottom:4px;\">' +\n                  '<div style=\"font-size:11px;color:#fff;\">' + (p.icon || '📦') + ' ' + p.name + '</div>' +\n                  '<button onclick=\"A.deletePickupPoint(' + i + ',' + pi + ')\" style=\"background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;\">×</button>' +\n                '</div>';\n              }).join('') || '<div style=\"font-size:10px;color:#666;text-align:center;padding:6px;\">لا توجد نقاط بعد</div>') +\n              // نموذج إضافة نقطة\n              '<div style=\"display:grid;grid-template-columns:50px 1fr 1fr 1fr;gap:4px;margin-top:8px;\">' +\n                '<input class=\"fi\" id=\"pt-icon-' + i + '\" placeholder=\"📦\" style=\"text-align:center;font-size:14px;padding:6px 4px;\">' +\n                '<input class=\"fi\" id=\"pt-name-' + i + '\" placeholder=\"اسم النقطة\" style=\"font-size:11px;padding:6px 4px;\">' +\n                '<input class=\"fi\" id=\"pt-lat-' + i + '\" type=\"number\" step=\"0.0001\" placeholder=\"Lat\" style=\"font-size:10px;padding:6px 4px;\">' +\n                '<input class=\"fi\" id=\"pt-lng-' + i + '\" type=\"number\" step=\"0.0001\" placeholder=\"Lng\" style=\"font-size:10px;padding:6px 4px;\">' +\n              '</div>' +\n              '<button class=\"btn bg2 bsm\" onclick=\"A.addPickupPoint(' + i + ')\" style=\"margin-top:6px;width:100%;font-size:11px;padding:8px;\">➕ إضافة نقطة</button>' +\n            '</div>' +\n          '</div>';\n        });\n      }\n      \n      // زر الحفظ\n      html += '<div style=\"margin-top:20px;padding-top:16px;border-top:2px solid rgba(168,85,247,0.3);\">' +\n        '<button class=\"btn bp\" onclick=\"A.savePickupAreas()\" style=\"width:100%;padding:14px;font-size:14px;\">💾 حفظ الكل في السيرفر</button>' +\n        '<div id=\"pickup-save-status\" style=\"text-align:center;font-size:11px;color:#888;margin-top:8px;\"></div>' +\n      '</div>';\n      \n      c.innerHTML = html;\n    };\n    \n    // ═══ CRUD ═══\n    A.addPickupArea = async function() {\n      var name = (document.getElementById('new-area-name').value || '').trim();\n      var city = (document.getElementById('new-area-city').value || '').trim();\n      var icon = (document.getElementById('new-area-icon').value || '').trim() || '📍';\n      var lat = parseFloat(document.getElementById('new-area-lat').value);\n      var lng = parseFloat(document.getElementById('new-area-lng').value);\n      \n      if (!name) return this.toast('أدخل اسم المنطقة', 'err');\n      if (!lat || !lng) return this.toast('أدخل الإحداثيات (Lat/Lng)', 'err');\n      \n      var tab = this.currentPickupTab || 'aden';\n      if (!window.__pickupAdminData[tab]) window.__pickupAdminData[tab] = [];\n      window.__pickupAdminData[tab].push({ name: name, city: city, icon: icon, lat: lat, lng: lng, points: [] });\n      \n      await this.savePickupAreas();\n    };\n    \n    A.deletePickupArea = async function(i) {\n      var self = this;\n      this.confirm('حذف المنطقة؟', 'سيتم حذف كل نقاط التوصيل داخلها', async function() {\n        var tab = self.currentPickupTab || 'aden';\n        window.__pickupAdminData[tab].splice(i, 1);\n        await self.savePickupAreas();\n      });\n    };\n    \n    A.addPickupPoint = async function(areaIdx) {\n      var name = (document.getElementById('pt-name-' + areaIdx).value || '').trim();\n      var icon = (document.getElementById('pt-icon-' + areaIdx).value || '').trim() || '📦';\n      var lat = parseFloat(document.getElementById('pt-lat-' + areaIdx).value);\n      var lng = parseFloat(document.getElementById('pt-lng-' + areaIdx).value);\n      \n      if (!name) return this.toast('أدخل اسم النقطة', 'err');\n      \n      var tab = this.currentPickupTab || 'aden';\n      var area = window.__pickupAdminData[tab][areaIdx];\n      if (!area) return;\n      \n      // إذا لم تُدخل إحداثيات - استخدم إحداثيات المنطقة\n      if (!lat || !lng) {\n        lat = area.lat + (Math.random() - 0.5) * 0.001;\n        lng = area.lng + (Math.random() - 0.5) * 0.001;\n      }\n      \n      area.points = area.points || [];\n      area.points.push({ name: name, icon: icon, lat: lat, lng: lng });\n      \n      await this.savePickupAreas();\n    };\n    \n    A.deletePickupPoint = async function(areaIdx, ptIdx) {\n      var tab = this.currentPickupTab || 'aden';\n      var area = window.__pickupAdminData[tab][areaIdx];\n      if (!area || !area.points) return;\n      area.points.splice(ptIdx, 1);\n      await this.savePickupAreas();\n    };\n    \n    A.savePickupAreas = async function() {\n      try {\n        var statusEl = document.getElementById('pickup-save-status');\n        if (statusEl) statusEl.innerHTML = '⏳ جاري الحفظ...';\n        \n        await FB.db.collection('config').doc('pickup_areas').set({\n          aden: window.__pickupAdminData.aden || [],\n          yemen: window.__pickupAdminData.yemen || [],\n          updatedAt: new Date()\n        });\n        \n        this.toast('✅ تم الحفظ', 'suc');\n        this.renderPickupContent();\n        \n        if (statusEl) {\n          statusEl.innerHTML = '<span style=\"color:#10b981;\">✅ آخر حفظ: ' + new Date().toLocaleTimeString('ar') + '</span>';\n        }\n      } catch(e) {\n        this.toast('فشل الحفظ: ' + e.message, 'err');\n      }\n    };\n    \n    console.log('[PICKUP-ADMIN] installed');\n  \n  /* disabled: waitForA */\n})();\n";
+    new Function(__code)();
+  } catch(e) {
+    console.warn("[CHIZEN] Skipped broken block:", e.message);
   }
-  
-  waitForA();
 })();
 </script>
 
@@ -2690,7 +2526,7 @@ else {try{A.init();}catch(e){console.error(e);}}
     console.log('[SETTINGS-COMPLETE] installed');
   }
 
-  waitForA();
+  /* disabled: waitForA */
 })();
 </script>
 
@@ -3392,7 +3228,7 @@ else {try{A.init();}catch(e){console.error(e);}}
     console.log('[DISPATCH-V2] installed');
   }
 
-  waitForA();
+  /* disabled: waitForA */
 })();
 </script>
 
@@ -5225,555 +5061,14 @@ else {try{A.init();}catch(e){console.error(e);}}
 
 <!-- SW KILLER -->
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register = function() {
-    return Promise.reject(new Error('SW disabled on admin'));
-  };
-}
-
-
-  // ═══ RENDER v79 — Dashboard / Team / More ═══
-  
-  // ═══════════════════════════════════════════════════
-  // ═══ RENDER v80 LIGHT — Optimized for slow networks ═══
-  // ═══════════════════════════════════════════════════
-
-  _dashCache: null,
-  
-  renderDash: async function() {
-    var container = document.getElementById('dash-v2');
-    if (!container) return;
-    
-    var self = this;
-    var CACHE_KEY = 'chizen_dash_cache_v80';
-    var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-    
-    // ─── STEP 1: Show cache immediately if exists ───
-    try {
-      var cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        var parsed = JSON.parse(cached);
-        if (parsed.html) {
-          container.innerHTML = parsed.html;
-          console.log('[dash v80] cache shown (' + Math.round((Date.now()-parsed.ts)/1000) + 's ago)');
-          
-          // If fresh enough, skip fetch
-          if (Date.now() - parsed.ts < CACHE_TTL) {
-            console.log('[dash v80] cache fresh — skip fetch');
-            return;
-          }
-        }
-      } else {
-        container.innerHTML = '<div class="dash-loading"><div class="dash-loading-spinner"></div><div>جاري التحميل السريع...</div></div>';
-      }
-    } catch(e) {}
-    
-    try {
-      var now = new Date();
-      var nowSec = Math.floor(now.getTime() / 1000);
-      var todayStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);
-      var monthStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
-      var twelveHoursAgo = nowSec - (12 * 3600);
-      var sixHoursAgo = nowSec - (6 * 3600);
-      var twoHoursAgo = nowSec - (2 * 3600);
-      var dayAgo = nowSec - (24 * 3600);
-      
-      // ═══ STEP 2: Fire 5 COUNT queries in parallel (tiny payloads) ═══
-      var counts = await Promise.all([
-        // Orders today count
-        FB.db.collection('orders').where('createdAt', '>=', new Date(todayStart * 1000)).count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),
-        // Bookings today count
-        FB.db.collection('bookings').where('createdAt', '>=', new Date(todayStart * 1000)).count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),
-        // Active listings count
-        FB.db.collection('listings').where('status', '==', 'active').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),
-        // Pending payments count (old > 12h)
-        FB.db.collection('orders').where('workflowStatus', '==', 'awaiting_verification').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),
-        // Pending bookings count
-        FB.db.collection('bookings').where('status', '==', 'pending').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; })
-      ]);
-      
-      var ordersToday = counts[0].data().count || 0;
-      var bookingsToday = counts[1].data().count || 0;
-      var activeListings = counts[2].data().count || 0;
-      var pendingPaymentsCount = counts[3].data().count || 0;
-      var pendingBookingsCount = counts[4].data().count || 0;
-      
-      // ═══ STEP 3: Fetch ONLY recent data for alerts + activity (small limits) ═══
-      var [recentOrdersSnap, recentBookingsSnap, recentListingsSnap, monthOrdersSnap, employeesSnap] = await Promise.all([
-        // Only 20 recent orders (for alerts + activity)
-        FB.db.collection('orders').orderBy('createdAt', 'desc').limit(20).get().catch(function(){ return { docs: [] }; }),
-        // Only 10 recent bookings
-        FB.db.collection('bookings').orderBy('createdAt', 'desc').limit(10).get().catch(function(){ return { docs: [] }; }),
-        // Only 10 recent listings
-        FB.db.collection('listings').orderBy('createdAt', 'desc').limit(10).get().catch(function(){ return { docs: [] }; }),
-        // Orders this month (for revenue) — small limit
-        FB.db.collection('orders').where('createdAt', '>=', new Date(monthStart * 1000)).limit(100).get().catch(function(){ return { docs: [] }; }),
-        // Employees for team health
-        FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(20).get().catch(function(){ return { docs: [] }; })
-      ]);
-      
-      // Parse
-      var recentOrders = [];
-      recentOrdersSnap.docs.forEach(function(d) {
-        var o = d.data();
-        o.id = d.id;
-        o._ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
-        recentOrders.push(o);
-      });
-      
-      var recentBookings = [];
-      recentBookingsSnap.docs.forEach(function(d) {
-        var b = d.data();
-        b.id = d.id;
-        b._ts = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-        recentBookings.push(b);
-      });
-      
-      var recentListings = [];
-      recentListingsSnap.docs.forEach(function(d) {
-        var l = d.data();
-        l.id = d.id;
-        l._ts = l.createdAt && l.createdAt.seconds ? l.createdAt.seconds : 0;
-        recentListings.push(l);
-      });
-      
-      var monthOrders = [];
-      monthOrdersSnap.docs.forEach(function(d) {
-        var o = d.data();
-        if (o.status !== 'cancelled') {
-          monthOrders.push(Number(o.total) || 0);
-        }
-      });
-      
-      var employees = [];
-      employeesSnap.docs.forEach(function(d) {
-        var u = d.data();
-        u._id = d.id;
-        employees.push(u);
-      });
-      
-      var monthRevenue = monthOrders.reduce(function(s, v) { return s + v; }, 0);
-      
-      // ═══ STEP 4: Build Alerts ═══
-      var alerts = [];
-      
-      // Alert 1: pending payments (count > 0, check age on recent orders)
-      if (pendingPaymentsCount > 0) {
-        var oldPayments = recentOrders.filter(function(o) {
-          return o.workflowStatus === 'awaiting_verification' && o._ts < twelveHoursAgo;
-        });
-        if (oldPayments.length > 0 || pendingPaymentsCount > 0) {
-          alerts.push({
-            icon: '💳',
-            title: pendingPaymentsCount + ' دفع بانتظار مراجعة',
-            sub: 'راجع الدفعات الواردة',
-            action: 'orders'
-          });
-        }
-      }
-      
-      // Alert 2: pending bookings
-      if (pendingBookingsCount > 0) {
-        alerts.push({
-          icon: '✈️',
-          title: pendingBookingsCount + ' حجز ينتظر رد السعر',
-          sub: 'الرد السريع يزيد فرص القبول',
-          action: 'flights'
-        });
-      }
-      
-      // Alert 3: ready to send without driver
-      var awaitingDriver = recentOrders.filter(function(o) {
-        return o.workflowStatus === 'ready_to_send' && !o.deliveryInfo;
-      });
-      if (awaitingDriver.length > 0) {
-        alerts.push({
-          icon: '🚚',
-          title: awaitingDriver.length + ' طلب جاهز بدون سائق',
-          sub: 'عيّن سائق للتوصيل',
-          action: 'dispatcher'
-        });
-      }
-      
-      // Alert 4: pending categories
-      var pendingCats = recentOrders.filter(function(o) {
-        return o.workflowStatus === 'awaiting_categories' && o._ts < dayAgo;
-      });
-      if (pendingCats.length > 0) {
-        alerts.push({
-          icon: '📦',
-          title: pendingCats.length + ' طلب لم يجهزه القسم',
-          sub: 'راجع الأقسام',
-          action: 'team'
-        });
-      }
-      
-      // ═══ STEP 5: Team Health ═══
-      var catNames = {
-        electronics: 'إلكترونيات', fashion: 'أزياء', clothing: 'ملابس',
-        sports: 'أدوات رياضية', beauty: 'جمال وعطور', kids: 'مستلزمات أطفال',
-        tools: 'أدوات منزلية', home: 'منزل وأثاث'
-      };
-      
-      var catManagers = {};
-      employees.forEach(function(e) {
-        if (e.role === 'cat_manager' && e.assignedCategory) {
-          catManagers[e.assignedCategory] = e;
-        }
-      });
-      
-      var teamStats = { green: 0, yellow: 0, red: 0, items: [] };
-      
-      Object.keys(catNames).forEach(function(k) {
-        var mgr = catManagers[k];
-        var status = mgr ? 'green' : 'red';
-        var reason = mgr ? '' : 'بدون مدير';
-        
-        if (status === 'green') teamStats.green++;
-        else teamStats.red++;
-        
-        teamStats.items.push({
-          name: catNames[k],
-          manager: mgr ? (mgr.name || mgr.email || '—') : '—',
-          status: status,
-          reason: reason
-        });
-      });
-      
-      // ═══ STEP 6: Activity ═══
-      var activity = [];
-      recentOrders.slice(0, 3).forEach(function(o) {
-        var status = o.workflowStatus || o.status || '';
-        var action = {
-          'awaiting_verification': 'طلب جديد',
-          'awaiting_categories': 'تم تأكيد دفع',
-          'ready_to_send': 'جاهز للشحن',
-          'sent_to_customer': 'تم تعيين سائق',
-          'delivered': 'تم التسليم'
-        }[status] || 'تحديث طلب';
-        activity.push({ ts: o._ts, icon: '🛒', text: action + ' #' + (o.orderNumber || o.id.substring(0, 6)) });
-      });
-      
-      recentBookings.slice(0, 2).forEach(function(b) {
-        var action = { 'pending': 'حجز جديد', 'confirmed': 'تأكيد حجز', 'completed': 'إتمام حجز', 'cancelled': 'إلغاء حجز' }[b.status] || 'تحديث حجز';
-        activity.push({ ts: b._ts, icon: '✈️', text: action });
-      });
-      
-      recentListings.slice(0, 2).forEach(function(l) {
-        activity.push({ ts: l._ts, icon: '🏪', text: 'إعلان: ' + (l.title || '').substring(0, 30) });
-      });
-      
-      activity.sort(function(a, b) { return b.ts - a.ts; });
-      activity = activity.slice(0, 6);
-      
-      // ═══ STEP 7: Build HTML ═══
-      var html = '';
-      
-      // Alerts
-      if (alerts.length > 0) {
-        html += '<div class="dash-alerts">' +
-          '<div class="dash-alerts-title">⚠️ يحتاج تدخلك الآن (' + alerts.length + ')</div>';
-        alerts.forEach(function(a) {
-          html += '<div class="dash-alert" onclick="A.tab(\'' + a.action + '\',null)">' +
-            '<div class="dash-alert-icon">' + a.icon + '</div>' +
-            '<div class="dash-alert-body">' +
-              '<div class="dash-alert-title">' + a.title + '</div>' +
-              '<div class="dash-alert-sub">' + a.sub + '</div>' +
-            '</div>' +
-            '<div class="dash-alert-arrow">←</div>' +
-          '</div>';
-        });
-        html += '</div>';
-      } else {
-        html += '<div class="dash-alerts" style="text-align:center;padding:20px;background:rgba(16,185,129,0.06);border:1.5px solid rgba(16,185,129,0.25);border-radius:12px;margin-bottom:16px;">' +
-          '<div style="font-size:32px;margin-bottom:8px;">✨</div>' +
-          '<div style="font-size:13px;font-weight:900;color:#10b981;">كل شيء تحت السيطرة</div>' +
-          '<div style="font-size:11px;color:#9ca3af;margin-top:4px;">لا توجد تنبيهات حالياً</div>' +
-        '</div>';
-      }
-      
-      // KPIs
-      html += '<div class="dash-kpis">' +
-        '<div class="dash-kpi">' +
-          '<div class="dash-kpi-icon">🛒</div>' +
-          '<div class="dash-kpi-value">' + ordersToday + '</div>' +
-          '<div class="dash-kpi-label">طلبات اليوم</div>' +
-        '</div>' +
-        '<div class="dash-kpi">' +
-          '<div class="dash-kpi-icon">✈️</div>' +
-          '<div class="dash-kpi-value">' + bookingsToday + '</div>' +
-          '<div class="dash-kpi-label">حجوزات اليوم</div>' +
-        '</div>' +
-        '<div class="dash-kpi">' +
-          '<div class="dash-kpi-icon">🏪</div>' +
-          '<div class="dash-kpi-value">' + activeListings + '</div>' +
-          '<div class="dash-kpi-label">إعلان حراج</div>' +
-        '</div>' +
-        '<div class="dash-kpi">' +
-          '<div class="dash-kpi-icon">💰</div>' +
-          '<div class="dash-kpi-value">' + (monthRevenue >= 1000 ? Math.round(monthRevenue/1000) + 'K' : monthRevenue) + '</div>' +
-          '<div class="dash-kpi-label">مبيعات الشهر</div>' +
-        '</div>' +
-      '</div>';
-      
-      // Team health
-      var teamColorClass = teamStats.red > 0 ? 'red' : (teamStats.yellow > 0 ? 'yellow' : 'green');
-      html += '<div class="dash-team">' +
-        '<div class="dash-team-title">' +
-          '<span>👥 حالة الفريق</span>' +
-          '<button onclick="A.tab(\'team\',null)">التفاصيل ←</button>' +
-        '</div>' +
-        '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:12px;font-weight:800;color:#e5e7eb;">' +
-          '<div class="dash-team-dot ' + teamColorClass + '"></div>' +
-          '<span>' + teamStats.green + ' قسم نشط</span>' +
-          (teamStats.red > 0 ? ' · <span style="color:#fca5a5;">' + teamStats.red + ' مشكلة</span>' : '') +
-        '</div>';
-      
-      var problems = teamStats.items.filter(function(t) { return t.status !== 'green'; });
-      if (problems.length > 0) {
-        problems.slice(0, 3).forEach(function(t) {
-          html += '<div class="dash-team-row">' +
-            '<div class="dash-team-dot ' + t.status + '"></div>' +
-            '<div class="dash-team-name">' + t.name + '</div>' +
-            '<div class="dash-team-count">' + (t.reason || '—') + '</div>' +
-          '</div>';
-        });
-      }
-      html += '</div>';
-      
-      // Activity
-      if (activity.length > 0) {
-        html += '<div class="dash-activity">' +
-          '<div class="dash-activity-title">📊 آخر الأنشطة</div>';
-        activity.forEach(function(a) {
-          var time = a.ts ? new Date(a.ts * 1000) : new Date();
-          var timeStr = String(time.getHours()).padStart(2,'0') + ':' + String(time.getMinutes()).padStart(2,'0');
-          html += '<div class="dash-activity-item">' +
-            '<div class="dash-activity-time">' + timeStr + '</div>' +
-            '<div class="dash-activity-text">' + a.icon + ' ' + a.text + '</div>' +
-          '</div>';
-        });
-        html += '</div>';
-      }
-      
-      container.innerHTML = html;
-      
-      // ─── Save to cache ───
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ html: html, ts: Date.now() }));
-      } catch(e) {}
-      
-      console.log('[dash v80] fresh data loaded & cached');
-      
-    } catch(e) {
-      console.error('[dashboard v80]', e);
-      container.innerHTML = '<div class="dash-loading"><div style="color:#f87171;font-size:32px;margin-bottom:12px;">⚠️</div><div>تعذر تحميل البيانات</div><div style="font-size:10px;color:#6b7280;margin-top:8px;">' + (e.message || '') + '</div></div>';
-    }
-  };
-  
-  // ═══ Refresh button (manual) ═══
-  A.clearDashCache = function() {
-    try { localStorage.removeItem('chizen_dash_cache_v80'); } catch(e) {}
-    this.renderDash();
-  };
-
-  // ═══════════════════════════════════════════════════
-  // TEAM
-  // ═══════════════════════════════════════════════════
-  renderTeam: async function() {
-    var container = document.getElementById('team-content');
-    if (!container) return;
-    
-    var CACHE_KEY = 'chizen_team_cache_v80';
-    var CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-    
-    // Cache first
-    try {
-      var cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        var parsed = JSON.parse(cached);
-        if (parsed.html && Date.now() - parsed.ts < CACHE_TTL) {
-          container.innerHTML = parsed.html;
-          console.log('[team v80] cache fresh');
-          return;
-        }
-        if (parsed.html) container.innerHTML = parsed.html;
-      }
-    } catch(e) {}
-    
-    if (!container.innerHTML || container.innerHTML.indexOf('dash-loading') > -1) {
-      container.innerHTML = '<div class="dash-loading"><div class="dash-loading-spinner"></div></div>';
-    }
-    
-    try {
-      var [employeesSnap, pendingOrdersSnap] = await Promise.all([
-        FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(30).get().catch(function(){ return { docs: [] }; }),
-        // Only pending orders, small limit
-        FB.db.collection('orders').where('workflowStatus', '==', 'awaiting_categories').limit(50).get().catch(function(){ return { docs: [] }; })
-      ]);
-      
-      var employees = [];
-      employeesSnap.docs.forEach(function(d) {
-        var u = d.data();
-        u._id = d.id;
-        employees.push(u);
-      });
-      
-      var pendingOrders = [];
-      pendingOrdersSnap.docs.forEach(function(d) {
-        var o = d.data();
-        o.id = d.id;
-        o._ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;
-        pendingOrders.push(o);
-      });
-      
-      var now = Math.floor(Date.now() / 1000);
-      var catNames = {
-        electronics: 'إلكترونيات', fashion: 'أزياء', clothing: 'ملابس',
-        sports: 'أدوات رياضية', beauty: 'جمال وعطور', kids: 'مستلزمات أطفال',
-        tools: 'أدوات منزلية', home: 'منزل وأثاث'
-      };
-      
-      var catManagers = {};
-      employees.forEach(function(e) {
-        if (e.role === 'cat_manager' && e.assignedCategory) {
-          catManagers[e.assignedCategory] = e;
-        }
-      });
-      
-      // Count pending per category
-      var catPending = {};
-      pendingOrders.forEach(function(o) {
-        var cats = Object.keys(o.categories || o.categoryStatus || {});
-        var hoursOld = (now - o._ts) / 3600;
-        cats.forEach(function(c) {
-          if (!catPending[c]) catPending[c] = { count: 0, oldest: 0 };
-          catPending[c].count++;
-          catPending[c].oldest = Math.max(catPending[c].oldest, hoursOld);
-        });
-      });
-      
-      var html = '<div class="team-tabs">' +
-        '<button class="team-tab active" onclick="A._teamView(\'cats\',this)">📦 الأقسام</button>' +
-        '<button class="team-tab" onclick="A._teamView(\'employees\',this)">👤 الموظفون</button>' +
-      '</div>';
-      
-      html += '<div id="team-view-cats">';
-      Object.keys(catNames).forEach(function(k) {
-        var mgr = catManagers[k];
-        var pending = catPending[k] || { count: 0, oldest: 0 };
-        var status = 'green';
-        var reason = '';
-        
-        if (!mgr) {
-          status = 'red';
-          reason = 'لا يوجد مدير قسم';
-        } else if (pending.count > 0 && pending.oldest > 24) {
-          status = 'red';
-          reason = pending.count + ' طلب معلق منذ ' + Math.floor(pending.oldest/24) + ' يوم';
-        } else if (pending.count > 0) {
-          status = 'yellow';
-          reason = pending.count + ' طلب معلق (' + Math.floor(pending.oldest) + ' ساعة)';
-        }
-        
-        var cardClass = 'team-card' + (status === 'red' ? ' danger' : (status === 'yellow' ? ' warning' : ''));
-        
-        html += '<div class="' + cardClass + '">' +
-          '<div class="team-card-icon">📦</div>' +
-          '<div class="team-card-body">' +
-            '<div class="team-card-title"><div class="status-dot ' + status + '"></div>' + catNames[k] + '</div>' +
-            '<div class="team-card-meta">👤 <strong>' + (mgr ? (mgr.name || mgr.email || '—') : 'بدون مدير') + '</strong></div>' +
-            (reason ? '<div class="team-card-warn ' + (status === 'red' ? 'danger' : '') + '">⚠️ ' + reason + '</div>' : '') +
-          '</div>' +
-        '</div>';
-      });
-      html += '</div>';
-      
-      html += '<div id="team-view-employees" style="display:none;">';
-      if (employees.length === 0) {
-        html += '<div class="team-card"><div class="team-card-body"><div class="team-card-title">لا يوجد موظفون</div><div class="team-card-meta">أضف موظفين من "المزيد" → الموظفين</div></div></div>';
-      } else {
-        var roleLabels = { cat_manager: 'مدير قسم', delivery_mgr: 'مندوب طلبات', accountant: 'محاسب', bookings_mgr: 'مدير حجوزات' };
-        employees.forEach(function(e) {
-          html += '<div class="team-card">' +
-            '<div class="team-card-icon">👤</div>' +
-            '<div class="team-card-body">' +
-              '<div class="team-card-title"><div class="status-dot green"></div>' + (e.name || e.email || '—') + '</div>' +
-              '<div class="team-card-meta">🎯 ' + (roleLabels[e.role] || e.role) + (e.assignedCategory ? ' · ' + (catNames[e.assignedCategory] || e.assignedCategory) : '') + '</div>' +
-            '</div>' +
-          '</div>';
-        });
-      }
-      html += '</div>';
-      
-      container.innerHTML = html;
-      
-      // Cache
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ html: html, ts: Date.now() }));
-      } catch(e) {}
-      
-      console.log('[team v80] loaded & cached');
-      
-    } catch(e) {
-      console.error('[team v80]', e);
-      container.innerHTML = '<div class="dash-loading">⚠️ تعذر التحميل</div>';
-    }
-  };
-  
-  A._teamView = function(view, btn) {
-    document.querySelectorAll('.team-tab').forEach(function(t){ t.classList.remove('active'); });
-    if (btn) btn.classList.add('active');
-    var catsView = document.getElementById('team-view-cats');
-    var empView = document.getElementById('team-view-employees');
-    if (view === 'cats') {
-      if (catsView) catsView.style.display = 'block';
-      if (empView) empView.style.display = 'none';
-    } else {
-      if (catsView) catsView.style.display = 'none';
-      if (empView) empView.style.display = 'block';
-    }
-  };
-  
-  // ═══════════════════════════════════════════════════
-  // MORE
-  // ═══════════════════════════════════════════════════
-  renderMore: function() {
-    var container = document.getElementById('more-grid');
-    if (!container) return;
-    
-    var items = [
-      { icon: '📦', label: 'المنتجات', tab: 'products' },
-      { icon: '🏪', label: 'حراج شيزن', tab: 'haraj' },
-      { icon: '✈️', label: 'الحجوزات', tab: 'flights' },
-      { icon: '🚚', label: 'مندوب الطلبات', tab: 'dispatcher' },
-      { icon: '👤', label: 'الموظفين', tab: 'employees' },
-      { icon: '👥', label: 'المستخدمين', tab: 'users' },
-      { icon: '💰', label: 'المالية', tab: 'reports' },
-      { icon: '💳', label: 'طرق الدفع', tab: 'pays' },
-      { icon: '🏷️', label: 'الماركات', tab: 'brands' },
-      { icon: '🗂️', label: 'الأقسام', tab: 'cats' },
-      { icon: '🖼️', label: 'البانرات', tab: 'banners' },
-      { icon: '🏢', label: 'الموردين', tab: 'sups' },
-      { icon: '💸', label: 'الديون', tab: 'balances' },
-      { icon: '📍', label: 'التوصيل', tab: 'delivery' },
-      { icon: '📍', label: 'مواقع التسليم', tab: 'pickup' },
-      { icon: '🔑', label: 'المسؤولين', tab: 'admins' },
-      { icon: '🔔', label: 'الإشعارات', tab: 'push' },
-      { icon: '⚙️', label: 'الإعدادات', tab: 'settings' }
-    ];
-    
-    var html = '';
-    items.forEach(function(item) {
-      html += '<div class="more-tile" onclick="A.tab(\'' + item.tab + '\',null)">' +
-        '<div class="more-tile-icon">' + item.icon + '</div>' +
-        '<div class="more-tile-label">' + item.label + '</div>' +
-      '</div>';
-    });
-    
-    container.innerHTML = html;
-  };
-
+(function() {
+  try {
+    var __code = "\nif ('serviceWorker' in navigator) {\n  navigator.serviceWorker.register = function() {\n    return Promise.reject(new Error('SW disabled on admin'));\n  };\n}\n\n\n  // ═══ RENDER v79 — Dashboard / Team / More ═══\n  \n  // ═══════════════════════════════════════════════════\n  // ═══ RENDER v80 LIGHT — Optimized for slow networks ═══\n  // ═══════════════════════════════════════════════════\n\n  Object.assign(A, {\n_dashCache: null,\n  \n  renderDash: async function() {\n    var container = document.getElementById('dash-v2');\n    if (!container) return;\n    \n    var self = this;\n    var CACHE_KEY = 'chizen_dash_cache_v80';\n    var CACHE_TTL = 5 * 60 * 1000; // 5 minutes\n    \n    // ─── STEP 1: Show cache immediately if exists ───\n    try {\n      var cached = localStorage.getItem(CACHE_KEY);\n      if (cached) {\n        var parsed = JSON.parse(cached);\n        if (parsed.html) {\n          container.innerHTML = parsed.html;\n          console.log('[dash v80] cache shown (' + Math.round((Date.now()-parsed.ts)/1000) + 's ago)');\n          \n          // If fresh enough, skip fetch\n          if (Date.now() - parsed.ts < CACHE_TTL) {\n            console.log('[dash v80] cache fresh — skip fetch');\n            return;\n          }\n        }\n      } else {\n        container.innerHTML = '<div class=\"dash-loading\"><div class=\"dash-loading-spinner\"></div><div>جاري التحميل السريع...</div></div>';\n      }\n    } catch(e) {}\n    \n    try {\n      var now = new Date();\n      var nowSec = Math.floor(now.getTime() / 1000);\n      var todayStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);\n      var monthStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);\n      var twelveHoursAgo = nowSec - (12 * 3600);\n      var sixHoursAgo = nowSec - (6 * 3600);\n      var twoHoursAgo = nowSec - (2 * 3600);\n      var dayAgo = nowSec - (24 * 3600);\n      \n      // ═══ STEP 2: Fire 5 COUNT queries in parallel (tiny payloads) ═══\n      var counts = await Promise.all([\n        // Orders today count\n        FB.db.collection('orders').where('createdAt', '>=', new Date(todayStart * 1000)).count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),\n        // Bookings today count\n        FB.db.collection('bookings').where('createdAt', '>=', new Date(todayStart * 1000)).count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),\n        // Active listings count\n        FB.db.collection('listings').where('status', '==', 'active').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),\n        // Pending payments count (old > 12h)\n        FB.db.collection('orders').where('workflowStatus', '==', 'awaiting_verification').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; }),\n        // Pending bookings count\n        FB.db.collection('bookings').where('status', '==', 'pending').count().get().catch(function(){ return { data: function(){ return { count: 0 }; } }; })\n      ]);\n      \n      var ordersToday = counts[0].data().count || 0;\n      var bookingsToday = counts[1].data().count || 0;\n      var activeListings = counts[2].data().count || 0;\n      var pendingPaymentsCount = counts[3].data().count || 0;\n      var pendingBookingsCount = counts[4].data().count || 0;\n      \n      // ═══ STEP 3: Fetch ONLY recent data for alerts + activity (small limits) ═══\n      var [recentOrdersSnap, recentBookingsSnap, recentListingsSnap, monthOrdersSnap, employeesSnap] = await Promise.all([\n        // Only 20 recent orders (for alerts + activity)\n        FB.db.collection('orders').orderBy('createdAt', 'desc').limit(20).get().catch(function(){ return { docs: [] }; }),\n        // Only 10 recent bookings\n        FB.db.collection('bookings').orderBy('createdAt', 'desc').limit(10).get().catch(function(){ return { docs: [] }; }),\n        // Only 10 recent listings\n        FB.db.collection('listings').orderBy('createdAt', 'desc').limit(10).get().catch(function(){ return { docs: [] }; }),\n        // Orders this month (for revenue) — small limit\n        FB.db.collection('orders').where('createdAt', '>=', new Date(monthStart * 1000)).limit(100).get().catch(function(){ return { docs: [] }; }),\n        // Employees for team health\n        FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(20).get().catch(function(){ return { docs: [] }; })\n      ]);\n      \n      // Parse\n      var recentOrders = [];\n      recentOrdersSnap.docs.forEach(function(d) {\n        var o = d.data();\n        o.id = d.id;\n        o._ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;\n        recentOrders.push(o);\n      });\n      \n      var recentBookings = [];\n      recentBookingsSnap.docs.forEach(function(d) {\n        var b = d.data();\n        b.id = d.id;\n        b._ts = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;\n        recentBookings.push(b);\n      });\n      \n      var recentListings = [];\n      recentListingsSnap.docs.forEach(function(d) {\n        var l = d.data();\n        l.id = d.id;\n        l._ts = l.createdAt && l.createdAt.seconds ? l.createdAt.seconds : 0;\n        recentListings.push(l);\n      });\n      \n      var monthOrders = [];\n      monthOrdersSnap.docs.forEach(function(d) {\n        var o = d.data();\n        if (o.status !== 'cancelled') {\n          monthOrders.push(Number(o.total) || 0);\n        }\n      });\n      \n      var employees = [];\n      employeesSnap.docs.forEach(function(d) {\n        var u = d.data();\n        u._id = d.id;\n        employees.push(u);\n      });\n      \n      var monthRevenue = monthOrders.reduce(function(s, v) { return s + v; }, 0);\n      \n      // ═══ STEP 4: Build Alerts ═══\n      var alerts = [];\n      \n      // Alert 1: pending payments (count > 0, check age on recent orders)\n      if (pendingPaymentsCount > 0) {\n        var oldPayments = recentOrders.filter(function(o) {\n          return o.workflowStatus === 'awaiting_verification' && o._ts < twelveHoursAgo;\n        });\n        if (oldPayments.length > 0 || pendingPaymentsCount > 0) {\n          alerts.push({\n            icon: '💳',\n            title: pendingPaymentsCount + ' دفع بانتظار مراجعة',\n            sub: 'راجع الدفعات الواردة',\n            action: 'orders'\n          });\n        }\n      }\n      \n      // Alert 2: pending bookings\n      if (pendingBookingsCount > 0) {\n        alerts.push({\n          icon: '✈️',\n          title: pendingBookingsCount + ' حجز ينتظر رد السعر',\n          sub: 'الرد السريع يزيد فرص القبول',\n          action: 'flights'\n        });\n      }\n      \n      // Alert 3: ready to send without driver\n      var awaitingDriver = recentOrders.filter(function(o) {\n        return o.workflowStatus === 'ready_to_send' && !o.deliveryInfo;\n      });\n      if (awaitingDriver.length > 0) {\n        alerts.push({\n          icon: '🚚',\n          title: awaitingDriver.length + ' طلب جاهز بدون سائق',\n          sub: 'عيّن سائق للتوصيل',\n          action: 'dispatcher'\n        });\n      }\n      \n      // Alert 4: pending categories\n      var pendingCats = recentOrders.filter(function(o) {\n        return o.workflowStatus === 'awaiting_categories' && o._ts < dayAgo;\n      });\n      if (pendingCats.length > 0) {\n        alerts.push({\n          icon: '📦',\n          title: pendingCats.length + ' طلب لم يجهزه القسم',\n          sub: 'راجع الأقسام',\n          action: 'team'\n        });\n      }\n      \n      // ═══ STEP 5: Team Health ═══\n      var catNames = {\n        electronics: 'إلكترونيات', fashion: 'أزياء', clothing: 'ملابس',\n        sports: 'أدوات رياضية', beauty: 'جمال وعطور', kids: 'مستلزمات أطفال',\n        tools: 'أدوات منزلية', home: 'منزل وأثاث'\n      };\n      \n      var catManagers = {};\n      employees.forEach(function(e) {\n        if (e.role === 'cat_manager' && e.assignedCategory) {\n          catManagers[e.assignedCategory] = e;\n        }\n      });\n      \n      var teamStats = { green: 0, yellow: 0, red: 0, items: [] };\n      \n      Object.keys(catNames).forEach(function(k) {\n        var mgr = catManagers[k];\n        var status = mgr ? 'green' : 'red';\n        var reason = mgr ? '' : 'بدون مدير';\n        \n        if (status === 'green') teamStats.green++;\n        else teamStats.red++;\n        \n        teamStats.items.push({\n          name: catNames[k],\n          manager: mgr ? (mgr.name || mgr.email || '—') : '—',\n          status: status,\n          reason: reason\n        });\n      });\n      \n      // ═══ STEP 6: Activity ═══\n      var activity = [];\n      recentOrders.slice(0, 3).forEach(function(o) {\n        var status = o.workflowStatus || o.status || '';\n        var action = {\n          'awaiting_verification': 'طلب جديد',\n          'awaiting_categories': 'تم تأكيد دفع',\n          'ready_to_send': 'جاهز للشحن',\n          'sent_to_customer': 'تم تعيين سائق',\n          'delivered': 'تم التسليم'\n        }[status] || 'تحديث طلب';\n        activity.push({ ts: o._ts, icon: '🛒', text: action + ' #' + (o.orderNumber || o.id.substring(0, 6)) });\n      });\n      \n      recentBookings.slice(0, 2).forEach(function(b) {\n        var action = { 'pending': 'حجز جديد', 'confirmed': 'تأكيد حجز', 'completed': 'إتمام حجز', 'cancelled': 'إلغاء حجز' }[b.status] || 'تحديث حجز';\n        activity.push({ ts: b._ts, icon: '✈️', text: action });\n      });\n      \n      recentListings.slice(0, 2).forEach(function(l) {\n        activity.push({ ts: l._ts, icon: '🏪', text: 'إعلان: ' + (l.title || '').substring(0, 30) });\n      });\n      \n      activity.sort(function(a, b) { return b.ts - a.ts; });\n      activity = activity.slice(0, 6);\n      \n      // ═══ STEP 7: Build HTML ═══\n      var html = '';\n      \n      // Alerts\n      if (alerts.length > 0) {\n        html += '<div class=\"dash-alerts\">' +\n          '<div class=\"dash-alerts-title\">⚠️ يحتاج تدخلك الآن (' + alerts.length + ')</div>';\n        alerts.forEach(function(a) {\n          html += '<div class=\"dash-alert\" onclick=\"A.tab(\\'' + a.action + '\\',null)\">' +\n            '<div class=\"dash-alert-icon\">' + a.icon + '</div>' +\n            '<div class=\"dash-alert-body\">' +\n              '<div class=\"dash-alert-title\">' + a.title + '</div>' +\n              '<div class=\"dash-alert-sub\">' + a.sub + '</div>' +\n            '</div>' +\n            '<div class=\"dash-alert-arrow\">←</div>' +\n          '</div>';\n        });\n        html += '</div>';\n      } else {\n        html += '<div class=\"dash-alerts\" style=\"text-align:center;padding:20px;background:rgba(16,185,129,0.06);border:1.5px solid rgba(16,185,129,0.25);border-radius:12px;margin-bottom:16px;\">' +\n          '<div style=\"font-size:32px;margin-bottom:8px;\">✨</div>' +\n          '<div style=\"font-size:13px;font-weight:900;color:#10b981;\">كل شيء تحت السيطرة</div>' +\n          '<div style=\"font-size:11px;color:#9ca3af;margin-top:4px;\">لا توجد تنبيهات حالياً</div>' +\n        '</div>';\n      }\n      \n      // KPIs\n      html += '<div class=\"dash-kpis\">' +\n        '<div class=\"dash-kpi\">' +\n          '<div class=\"dash-kpi-icon\">🛒</div>' +\n          '<div class=\"dash-kpi-value\">' + ordersToday + '</div>' +\n          '<div class=\"dash-kpi-label\">طلبات اليوم</div>' +\n        '</div>' +\n        '<div class=\"dash-kpi\">' +\n          '<div class=\"dash-kpi-icon\">✈️</div>' +\n          '<div class=\"dash-kpi-value\">' + bookingsToday + '</div>' +\n          '<div class=\"dash-kpi-label\">حجوزات اليوم</div>' +\n        '</div>' +\n        '<div class=\"dash-kpi\">' +\n          '<div class=\"dash-kpi-icon\">🏪</div>' +\n          '<div class=\"dash-kpi-value\">' + activeListings + '</div>' +\n          '<div class=\"dash-kpi-label\">إعلان حراج</div>' +\n        '</div>' +\n        '<div class=\"dash-kpi\">' +\n          '<div class=\"dash-kpi-icon\">💰</div>' +\n          '<div class=\"dash-kpi-value\">' + (monthRevenue >= 1000 ? Math.round(monthRevenue/1000) + 'K' : monthRevenue) + '</div>' +\n          '<div class=\"dash-kpi-label\">مبيعات الشهر</div>' +\n        '</div>' +\n      '</div>';\n      \n      // Team health\n      var teamColorClass = teamStats.red > 0 ? 'red' : (teamStats.yellow > 0 ? 'yellow' : 'green');\n      html += '<div class=\"dash-team\">' +\n        '<div class=\"dash-team-title\">' +\n          '<span>👥 حالة الفريق</span>' +\n          '<button onclick=\"A.tab(\\'team\\',null)\">التفاصيل ←</button>' +\n        '</div>' +\n        '<div style=\"display:flex;align-items:center;gap:8px;padding:8px 0;font-size:12px;font-weight:800;color:#e5e7eb;\">' +\n          '<div class=\"dash-team-dot ' + teamColorClass + '\"></div>' +\n          '<span>' + teamStats.green + ' قسم نشط</span>' +\n          (teamStats.red > 0 ? ' · <span style=\"color:#fca5a5;\">' + teamStats.red + ' مشكلة</span>' : '') +\n        '</div>';\n      \n      var problems = teamStats.items.filter(function(t) { return t.status !== 'green'; });\n      if (problems.length > 0) {\n        problems.slice(0, 3).forEach(function(t) {\n          html += '<div class=\"dash-team-row\">' +\n            '<div class=\"dash-team-dot ' + t.status + '\"></div>' +\n            '<div class=\"dash-team-name\">' + t.name + '</div>' +\n            '<div class=\"dash-team-count\">' + (t.reason || '—') + '</div>' +\n          '</div>';\n        });\n      }\n      html += '</div>';\n      \n      // Activity\n      if (activity.length > 0) {\n        html += '<div class=\"dash-activity\">' +\n          '<div class=\"dash-activity-title\">📊 آخر الأنشطة</div>';\n        activity.forEach(function(a) {\n          var time = a.ts ? new Date(a.ts * 1000) : new Date();\n          var timeStr = String(time.getHours()).padStart(2,'0') + ':' + String(time.getMinutes()).padStart(2,'0');\n          html += '<div class=\"dash-activity-item\">' +\n            '<div class=\"dash-activity-time\">' + timeStr + '</div>' +\n            '<div class=\"dash-activity-text\">' + a.icon + ' ' + a.text + '</div>' +\n          '</div>';\n        });\n        html += '</div>';\n      }\n      \n      container.innerHTML = html;\n      \n      // ─── Save to cache ───\n      try {\n        localStorage.setItem(CACHE_KEY, JSON.stringify({ html: html, ts: Date.now() }));\n      } catch(e) {}\n      \n      console.log('[dash v80] fresh data loaded & cached');\n      \n    } catch(e) {\n      console.error('[dashboard v80]', e);\n      container.innerHTML = '<div class=\"dash-loading\"><div style=\"color:#f87171;font-size:32px;margin-bottom:12px;\">⚠️</div><div>تعذر تحميل البيانات</div><div style=\"font-size:10px;color:#6b7280;margin-top:8px;\">' + (e.message || '') + '</div></div>';\n    }\n  }\n  \n  // ═══ Refresh button (manual) ═══\n  A.clearDashCache = function() {\n    try { localStorage.removeItem('chizen_dash_cache_v80'); } catch(e) {}\n    this.renderDash();\n  };\n\n  // ═══════════════════════════════════════════════════\n  // TEAM\n  // ═══════════════════════════════════════════════════\n  renderTeam: async function() {\n    var container = document.getElementById('team-content');\n    if (!container) return;\n    \n    var CACHE_KEY = 'chizen_team_cache_v80';\n    var CACHE_TTL = 10 * 60 * 1000; // 10 minutes\n    \n    // Cache first\n    try {\n      var cached = localStorage.getItem(CACHE_KEY);\n      if (cached) {\n        var parsed = JSON.parse(cached);\n        if (parsed.html && Date.now() - parsed.ts < CACHE_TTL) {\n          container.innerHTML = parsed.html;\n          console.log('[team v80] cache fresh');\n          return;\n        }\n        if (parsed.html) container.innerHTML = parsed.html;\n      }\n    } catch(e) {}\n    \n    if (!container.innerHTML || container.innerHTML.indexOf('dash-loading') > -1) {\n      container.innerHTML = '<div class=\"dash-loading\"><div class=\"dash-loading-spinner\"></div></div>';\n    }\n    \n    try {\n      var [employeesSnap, pendingOrdersSnap] = await Promise.all([\n        FB.db.collection('users').where('role', 'in', ['cat_manager', 'delivery_mgr', 'accountant', 'bookings_mgr']).limit(30).get().catch(function(){ return { docs: [] }; }),\n        // Only pending orders, small limit\n        FB.db.collection('orders').where('workflowStatus', '==', 'awaiting_categories').limit(50).get().catch(function(){ return { docs: [] }; })\n      ]);\n      \n      var employees = [];\n      employeesSnap.docs.forEach(function(d) {\n        var u = d.data();\n        u._id = d.id;\n        employees.push(u);\n      });\n      \n      var pendingOrders = [];\n      pendingOrdersSnap.docs.forEach(function(d) {\n        var o = d.data();\n        o.id = d.id;\n        o._ts = o.createdAt && o.createdAt.seconds ? o.createdAt.seconds : 0;\n        pendingOrders.push(o);\n      });\n      \n      var now = Math.floor(Date.now() / 1000);\n      var catNames = {\n        electronics: 'إلكترونيات', fashion: 'أزياء', clothing: 'ملابس',\n        sports: 'أدوات رياضية', beauty: 'جمال وعطور', kids: 'مستلزمات أطفال',\n        tools: 'أدوات منزلية', home: 'منزل وأثاث'\n      };\n      \n      var catManagers = {};\n      employees.forEach(function(e) {\n        if (e.role === 'cat_manager' && e.assignedCategory) {\n          catManagers[e.assignedCategory] = e;\n        }\n      });\n      \n      // Count pending per category\n      var catPending = {};\n      pendingOrders.forEach(function(o) {\n        var cats = Object.keys(o.categories || o.categoryStatus || {});\n        var hoursOld = (now - o._ts) / 3600;\n        cats.forEach(function(c) {\n          if (!catPending[c]) catPending[c] = { count: 0, oldest: 0 };\n          catPending[c].count++;\n          catPending[c].oldest = Math.max(catPending[c].oldest, hoursOld);\n        });\n      });\n      \n      var html = '<div class=\"team-tabs\">' +\n        '<button class=\"team-tab active\" onclick=\"A._teamView(\\'cats\\',this)\">📦 الأقسام</button>' +\n        '<button class=\"team-tab\" onclick=\"A._teamView(\\'employees\\',this)\">👤 الموظفون</button>' +\n      '</div>';\n      \n      html += '<div id=\"team-view-cats\">';\n      Object.keys(catNames).forEach(function(k) {\n        var mgr = catManagers[k];\n        var pending = catPending[k] || { count: 0, oldest: 0 };\n        var status = 'green';\n        var reason = '';\n        \n        if (!mgr) {\n          status = 'red';\n          reason = 'لا يوجد مدير قسم';\n        } else if (pending.count > 0 && pending.oldest > 24) {\n          status = 'red';\n          reason = pending.count + ' طلب معلق منذ ' + Math.floor(pending.oldest/24) + ' يوم';\n        } else if (pending.count > 0) {\n          status = 'yellow';\n          reason = pending.count + ' طلب معلق (' + Math.floor(pending.oldest) + ' ساعة)';\n        }\n        \n        var cardClass = 'team-card' + (status === 'red' ? ' danger' : (status === 'yellow' ? ' warning' : ''));\n        \n        html += '<div class=\"' + cardClass + '\">' +\n          '<div class=\"team-card-icon\">📦</div>' +\n          '<div class=\"team-card-body\">' +\n            '<div class=\"team-card-title\"><div class=\"status-dot ' + status + '\"></div>' + catNames[k] + '</div>' +\n            '<div class=\"team-card-meta\">👤 <strong>' + (mgr ? (mgr.name || mgr.email || '—') : 'بدون مدير') + '</strong></div>' +\n            (reason ? '<div class=\"team-card-warn ' + (status === 'red' ? 'danger' : '') + '\">⚠️ ' + reason + '</div>' : '') +\n          '</div>' +\n        '</div>';\n      });\n      html += '</div>';\n      \n      html += '<div id=\"team-view-employees\" style=\"display:none;\">';\n      if (employees.length === 0) {\n        html += '<div class=\"team-card\"><div class=\"team-card-body\"><div class=\"team-card-title\">لا يوجد موظفون</div><div class=\"team-card-meta\">أضف موظفين من \"المزيد\" → الموظفين</div></div></div>';\n      } else {\n        var roleLabels = { cat_manager: 'مدير قسم', delivery_mgr: 'مندوب طلبات', accountant: 'محاسب', bookings_mgr: 'مدير حجوزات' };\n        employees.forEach(function(e) {\n          html += '<div class=\"team-card\">' +\n            '<div class=\"team-card-icon\">👤</div>' +\n            '<div class=\"team-card-body\">' +\n              '<div class=\"team-card-title\"><div class=\"status-dot green\"></div>' + (e.name || e.email || '—') + '</div>' +\n              '<div class=\"team-card-meta\">🎯 ' + (roleLabels[e.role] || e.role) + (e.assignedCategory ? ' · ' + (catNames[e.assignedCategory] || e.assignedCategory) : '') + '</div>' +\n            '</div>' +\n          '</div>';\n        });\n      }\n      html += '</div>';\n      \n      container.innerHTML = html;\n      \n      // Cache\n      try {\n        localStorage.setItem(CACHE_KEY, JSON.stringify({ html: html, ts: Date.now() }));\n      } catch(e) {}\n      \n      console.log('[team v80] loaded & cached');\n      \n    } catch(e) {\n      console.error('[team v80]', e);\n      container.innerHTML = '<div class=\"dash-loading\">⚠️ تعذر التحميل</div>';\n    }\n  };\n  \n  A._teamView = function(view, btn) {\n    document.querySelectorAll('.team-tab').forEach(function(t){ t.classList.remove('active'); });\n    if (btn) btn.classList.add('active');\n    var catsView = document.getElementById('team-view-cats');\n    var empView = document.getElementById('team-view-employees');\n    if (view === 'cats') {\n      if (catsView) catsView.style.display = 'block';\n      if (empView) empView.style.display = 'none';\n    } else {\n      if (catsView) catsView.style.display = 'none';\n      if (empView) empView.style.display = 'block';\n    }\n  };\n  \n  // ═══════════════════════════════════════════════════\n  // MORE\n  // ═══════════════════════════════════════════════════\n  renderMore: function() {\n    var container = document.getElementById('more-grid');\n    if (!container) return;\n    \n    var items = [\n      { icon: '📦', label: 'المنتجات', tab: 'products' },\n      { icon: '🏪', label: 'حراج شيزن', tab: 'haraj' },\n      { icon: '✈️', label: 'الحجوزات', tab: 'flights' },\n      { icon: '🚚', label: 'مندوب الطلبات', tab: 'dispatcher' },\n      { icon: '👤', label: 'الموظفين', tab: 'employees' },\n      { icon: '👥', label: 'المستخدمين', tab: 'users' },\n      { icon: '💰', label: 'المالية', tab: 'reports' },\n      { icon: '💳', label: 'طرق الدفع', tab: 'pays' },\n      { icon: '🏷️', label: 'الماركات', tab: 'brands' },\n      { icon: '🗂️', label: 'الأقسام', tab: 'cats' },\n      { icon: '🖼️', label: 'البانرات', tab: 'banners' },\n      { icon: '🏢', label: 'الموردين', tab: 'sups' },\n      { icon: '💸', label: 'الديون', tab: 'balances' },\n      { icon: '📍', label: 'التوصيل', tab: 'delivery' },\n      { icon: '📍', label: 'مواقع التسليم', tab: 'pickup' },\n      { icon: '🔑', label: 'المسؤولين', tab: 'admins' },\n      { icon: '🔔', label: 'الإشعارات', tab: 'push' },\n      { icon: '⚙️', label: 'الإعدادات', tab: 'settings' }\n    ];\n    \n    var html = '';\n    items.forEach(function(item) {\n      html += '<div class=\"more-tile\" onclick=\"A.tab(\\'' + item.tab + '\\',null)\">' +\n        '<div class=\"more-tile-icon\">' + item.icon + '</div>' +\n        '<div class=\"more-tile-label\">' + item.label + '</div>' +\n      '</div>';\n    });\n    \n    container.innerHTML = html;\n  \n});\n\n\n";
+    new Function(__code)();
+  } catch(e) {
+    console.warn("[CHIZEN] Skipped broken block:", e.message);
+  }
+})();
 </script>
 
 
@@ -8990,75 +8285,41 @@ console.log("[CHIZEN] doLogin loaded from clean block");
 </script>
 
 
-<script>
-window.addEventListener("load", function() {
-  var check = setInterval(function() {
-    if (typeof A !== "undefined" && typeof A.tab === "function") {
-      clearInterval(check);
-      
-      // اعتراض دالة فتح الحراج
-      A.renderHaraj = function() {
-        if (document.getElementById("haraj-iframe-overlay")) return;
-        
-        var ov = document.createElement("div");
-        ov.id = "haraj-iframe-overlay";
-        ov.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:#090b14;z-index:999999;display:flex;flex-direction:column;";
-        
-        ov.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0f172a;border-bottom:1px solid #334155;color:#fff;">
-            <div style="font-weight:900;font-size:16px;">🏪 إدارة الحراج</div>
-            <button id="haraj-close-btn" style="background:#ef4444;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:bold;">✕ رجوع للوحة</button>
-          </div>
-          <iframe src="haraj.html" style="flex:1;border:none;width:100%;height:100%;background:#090b14;"></iframe>
-        `;
-        
-        document.body.appendChild(ov);
-        
-        document.getElementById("haraj-close-btn").onclick = function() {
-          ov.remove();
-          A.tab('dash', null);
-        };
-      };
-      
-      console.log("[CHIZEN] Haraj integrated safely.");
-    }
-  }, 500);
-});
-</script>
 
 
+
+
+
+
+<!-- ═══ HARAJ — الحل الجراحي النهائي ═══ -->
 <script>
-// هذا السكربت يعترض زر الحراج ويجبره على فتح الصفحة المستقلة
-setInterval(function() {
-  var btns = document.querySelectorAll('[onclick*="haraj"], [onclick*="'haraj'"]');
-  btns.forEach(function(btn) {
-    if (btn.dataset.hijacked) return;
-    btn.dataset.hijacked = "1";
-    
-    // إزالة الكود القديم المكسور
-    btn.removeAttribute("onclick");
-    
-    // إضافة الكود الجديد
-    btn.onclick = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      if (document.getElementById('haraj-modal-overlay')) return;
-      
-      var ov = document.createElement('div');
-      ov.id = 'haraj-modal-overlay';
-      ov.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#090b14;z-index:999999;display:flex;flex-direction:column;';
-      ov.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0f172a;border-bottom:1px solid #334155;color:#fff;">
-          <div style="font-weight:900;font-size:16px;">🏪 إدارة الحراج</div>
-          <button onclick="document.getElementById('haraj-modal-overlay').remove()" style="background:#ef4444;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:bold;">✕ رجوع للوحة</button>
-        </div>
-        <iframe src="haraj.html" style="flex:1;border:none;width:100%;height:100%;background:#090b14;"></iframe>
-      `;
-      document.body.appendChild(ov);
-    };
-  });
-}, 1000);
+(function() {
+  if (typeof A === 'undefined') {
+    // إذا لم يكن A موجوداً بعد، ننتظر
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        if (typeof A !== 'undefined') A.openHarajFrame = openHarajFrame;
+      }, 2000);
+    });
+    return;
+  }
+  A.openHarajFrame = openHarajFrame;
+  window.openHarajFrame = openHarajFrame;
+
+  function openHarajFrame() {
+    if (document.getElementById('haraj-frame-overlay')) return;
+    var ov = document.createElement('div');
+    ov.id = 'haraj-frame-overlay';
+    ov.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#090b14;z-index:999999;display:flex;flex-direction:column;';
+    ov.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0f172a;border-bottom:1px solid #334155;color:#fff;">' +
+      '<div style="font-weight:900;font-size:16px;">🏪 إدارة الحراج</div>' +
+      '<button onclick="document.getElementById(\'haraj-frame-overlay\').remove();" style="background:#ef4444;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:bold;">✕ رجوع</button>' +
+      '</div>' +
+      '<iframe src="haraj.html" style="flex:1;border:none;width:100%;height:100%;background:#090b14;"></iframe>';
+    document.body.appendChild(ov);
+  }
+  console.log('[HARAJ-SURGICAL] Installed successfully.');
+})();
 </script>
 
 </body>
