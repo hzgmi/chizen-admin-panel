@@ -9026,5 +9026,40 @@ window.addEventListener("load", function() {
 });
 </script>
 
+
+<script>
+// هذا السكربت يعترض زر الحراج ويجبره على فتح الصفحة المستقلة
+setInterval(function() {
+  var btns = document.querySelectorAll('[onclick*="haraj"], [onclick*="'haraj'"]');
+  btns.forEach(function(btn) {
+    if (btn.dataset.hijacked) return;
+    btn.dataset.hijacked = "1";
+    
+    // إزالة الكود القديم المكسور
+    btn.removeAttribute("onclick");
+    
+    // إضافة الكود الجديد
+    btn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (document.getElementById('haraj-modal-overlay')) return;
+      
+      var ov = document.createElement('div');
+      ov.id = 'haraj-modal-overlay';
+      ov.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#090b14;z-index:999999;display:flex;flex-direction:column;';
+      ov.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0f172a;border-bottom:1px solid #334155;color:#fff;">
+          <div style="font-weight:900;font-size:16px;">🏪 إدارة الحراج</div>
+          <button onclick="document.getElementById('haraj-modal-overlay').remove()" style="background:#ef4444;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:bold;">✕ رجوع للوحة</button>
+        </div>
+        <iframe src="haraj.html" style="flex:1;border:none;width:100%;height:100%;background:#090b14;"></iframe>
+      `;
+      document.body.appendChild(ov);
+    };
+  });
+}, 1000);
+</script>
+
 </body>
 </html>
