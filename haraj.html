@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حراج شيزن — إدارة</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #090b14; color: #fff; font-family: 'Tajawal', 'Segoe UI', -apple-system, sans-serif; min-height: 100vh; padding: 16px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(236,72,153,0.2); }
+.header h1 { font-size: 22px; font-weight: 900; }
+.back-btn { background: #1e293b; color: #fff; border: 1px solid #334155; padding: 8px 16px; border-radius: 10px; text-decoration: none; font-size: 13px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat { padding: 14px; border-radius: 12px; text-align: center; }
+.stat-num { font-size: 24px; font-weight: 900; }
+.stat-label { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+.search { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #334155; background: #1e293b; color: #fff; font-size: 14px; font-family: inherit; margin-bottom: 12px; }
+.filters { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 4px; }
+.filter { padding: 8px 16px; background: #1e293b; border: 1px solid #334155; border-radius: 20px; color: #fff; cursor: pointer; font-size: 12px; white-space: nowrap; font-family: inherit; }
+.filter.active { background: linear-gradient(135deg, #ec4899, #3b82f6); border-color: transparent; }
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 12px; margin-bottom: 10px; display: flex; gap: 12px; align-items: center; }
+.card img { width: 80px; height: 80px; border-radius: 10px; object-fit: cover; background: #000; flex-shrink: 0; }
+.card-info { flex: 1; min-width: 0; }
+.card-title { font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-price { font-size: 13px; color: #cbd5e1; margin-top: 4px; }
+.card-seller { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+.card-status { font-size: 10px; margin-top: 4px; font-weight: bold; }
+.card-actions { display: flex; flex-direction: column; gap: 6px; }
+.btn { padding: 8px 14px; border-radius: 8px; border: none; color: #fff; cursor: pointer; font-size: 12px; font-weight: bold; font-family: inherit; }
+.btn-view { background: #3b82f6; }
+.btn-del { background: #ef4444; }
+.empty, .loading { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+.modal { background: #0f172a; border-radius: 18px; padding: 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; border: 1px solid rgba(236,72,153,0.3); }
+.modal img { width: 100%; border-radius: 10px; margin-bottom: 8px; }
+.modal h2 { font-size: 18px; margin: 12px 0; }
+.modal p { color: #cbd5e1; line-height: 1.7; font-size: 14px; }
+.modal-close { width: 100%; padding: 12px; background: #ef4444; color: #fff; border: none; border-radius: 10px; margin-top: 16px; cursor: pointer; font-weight: bold; font-family: inherit; }
+.auth-msg { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 15px; }
+.auth-msg a { color: #ec4899; text-decoration: none; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏪 حراج شيزن</h1>
+  <a href="index.html" class="back-btn">← العودة</a>
+</div>
+
+<div id="app"><div class="loading">⏳ جاري التحميل...</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function() {
+  'use strict';
+  var appEl = document.getElementById('app');
+
+  try {
+    if (!firebase.apps.length) {
+      // هنا تم استخدام window.FIREBASE_CONFIG الصحيح
+      var cfg = window.FIREBASE_CONFIG || window.firebaseConfig || {};
+      if (!cfg.apiKey) {
+        appEl.innerHTML = '<div class="empty" style="color:#ef4444;">❌ لم يتم العثور على إعدادات Firebase. تأكد من وجود firebase-config.js</div>';
+        return;
+      }
+      firebase.initializeApp(cfg);
+    }
+  } catch(e) {
+    appEl.innerHTML = '<div class="empty" style="color:#ef4444;">❌ خطأ Firebase: ' + e.message + '</div>';
+    return;
+  }
+
+  var db = firebase.firestore();
+  var auth = firebase.auth();
+  var allData = [];
+  var currentFilter = 'all';
+  var currentSearch = '';
+
+  auth.onAuthStateChanged(function(user) {
+    if (!user) {
+      appEl.innerHTML = '<div class="auth-msg">يجب تسجيل الدخول أولاً.<br><br><a href="index.html">← اضغط هنا للدخول</a></div>';
+      return;
+    }
+    renderLayout();
+    loadListings();
+  });
+
+  function renderLayout() {
+    appEl.innerHTML =
+      '<div class="stats" id="stats"></div>' +
+      '<input type="text" class="search" id="search" placeholder="🔍 ابحث بالعنوان، البائع، المدينة، الهاتف...">' +
+      '<div class="filters" id="filters"></div>' +
+      '<div id="list"><div class="loading">⏳ جاري التحميل...</div></div>';
+    document.getElementById('search').addEventListener('input', function(e) {
+      currentSearch = e.target.value.toLowerCase();
+      renderList();
+    });
+    renderFilters();
+  }
+
+  function renderFilters() {
+    var f = {
+      all: allData.length,
+      active: allData.filter(function(d){ return d.status === 'active'; }).length,
+      sold: allData.filter(function(d){ return d.status === 'sold'; }).length,
+      removed: allData.filter(function(d){ return d.status === 'removed'; }).length,
+      reserved: allData.filter(function(d){ return d.status === 'reserved'; }).length,
+      paused: allData.filter(function(d){ return d.status === 'paused'; }).length
+    };
+    var items = [
+      { key: 'all', label: 'الكل (' + f.all + ')' },
+      { key: 'active', label: '✅ نشط (' + f.active + ')' },
+      { key: 'sold', label: '💰 مباع (' + f.sold + ')' },
+      { key: 'reserved', label: '⏸️ محجوز (' + f.reserved + ')' },
+      { key: 'paused', label: '⏹️ موقوف (' + f.paused + ')' },
+      { key: 'removed', label: '🗑️ محذوف (' + f.removed + ')' }
+    ];
+    document.getElementById('filters').innerHTML = items.map(function(it) {
+      return '<button class="filter ' + (currentFilter === it.key ? 'active' : '') + '" data-key="' + it.key + '">' + it.label + '</button>';
+    }).join('');
+    document.querySelectorAll('#filters .filter').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        currentFilter = btn.getAttribute('data-key');
+        renderFilters();
+        renderList();
+      });
+    });
+  }
+
+  function renderStats() {
+    var a = allData.filter(function(d){ return d.status === 'active'; }).length;
+    var s = allData.filter(function(d){ return d.status === 'sold'; }).length;
+    var r = allData.filter(function(d){ return d.status === 'removed'; }).length;
+    document.getElementById('stats').innerHTML =
+      '<div class="stat" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);"><div class="stat-num" style="color:#10b981;">' + a + '</div><div class="stat-label">نشط</div></div>' +
+      '<div class="stat" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);"><div class="stat-num" style="color:#f59e0b;">' + s + '</div><div class="stat-label">مباع</div></div>' +
+      '<div class="stat" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);"><div class="stat-num" style="color:#ef4444;">' + r + '</div><div class="stat-label">محذوف</div></div>';
+  }
+
+  function renderList() {
+    var filtered = allData.filter(function(d) {
+      if (currentFilter !== 'all' && d.status !== currentFilter) return false;
+      if (currentSearch) {
+        var txt = ((d.title||'') + ' ' + (d.sellerName||'') + ' ' + (d.city||'') + ' ' + (d.sellerPhone||'')).toLowerCase();
+        if (txt.indexOf(currentSearch) === -1) return false;
+      }
+      return true;
+    });
+    if (filtered.length === 0) {
+      document.getElementById('list').innerHTML = '<div class="empty">لا توجد إعلانات تطابق بحثك</div>';
+      return;
+    }
+    document.getElementById('list').innerHTML = filtered.map(function(d) {
+      var img = (d.images && d.images.length > 0) ? d.images[0] : (d.image || '');
+      var imgHtml = img ? '<img src="' + img + '" onerror="this.style.background=\'#334155\';this.style.display=\'none\'">' : '<div style="width:80px;height:80px;background:#334155;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;">📦</div>';
+      var price = d.price ? Number(d.price).toLocaleString('ar-EG') + ' ر.س' : '—';
+      var date = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : '—';
+      var si = { active:{l:'نشط',c:'#10b981'}, sold:{l:'مباع',c:'#f59e0b'}, removed:{l:'محذوف',c:'#ef4444'}, paused:{l:'موقوف',c:'#64748b'}, reserved:{l:'محجوز',c:'#3b82f6'} }[d.status] || {l:d.status,c:'#64748b'};
+      return '<div class="card">' +
+        imgHtml +
+        '<div class="card-info">' +
+          '<div class="card-title">' + esc(d.title || 'بدون عنوان') + '</div>' +
+          '<div class="card-price">💰 ' + price + '</div>' +
+          '<div class="card-seller">👤 ' + esc(d.sellerName || 'مجهول') + ' · 📍 ' + esc(d.city || '—') + '</div>' +
+          '<div class="card-status" style="color:' + si.c + ';">● ' + si.l + ' · ' + date + '</div>' +
+        '</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn btn-view" data-view="' + d.id + '">👁️ عرض</button>' +
+          '<button class="btn btn-del" data-del="' + d.id + '">🗑️ حذف</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    document.querySelectorAll('[data-view]').forEach(function(b) {
+      b.addEventListener('click', function() { showDetails(b.getAttribute('data-view')); });
+    });
+    document.querySelectorAll('[data-del]').forEach(function(b) {
+      b.addEventListener('click', function() { deleteItem(b.getAttribute('data-del')); });
+    });
+  }
+
+  function showDetails(id) {
+    var d = allData.find(function(x) { return x.id === id; });
+    if (!d) return;
+    var imgs = (d.images && d.images.length > 0) ? d.images : (d.image ? [d.image] : []);
+    var imgsHtml = imgs.map(function(s) { return '<img src="' + s + '">'; }).join('');
+    var ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.innerHTML = '<div class="modal">' + imgsHtml +
+      '<h2>' + esc(d.title || 'بدون عنوان') + '</h2>' +
+      '<p>' + esc(d.description || 'لا يوجد وصف') + '</p>' +
+      '<div style="border-top:1px solid #334155;padding-top:12px;margin-top:12px;font-size:13px;color:#94a3b8;line-height:2;">' +
+        '<div>💰 السعر: <strong style="color:#10b981;">' + (d.price ? Number(d.price).toLocaleString('ar-EG') + ' ر.س' : '—') + '</strong></div>' +
+        '<div>👤 البائع: <strong>' + esc(d.sellerName || '—') + '</strong></div>' +
+        '<div>📱 الهاتف: <strong dir="ltr">' + esc(d.sellerPhone || '—') + '</strong></div>' +
+        '<div>📍 المدينة: <strong>' + esc(d.city || '—') + '</strong></div>' +
+      '</div>' +
+      '<button class="modal-close">إغلاق</button></div>';
+    ov.querySelector('.modal-close').addEventListener('click', function() { ov.remove(); });
+    ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+  }
+
+  function deleteItem(id) {
+    var reason = prompt('أدخل سبب الحذف (سيُحفظ في السجل):', 'مخالف لسياسة الخصوصية');
+    if (reason === null) return;
+    if (!confirm('هل أنت متأكد من حذف هذا الإعلان؟')) return;
+    db.collection('listings').doc(id).update({
+      status: 'removed',
+      removedReason: reason || 'غير محدد',
+      removedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      alert('✅ تم حذف الإعلان بنجاح');
+      loadListings();
+    }).catch(function(e) {
+      alert('❌ خطأ: ' + e.message);
+    });
+  }
+
+  function loadListings() {
+    document.getElementById('list').innerHTML = '<div class="loading">⏳ جاري التحميل...</div>';
+    db.collection('listings').orderBy('createdAt', 'desc').limit(200).get()
+      .then(function(snap) {
+        allData = [];
+        snap.forEach(function(doc) {
+          var data = doc.data();
+          data.id = doc.id;
+          allData.push(data);
+        });
+        renderStats();
+        renderFilters();
+        renderList();
+      })
+      .catch(function(e) {
+        document.getElementById('list').innerHTML = '<div class="empty" style="color:#ef4444;">❌ خطأ في التحميل: ' + esc(e.message) + '</div>';
+      });
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+})();
+</script>
+</body>
+</html>
