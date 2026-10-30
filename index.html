@@ -2167,23 +2167,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else {try{A.init();}catch(e){console.error(e);}}
 </script>
 <script>
-window.doLogin = async function() {
-  var e = document.getElementById("login-email").value.trim();
-  var p = document.getElementById("login-pass").value;
-  var btn = document.getElementById("btn-do-login");
-  var err = document.getElementById("login-err");
-  if (!e || !p) { if (err) err.textContent = "أدخل البريد وكلمة المرور"; return; }
-  if(btn) btn.innerHTML = "<span>جاري الدخول...</span>";
-  if(err) err.textContent = "";
-  
-  try {
-    await FB.auth.signInWithEmailAndPassword(e, p);
-    // سيتم استدعاء onAuthStateChanged تلقائياً
-  } catch(ex) {
-    if(err) err.textContent = "خطأ: " + (ex.message || "تعذر الدخول");
-    if(btn) btn.innerHTML = "<span>تسجيل الدخول</span>";
-  }
-};
+/* doLogin moved to clean block below */
     
     // ═══ رسم المحتوى ═══
     A.renderPickupContent = function() {
@@ -8979,6 +8963,30 @@ window.catMgrApp = (function(){
 
 
 
+
+
+<!-- ═══ CLEAN LOGIN HANDLER (bypasses broken blocks) ═══ -->
+<script>
+window.doLogin = async function() {
+  var e = document.getElementById("login-email");
+  var p = document.getElementById("login-pass");
+  var btn = document.getElementById("btn-do-login");
+  var err = document.getElementById("login-err");
+  if (!e || !p) return;
+  var email = e.value.trim();
+  var pass = p.value;
+  if (!email || !pass) { if (err) err.textContent = "أدخل البريد وكلمة المرور"; return; }
+  if (btn) btn.innerHTML = "<span>جاري الدخول...</span>";
+  if (err) err.textContent = "";
+  try {
+    await FB.auth.signInWithEmailAndPassword(email, pass);
+  } catch(ex) {
+    if (err) err.textContent = "خطأ: " + (ex.message || "تعذر الدخول");
+    if (btn) btn.innerHTML = "<span>تسجيل الدخول</span>";
+  }
+};
+console.log("[CHIZEN] doLogin loaded from clean block");
+</script>
 
 </body>
 </html>
