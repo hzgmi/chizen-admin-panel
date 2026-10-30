@@ -751,25 +751,35 @@ var A={
   },
 
   loginScreen:function(){
-    document.getElementById('gb').innerHTML =
-      '<div class="gl">CHIZEN</div>' +
-      '<div class="gt">ADMIN PANEL</div>' +
-      '<div class="gi">🔐</div>' +
-      '<div class="gtt">لوحة محمية</div>' +
-      '<div class="gd">سجّل دخول بحسابك</div>' +
-      '<div style="width:100%;max-width:320px;margin:15px auto 0;">' +
-      '  <input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="username" style="width:100%;padding:12px 15px;margin-bottom:10px;border-radius:12px;border:1.5px solid rgba(255,77,148,.4);background:rgba(20,15,45,.85);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box;">' +
-      '  <input id="login-pass" type="password" placeholder="كلمة السر" autocomplete="current-password" style="width:100%;padding:12px 15px;margin-bottom:10px;border-radius:12px;border:1.5px solid rgba(255,77,148,.4);background:rgba(20,15,45,.85);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box;">' +
-      '  <button id="btn-do-login" class="gbtn" onclick="doLogin()" style="width:100%;margin-bottom:8px;">🔓 تسجيل الدخول</button>' +
-      '  <div id="login-err" style="color:#ff4d94;font-size:12px;text-align:center;min-height:16px;"></div>' +
-      '</div>' +
-      '<button class="gbtn sec" onclick="location.reload()" style="margin-top:10px;">🔄 إعادة</button>';
-    
-    // Enter key submits
+    var gb = document.getElementById("gb");
+    if (!gb) return;
+    if (gb.querySelector("#login-email")) {
+      var err = document.getElementById("login-err");
+      if (err) err.textContent = "";
+      return;
+    }
+    gb.innerHTML =
+      "<div class=\"gl\">CHIZEN</div>" +
+      "<div class=\"gt\">ADMIN PANEL</div>" +
+      "<div style=\"font-size:36px;margin:8px 0 16px;\">🔐</div>" +
+      "<div style=\"font-size:14px;color:#b8c0d8;margin-bottom:20px;\">سجّل دخول بحساب المسؤول</div>" +
+      "<div style=\"width:100%;max-width:320px;margin:0 auto;\">" +
+      "<div style=\"position:relative;margin-bottom:12px;\">" +
+      "<input id=\"login-email\" type=\"email\" placeholder=\"البريد الإلكتروني\" autocomplete=\"username\" style=\"width:100%;padding:14px 42px 14px 16px;border-radius:12px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:Tajawal,sans-serif;font-size:14px;box-sizing:border-box;outline:none;\">" +
+      "<span style=\"position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#6b7591;font-size:16px;pointer-events:none;\">📧</span>" +
+      "</div>" +
+      "<div style=\"position:relative;margin-bottom:12px;\">" +
+      "<input id=\"login-pass\" type=\"password\" placeholder=\"كلمة السر\" autocomplete=\"current-password\" style=\"width:100%;padding:14px 42px 14px 16px;border-radius:12px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:Tajawal,sans-serif;font-size:14px;box-sizing:border-box;outline:none;\">" +
+      "<span style=\"position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#6b7591;font-size:16px;pointer-events:none;\">🔒</span>" +
+      "</div>" +
+      "<div id=\"login-err\" style=\"color:#ef4444;font-size:12px;text-align:center;min-height:18px;margin-bottom:10px;font-weight:700;\"></div>" +
+      "<button id=\"btn-do-login\" class=\"gbtn\" onclick=\"doLogin()\" style=\"width:100%;position:relative;overflow:hidden;margin-top:8px;padding:16px;border-radius:14px;font-weight:900;font-size:15px;\"><span style=\"position:relative;z-index:2;\">🔓 تسجيل الدخول</span></button>" +
+      "</div>";
+
     setTimeout(function(){
-      var passInp = document.getElementById('login-pass');
-      if (passInp) passInp.addEventListener('keypress', function(e){
-        if (e.key === 'Enter') doLogin();
+      var passInp = document.getElementById("login-pass");
+      if (passInp) passInp.addEventListener("keypress", function(ev){
+        if (ev.key === "Enter") doLogin();
       });
     }, 100);
   },
