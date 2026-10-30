@@ -312,6 +312,38 @@ body, #app { background: var(--bg) !important; color: var(--cr) !important; font
 .rw:hover { background: rgba(255,255,255,0.02) !important; }
 input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !important; cursor: pointer; }
 
+
+/* ══════════════ SPLIT SCREEN LOGIN ══════════════ */
+.gs { position:fixed; top:0; left:0; right:0; bottom:0; background:#090b14; display:flex; z-index:100; overflow:hidden; font-family:"Tajawal",sans-serif; }
+.split-screen { display:flex; width:100%; height:100%; }
+.brand-side { flex:1.2; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:40px; background:radial-gradient(circle at 30% 50%, rgba(236,72,153,0.1) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(59,130,246,0.1) 0%, transparent 50%); position:relative; overflow:hidden; }
+.brand-side::before { content:""; position:absolute; width:600px; height:600px; background:linear-gradient(135deg, #ec4899, #3b82f6); border-radius:50%; filter:blur(150px); opacity:0.15; top:-100px; left:-100px; z-index:0; }
+.brand-logo-glow { width:120px; height:120px; margin-bottom:20px; filter:drop-shadow(0 0 20px rgba(236,72,153,0.5)); z-index:1; position:relative; animation:float 6s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+.brand-name { font-size:56px; font-weight:900; background:linear-gradient(135deg, #ec4899, #3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0 0 10px 0; z-index:1; letter-spacing:2px; }
+.brand-sub { font-size:20px; color:#94a3b8; margin:0 0 40px 0; z-index:1; font-weight:500; }
+.brand-features { list-style:none; padding:0; margin:0; z-index:1; }
+.brand-features li { color:#cbd5e1; font-size:16px; margin-bottom:18px; display:flex; align-items:center; gap:12px; font-weight:500; }
+.brand-features li span { font-size:22px; background:rgba(255,255,255,0.05); padding:8px; border-radius:12px; }
+.login-side { flex:1; display:flex; justify-content:center; align-items:center; padding:20px; background:#0a0c16; }
+.login-card { background:rgba(30,41,59,0.4); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.08); padding:50px 40px; border-radius:24px; width:100%; max-width:440px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); position:relative; }
+.welcome-text { color:#fff; font-size:28px; font-weight:800; margin:0 0 8px 0; }
+.welcome-sub { color:#94a3b8; font-size:15px; margin:0 0 30px 0; line-height:1.6; }
+.input-group { position:relative; margin-bottom:18px; }
+.input-icon { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:18px; color:#64748b; }
+.input-group input { width:100%; padding:16px 48px 16px 16px; border-radius:14px; border:1px solid rgba(255,255,255,0.1); background:rgba(15,23,42,0.8); color:#fff; font-family:inherit; font-size:15px; box-sizing:border-box; transition:all 0.3s; outline:none; }
+.input-group input:focus { border-color:#ec4899; box-shadow:0 0 0 3px rgba(236,72,153,0.2); background:rgba(15,23,42,1); }
+.login-btn { width:100%; padding:16px; border-radius:14px; border:none; background:linear-gradient(135deg, #ec4899 0%, #3b82f6 100%); color:#fff; font-family:inherit; font-size:16px; font-weight:800; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:10px; margin-top:10px; transition:transform 0.2s, box-shadow 0.2s; }
+.login-btn:hover { transform:translateY(-2px); box-shadow:0 10px 25px rgba(236,72,153,0.4); }
+.login-btn:active { transform:translateY(0); }
+.copyright { color:#475569; font-size:12px; text-align:center; margin-top:30px; margin-bottom:0; }
+#login-err { color:#ef4444; font-size:13px; text-align:center; min-height:20px; margin-bottom:10px; font-weight:700; }
+@media (max-width: 768px) {
+  .split-screen { flex-direction:column; }
+  .brand-side { display:none; }
+  .login-side { width:100%; padding:20px; }
+  .login-card { padding:40px 25px; }
+}
 </style>
 
 
@@ -643,31 +675,45 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pl) !imp
 
 <div id="app">
 <div class="gs" id="gs">
-<div class="gb" id="gb">
-  <div class="gl">CHIZEN</div>
-  <div class="gt">ADMIN PANEL</div>
-  <div style="font-size:36px;margin:8px 0 16px;">🔐</div>
-  <div style="font-size:14px;color:#b8c0d8;margin-bottom:20px;">سجّل دخول بحساب المسؤول</div>
-  
-  <div style="width:100%;max-width:320px;margin:0 auto;">
-    <div style="position:relative;margin-bottom:12px;">
-      <input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="username"
-        style="width:100%;padding:14px 42px 14px 16px;border-radius:12px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:Tajawal,sans-serif;font-size:14px;box-sizing:border-box;outline:none;transition:all 0.2s;">
-      <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#6b7591;font-size:16px;pointer-events:none;">📧</span>
-    </div>
-    
-    <div style="position:relative;margin-bottom:12px;">
-      <input id="login-pass" type="password" placeholder="كلمة السر" autocomplete="current-password"
-        style="width:100%;padding:14px 42px 14px 16px;border-radius:12px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(15,10,35,0.9);color:#fff;font-family:Tajawal,sans-serif;font-size:14px;box-sizing:border-box;outline:none;transition:all 0.2s;">
-      <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#6b7591;font-size:16px;pointer-events:none;">🔒</span>
-    </div>
-    
-    <div id="login-err" style="color:#ef4444;font-size:12px;text-align:center;min-height:18px;margin-bottom:10px;font-weight:700;"></div>
-    <button id="btn-do-login" class="gbtn" onclick="doLogin()" style="width:100%;position:relative;overflow:hidden;margin-top:8px;padding:16px;border-radius:14px;font-weight:900;font-size:15px;">
-      <span style="position:relative;z-index:2;">🔓 تسجيل الدخول</span>
-    </button>
+  <div class="split-screen">
+    <div class="brand-side">
+      <div class="brand-logo-glow">
+        <svg viewBox="0 0 100 100" fill="none" stroke="url(#grad)" stroke-width="6" style="width:100%;height:100%;">
+          <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#ec4899;" /><stop offset="100%" style="stop-color:#3b82f6;" /></linearGradient></defs>
+          <circle cx="50" cy="50" r="40" />
+          <path d="M65 35 C60 30, 50 28, 40 32 C30 36, 25 45, 28 55 C31 65, 42 70, 52 68 C58 67, 63 63, 66 58" stroke-linecap="round"/>
+        </svg>
       </div>
-</div>
+      <h1 class="brand-name">CHIZEN</h1>
+      <h2 class="brand-sub">لوحة الإدارة العامة</h2>
+      <ul class="brand-features">
+        <li><span>📊</span> إدارة شاملة للمبيعات والطلبات</li>
+        <li><span>🔐</span> تحكم كامل بالصلاحيات والأدوار</li>
+        <li><span>📈</span> تقارير مالية وحظية للعمل</li>
+        <li><span>🚀</span> أداء فائق وحماية متقدمة</li>
+      </ul>
+    </div>
+    <div class="login-side">
+      <div class="login-card" id="gb">
+        <h3 class="welcome-text">مرحباً بعودتك 👋</h3>
+        <p class="welcome-sub">يرجى تسجيل الدخول للمتابعة إلى لوحة التحكم</p>
+        <div class="input-group">
+          <span class="input-icon">📧</span>
+          <input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="username">
+        </div>
+        <div class="input-group">
+          <span class="input-icon">🔒</span>
+          <input id="login-pass" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+        </div>
+        <div id="login-err"></div>
+        <button id="btn-do-login" class="login-btn" onclick="doLogin()">
+          <span>تسجيل الدخول</span>
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <p class="copyright">© CHIZEN 2026 — All Rights Reserved</p>
+      </div>
+    </div>
+  </div>
 </div>
 <div id="am" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;">
 <div class="hd"><div><div class="ht">CHIZEN</div><div class="hs">ADMIN PANEL</div></div>
@@ -838,7 +884,7 @@ var A={
       
       // 3) الدور الفعلي
       var effRole = isLegacy ? 'super_admin' : role;
-      alert("DEBUG\nRole: " + role + "\nIsLegacy: " + isLegacy + "\nEffective: " + (isLegacy ? "super_admin" : role));
+      /* DEBUG removed */
       
       // 4) منع العملاء
       if (effRole === 'customer') {
