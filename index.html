@@ -838,6 +838,7 @@ var A={
       
       // 3) الدور الفعلي
       var effRole = isLegacy ? 'super_admin' : role;
+      alert("DEBUG\nRole: " + role + "\nIsLegacy: " + isLegacy + "\nEffective: " + (isLegacy ? "super_admin" : role));
       
       // 4) منع العملاء
       if (effRole === 'customer') {
