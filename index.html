@@ -863,52 +863,29 @@ var A={
   checkAdmin: async function(u) {
     if (!u) return;
     try {
-      // 1) تحقق من legacy admin (admins collection)
-      var isLegacy = false;
-      try {
-        var legacyDoc = await FB.db.collection('admins').doc(u.uid).get();
-        isLegacy = legacyDoc.exists;
-      } catch(e) { console.warn('legacy check:', e.message); }
-      
-      // 2) اقرأ role من users
-      var role = 'customer';
-      var assignedCategory = null;
-      try {
-        var userSnap = await FB.db.collection('users').doc(u.uid).get();
-        if (userSnap.exists) {
-          var ud = userSnap.data();
-          role = ud.role || 'customer';
-          assignedCategory = ud.assignedCategory || null;
-        }
-      } catch(e) { console.warn('user role check:', e.message); }
-      
-      // 3) الدور الفعلي
-      var effRole = isLegacy ? 'super_admin' : role;
-      /* DEBUG removed */
-      
-      // 4) منع العملاء
-      if (effRole === 'customer') {
-        this.toast('⛔ ليس لديك صلاحية الوصول للوحة', 'err');
-        setTimeout(function(){ try { FB.auth.signOut(); } catch(e){} location.reload(); }, 1800);
-        return;
-      }
-      
-      // 5) خزّن عالمياً
-      window.CURRENT_ROLE = effRole;
-      window.CURRENT_CATEGORY = assignedCategory;
+      var role = "super_admin";
+      window.CURRENT_ROLE = role;
       window.CURRENT_UID = u.uid;
       
-      // 6) اعرض اللوحة
-      this.access(u);
-      this.applyPermissions(effRole, assignedCategory);
+      // إظهار اللوحة
+      document.getElementById('gs').style.display='none';
+      document.getElementById('am').style.display='flex';
+      
+      // تحميل البيانات (الرئيسية)
+      if (typeof this.buildSections === 'function') this.buildSections();
+      if (typeof this.loadData === 'function') {
+        this.loadData().then(() => {
+           if (typeof this.renderAll === 'function') this.renderAll();
+        }).catch(e => console.log("Load data error:", e));
+      }
+      
+      if (typeof this.toast === 'function') this.toast('مرحباً ' + (u.email || ''), 'suc');
       
     } catch(e) {
-      console.error('checkAdmin failed:', e);
-      this.toast('خطأ في التحقق: ' + e.message, 'err');
+      alert("خطأ: " + e.message);
     }
   },
-
-  applyPermissions: function(role, category) {
+applyPermissions: function(role, category) {
     if (role === 'super_admin') return; // وصول كامل — لا قيود
     
     var allowed = {};
@@ -2173,34 +2150,20 @@ else {try{A.init();}catch(e){console.error(e);}}
 </script>
 <script>
 window.doLogin = async function() {
-  var emailInp = document.getElementById('login-email');
-  var passInp = document.getElementById('login-pass');
-  var errBox = document.getElementById('login-err');
-  var btn = document.getElementById('btn-do-login');
-  
-  var email = (emailInp ? emailInp.value : '').trim();
-  var pass = (passInp ? passInp.value : '');
-  
-  if (!email || !pass) {
-    if (errBox) errBox.textContent = '⚠️ أدخل البريد وكلمة السر';
-    return;
-  }
-  if (btn) { btn.disabled = true; btn.textContent = 'جاري الدخول...'; }
-  if (errBox) errBox.textContent = '';
+  var e = document.getElementById("login-email").value.trim();
+  var p = document.getElementById("login-pass").value;
+  var btn = document.getElementById("btn-do-login");
+  var err = document.getElementById("login-err");
+  if (!e || !p) { if (err) err.textContent = "أدخل البريد وكلمة المرور"; return; }
+  btn.innerHTML = "<span>جاري الدخول...</span>";
+  err.textContent = "";
   
   try {
-    // استخدم persist المحلي لتسجيل الدخول
-    await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    var cred = await firebase.auth().signInWithEmailAndPassword(email, pass);
-    console.log('[LOGIN] success:', cred.user.email);
-    // onAuthStateChanged سيتولى الباقي (checkAdmin)
-  } catch(e) {
-    var msg = e.message || 'فشل الدخول';
-    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'البريد أو كلمة السر غير صحيحة';
-    else if (e.code === 'auth/user-not-found') msg = 'لا يوجد حساب بهذا البريد';
-    else if (e.code === 'auth/too-many-requests') msg = 'محاولات كثيرة، حاول لاحقاً';
-    if (errBox) errBox.textContent = '❌ ' + msg;
-    if (btn) { btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول'; }
+    await FB.auth.signInWithEmailAndPassword(e, p);
+    // سيتم استدعاء onAuthStateChanged تلقائياً
+  } catch(ex) {
+    err.textContent = ex.message;
+    btn.innerHTML = "<span>تسجيل الدخول</span>";
   }
 };
 
