@@ -28,6 +28,7 @@ input{width:100%;padding:10px;border-radius:8px;border:1px solid #374151;backgro
 </div>
 <div id="act" class="hidden">
 <button id="rbtn">▶ تشغيل الإصلاح</button>
+<button id="lobtn" style="background:#ef4444;margin-top:6px;">🚪 تسجيل خروج قسري</button>
 </div>
 <pre id="log">[السجل سيظهر هنا]</pre>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -55,6 +56,24 @@ var em=document.getElementById('em').value.trim(),pw=document.getElementById('pw
 if(!em||!pw){st.textContent='❌ املأ الحقول';return}
 st.textContent='جارٍ الدخول...';
 try{await auth.signInWithEmailAndPassword(em,pw)}catch(e){st.textContent='❌ '+e.code}
+};
+document.getElementById('lobtn').onclick=async function(){
+if(!confirm('تسجيل الخروج ومسح الجلسة؟')) return;
+try {
+  await firebase.auth().signOut();
+  // مسح أي بيانات جلسة إضافية
+  try {
+    Object.keys(localStorage).forEach(function(k){
+      if(k.indexOf('firebase')>-1 || k.indexOf('chizen')>-1) localStorage.removeItem(k);
+    });
+    if(window.indexedDB && indexedDB.databases){
+      var dbs = await indexedDB.databases();
+      dbs.forEach(function(d){ if(d.name && d.name.indexOf('firebase')>-1) indexedDB.deleteDatabase(d.name); });
+    }
+  } catch(e){}
+  alert('✅ تم تسجيل الخروج. أعد تحميل الصفحة الآن.');
+  location.reload();
+} catch(e) { alert('❌ فشل: ' + e.message); }
 };
 document.getElementById('rbtn').onclick=async function(){
 this.disabled=true;clean();
