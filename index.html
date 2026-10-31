@@ -5804,9 +5804,23 @@ window.catMgrApp = (function(){
         const merged=Object.assign({},categories,{[state.cat]:catObj});
         const allResolved=Object.keys(merged).every(k=>{const s=merged[k]&&merged[k].status;return s==='confirmed'||s==='rejected';});
         const anyRejected=Object.keys(merged).some(k=>merged[k]&&merged[k].status==='rejected');
-        if(allResolved)updates.workflowStatus=anyRejected?'payment_rejected':'ready_to_send';
+        if(allResolved){
+          updates.workflowStatus=anyRejected?'payment_rejected':'ready_to_send';
+          updates.fulfillmentStage=anyRejected?'awaiting_customer_decision':'confirmed';
+        }
         tx.update(ref,updates);
       });
+      // ═══ Advance state (confirmed -> preparing) ═══
+      try {
+        if (window.FulfillmentEngine && typeof FulfillmentEngine.advance === 'function') {
+          const _chk = await db.collection('orders').doc(orderId).get();
+          if (_chk.exists && _chk.data().fulfillmentStage === 'confirmed') {
+            await FulfillmentEngine.advance(orderId, 'preparing', { role: 'system' });
+            console.log('[CM] advanced to preparing:', orderId);
+          }
+        }
+      } catch(_ae){ console.warn('[CM advance]', _ae.message); }
+
       await notifyCustomer(o.customerId,{title:'✅ تم تأكيد توفر منتجاتك',body:'طلبك #'+String(orderId).slice(-6)+' من قسم '+label(state.cat)+' جاهز',type:'order',event:'cat_confirmed',icon:'✅',deepLink:'order/'+orderId});
       await notifyRole('delivery_mgr',{title:'📦 طلب بحاجة لجدولة توصيل',body:'#'+String(orderId).slice(-6)+' — قسم '+label(state.cat)+' أكّد',type:'order',event:'cat_confirmed',icon:'📦',deepLink:'order/'+orderId});
       toast('✅ تم التأكيد');
@@ -5823,7 +5837,7 @@ window.catMgrApp = (function(){
         const data=doc.data();const catObj=Object.assign({},(data.categories||{})[state.cat]||{});
         catObj.status='rejected';catObj.rejectReason=reason;catObj.rejectedBy=state.user.uid;catObj.rejectedByName=state.user.name||'';
         catObj.rejectedAt=firebase.firestore.FieldValue.serverTimestamp();
-        const updates={};updates['categories.'+state.cat]=catObj;updates.workflowStatus='payment_rejected';
+        const updates={};updates['categories.'+state.cat]=catObj;updates.workflowStatus='payment_rejected';updates.fulfillmentStage='awaiting_customer_decision';
         tx.update(ref,updates);
       });
       await notifyCustomer(o.customerId,{title:'⚠️ تحديث بخصوص طلبك',body:'قسم '+label(state.cat)+': '+reason,type:'warning',event:'cat_rejected',icon:'⚠️',important:true,deepLink:'order/'+orderId});
