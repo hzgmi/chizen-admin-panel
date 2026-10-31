@@ -3081,52 +3081,18 @@ else {try{A.init();}catch(e){console.error(e);}}
 
     // ═══ تأكيد الدفع ═══
     A.verifyPayment = async function(orderId) {
-      var self = this;
-      this.confirm('تأكيد الدفع؟', 'سيبدأ تجهيز الطلب', async function() {
-        try {
-          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
-          if (snap.empty) return;
-          await snap.docs[0].ref.update({
-            'payment.status': 'verified',
-            'payment.verifiedBy': FB.currentUser ? FB.currentUser.uid : '',
-            'payment.verifiedAt': new Date(),
-            workflowStatus: 'awaiting_categories'
-          });
-          var order = snap.docs[0].data();
-          if (order.customerId && FB.addUserNotification) {
-            await FB.addUserNotification(order.customerId, {
-              title: '✅ تم تأكيد الدفع',
-              body: 'طلبك جاري تجهيزه الآن',
-              type: 'order'
-            });
-          }
-          self.toast('✅ تم', 'suc');
-          await self.loadData();
-          self.dispatch.orders = self.orders || [];
-          self.renderDispatcher();
-        } catch(e) { self.toast('فشل', 'err'); }
-      }, 'primary');
+      if (typeof window.__v86Confirm === 'function') {
+        return window.__v86Confirm(orderId);
+      }
+      this.toast('⚠️ دالة الدفع غير جاهزة، أعد التحميل', 'err');
     };
 
     // ═══ رفض الدفع ═══
     A.rejectPayment = function(orderId) {
-      var self = this;
-      this.confirm('رفض الدفع؟', 'سيتم إعلام العميل', async function() {
-        try {
-          var snap = await FB.db.collection('orders').where('id', '==', orderId).get();
-          if (snap.empty) return;
-          await snap.docs[0].ref.update({
-            'payment.status': 'rejected',
-            'payment.verifiedBy': FB.currentUser ? FB.currentUser.uid : '',
-            'payment.verifiedAt': new Date(),
-            workflowStatus: 'payment_rejected'
-          });
-          self.toast('تم الرفض', 'suc');
-          await self.loadData();
-          self.dispatch.orders = self.orders || [];
-          self.renderDispatcher();
-        } catch(e) { self.toast('فشل', 'err'); }
-      });
+      if (typeof window.__v86Reject === 'function') {
+        return window.__v86Reject(orderId);
+      }
+      this.toast('⚠️ دالة الرفض غير جاهزة، أعد التحميل', 'err');
     };
 
     // ═══ تم التسليم ═══
