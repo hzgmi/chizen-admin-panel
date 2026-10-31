@@ -502,22 +502,51 @@ async function pickupOrder(id){
 
 async function startDelivery(id){
   var otp = String(Math.floor(100000 + Math.random()*900000));
-  if(typeof window.__dlvStartDelivery === 'function'){
-    try { await window.__dlvStartDelivery(id); toast('✅ بدأ التوصيل — اطلب OTP من العميل', 'ok'); return; } catch(e){ console.warn('__dlvStart failed:', e); }
+  try {
+    if(typeof window.__dlvStartDelivery === 'function'){
+      await window.__dlvStartDelivery(id);
+    } else {
+      await db.collection('orders').doc(id).update({
+        fulfillmentStage: 'on_the_way',
+        workflowStatus: 'sent_to_customer',
+        deliveryOTP: otp,
+        deliveryOTPCreatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        onTheWayAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    var oDoc = await db.collection('orders').doc(id).get();
+    if(oDoc.exists){
+      var o = oDoc.data();
+      var realOtp = o.deliveryOTP || otp;
+      var _isPaid = (o.payment && o.payment.status === 'verified') || o.paymentStatus === 'paid' || o.paymentStatus === 'verified';
+      var _isCOD = !_isPaid;
+      var _payStatus = _isPaid ? 'paid' : 'cod';
+      var _amount = _isCOD ? Number(o.total || 0) : 0;
+      try {
+        await db.collection('pickup_verifications').doc(String(realOtp)).set({
+          orderId: id,
+          customerName: o.name || o.customerName || 'عميل',
+          customerPhone: o.phone || o.customerPhone || '',
+          total: o.total || 0,
+          items: getItems(o),
+          pickupPointName: o.pickupPointName || 'نقطة الاستلام',
+          paymentStatus: _payStatus,
+          amountToCollect: _amount,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e){ console.warn('[pickup_ver save]', e.message); }
+      try {
+        await window.notifyCustomer(o.customerId || '', {
+          title: '🚚 طلبك في الطريق',
+          body: 'رمز التسليم: ' + realOtp + ' — أعطيه لنقطة الاستلام عند استلام طلبك',
+          type: 'order', event: 'on_the_way', icon: '🚚'
+        });
+      } catch(e){}
+    }
+    toast('✅ بدأ التوصيل — رمز التسليم أُرسل للعميل', 'ok');
+  } catch(e) {
+    toast('❌ ' + (e.message || 'فشل'), 'err');
   }
-  await db.collection('orders').doc(id).update({
-    fulfillmentStage: 'on_the_way',
-    workflowStatus: 'sent_to_customer',
-    deliveryOTP: otp,
-    deliveryOTPCreatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    onTheWayAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  await window.notifyCustomer((await db.collection('orders').doc(id).get()).data().customerId || '', {
-    title: '🚚 طلبك في الطريق',
-    body: 'رمز التسليم: ' + otp,
-    type: 'order', event: 'on_the_way', icon: '🚚'
-  });
-  toast('✅ بدأ التوصيل — OTP: ' + otp, 'ok');
 }
 
 async function deliverOrder(id, otp){

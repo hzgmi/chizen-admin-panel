@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHIZEN — التحقق من التسليم</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0b1220,#1e1b4b);color:#e5e7eb;min-height:100vh;padding:20px;display:flex;justify-content:center;align-items:flex-start}
+.container{max-width:480px;width:100%;margin-top:20px}
+.logo{text-align:center;font-size:28px;font-weight:900;color:#FF8A00;margin-bottom:6px}
+.subtitle{text-align:center;color:#9ca3af;font-size:13px;margin-bottom:24px}
+.card{background:rgba(255,255,255,0.04);border:1px solid rgba(168,85,247,0.3);border-radius:16px;padding:24px;backdrop-filter:blur(10px)}
+h2{color:#a855f7;font-size:16px;margin-bottom:8px;text-align:center}
+p.hint{text-align:center;color:#9ca3af;font-size:12px;margin-bottom:18px;line-height:1.5}
+.otp-input{width:100%;padding:20px;border-radius:12px;border:2px solid #374151;background:#0f172a;color:#fff;font-size:32px;text-align:center;letter-spacing:12px;font-weight:900;font-family:monospace;direction:ltr;transition:border-color 0.2s}
+.otp-input:focus{outline:none;border-color:#a855f7;box-shadow:0 0 0 4px rgba(168,85,247,0.15)}
+.btn{width:100%;padding:16px;border-radius:12px;border:none;font-size:16px;font-weight:900;cursor:pointer;font-family:inherit;margin-top:14px;transition:transform 0.15s}
+.btn:active{transform:scale(0.97)}
+.btn-verify{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 4px 20px rgba(16,185,129,0.35)}
+.btn-verify:disabled{background:#374151;cursor:not-allowed;box-shadow:none}
+.result{margin-top:20px}
+.result-card{background:rgba(16,185,129,0.1);border:2px solid rgba(16,185,129,0.4);border-radius:16px;padding:20px;animation:slideUp 0.3s ease}
+.result-card.error{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.4)}
+.result-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.result-header .icon{font-size:32px}
+.result-header .text{flex:1}
+.result-header h3{color:#6ee7b7;font-size:16px;margin-bottom:2px}
+.result-card.error .result-header h3{color:#fca5a5}
+.result-header .small{font-size:11px;color:#9ca3af}
+.info-grid{display:grid;gap:8px;margin-bottom:14px}
+.info-row{display:flex;justify-content:space-between;align-items:flex-start;font-size:13px;padding:6px 0;gap:12px}
+.info-row .label{color:#9ca3af;flex-shrink:0}
+.info-row .value{color:#fff;font-weight:800;text-align:left;word-break:break-word}
+.items-title{color:#a855f7;font-weight:900;font-size:13px;margin-bottom:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1)}
+.item-line{display:flex;justify-content:space-between;padding:8px 0;font-size:12px;border-bottom:1px dashed rgba(255,255,255,0.05);gap:8px}
+.item-line:last-child{border-bottom:none}
+.item-line .n{color:#e5e7eb;flex:1;min-width:0}
+.item-line .q{color:#9ca3af;font-size:11px;white-space:nowrap}
+.item-line .p{color:#ff4d94;font-weight:800;white-space:nowrap}
+.total-row{display:flex;justify-content:space-between;padding:14px 0 0;border-top:2px solid rgba(168,85,247,0.3);margin-top:8px;font-size:16px;font-weight:900}
+.total-row .t{color:#FF8A00}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-left:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;top:20px;left:20px;right:20px;padding:14px;border-radius:10px;color:#fff;font-weight:800;font-size:14px;text-align:center;z-index:1000;display:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">📦 CHIZEN</div>
+  <div class="subtitle">التحقق من استلام العميل</div>
+  
+  <div class="card">
+    <h2>🔐 أدخل رمز التسليم</h2>
+    <p class="hint">اطلب من العميل الرمز المكوَّن من 6 أرقام</p>
+    <input id="otp" class="otp-input" type="text" inputmode="numeric" maxlength="6" placeholder="------" autocomplete="off">
+    <button id="verify-btn" class="btn btn-verify">تحقق</button>
+  </div>
+  
+  <div id="result" class="result"></div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function(){
+'use strict';
+if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+var db = firebase.firestore();
+var auth = firebase.auth();
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+function showToast(msg, color){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color || 'linear-gradient(135deg,#ef4444,#dc2626)';
+  t.style.display = 'block';
+  setTimeout(function(){ t.style.display='none'; }, 3000);
+}
+function checkRateLimit(){
+  try {
+    var key = 'pv_attempts';
+    var now = Date.now();
+    var data = JSON.parse(localStorage.getItem(key) || '[]');
+    data = data.filter(function(t){ return now - t < 300000; });
+    if(data.length >= 10) return false;
+    data.push(now);
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch(e){ return true; }
+}
+async function init(){
+  try { await auth.signInAnonymously(); }
+  catch(e){
+    console.warn('[pv] anon auth failed:', e.code);
+    if(e.code === 'auth/operation-not-allowed'){
+      showToast('⚠️ فعّل Anonymous Auth في Firebase Console', 'linear-gradient(135deg,#f59e0b,#d97706)');
+    }
+  }
+}
+
+var input = document.getElementById('otp');
+var btn = document.getElementById('verify-btn');
+var resultDiv = document.getElementById('result');
+
+input.addEventListener('input', function(){ this.value = this.value.replace(/\D/g, '').slice(0, 6); });
+input.addEventListener('keydown', function(e){ if(e.key === 'Enter' && this.value.length === 6) verify(); });
+btn.onclick = verify;
+
+async function verify(){
+  var otp = input.value.trim();
+  if(!/^\d{6}$/.test(otp)){ showToast('أدخل 6 أرقام'); return; }
+  if(!checkRateLimit()){ showToast('⚠️ تجاوزت المحاولات — انتظر قليلاً'); return; }
+  btn.disabled = true;
+  btn.innerHTML = 'جارٍ التحقق<span class="spinner"></span>';
+  resultDiv.innerHTML = '';
+  try {
+    var doc = await db.collection('pickup_verifications').doc(otp).get();
+    if(!doc.exists){
+      resultDiv.innerHTML = '<div class="result-card error"><div class="result-header"><div class="icon">❌</div><div class="text"><h3>رمز غير صحيح</h3><div class="small">تأكد من الرمز مع العميل</div></div></div></div>';
+      return;
+    }
+    var data = doc.data();
+    if(data.used){
+      resultDiv.innerHTML = '<div class="result-card error"><div class="result-header"><div class="icon">⛔</div><div class="text"><h3>الرمز مستخدم</h3><div class="small">هذا الطلب تم تسليمه أو إرجاعه سابقاً</div></div></div></div>';
+      return;
+    }
+    showOrder(data, otp);
+  } catch(e){
+    resultDiv.innerHTML = '<div class="result-card error"><div class="result-header"><div class="icon">⚠️</div><div class="text"><h3>خطأ</h3><div class="small">' + esc(e.message) + '</div></div></div></div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'تحقق';
+  }
+}
+
+function showOrder(o, otp){
+  var items = o.items || [];
+  var itemsHtml = items.map(function(it){
+    return '<div class="item-line"><span class="n">' + esc(it.name||'—') + '</span><span class="q">×' + (it.qty||1) + '</span><span class="p">' + (it.price||0) + ' ر</span></div>';
+  }).join('');
+  var orderShort = (o.orderId || '').slice(-6).toUpperCase();
+  var isPaid = o.paymentStatus === 'paid';
+  var isCOD = o.paymentStatus === 'cod';
+  var amount = Number(o.amountToCollect || 0);
+  
+  var payBadge = isPaid 
+    ? '<span style="display:inline-block;background:rgba(16,185,129,0.25);color:#6ee7b7;border:1px solid rgba(16,185,129,0.5);padding:6px 14px;border-radius:8px;font-size:13px;font-weight:900">✅ مدفوع مسبقاً</span>'
+    : isCOD
+    ? '<span style="display:inline-block;background:rgba(245,158,11,0.25);color:#fcd34d;border:1px solid rgba(245,158,11,0.5);padding:6px 14px;border-radius:8px;font-size:13px;font-weight:900">💰 دفع عند الاستلام</span>'
+    : '<span style="display:inline-block;background:rgba(107,114,128,0.25);color:#d1d5db;border:1px solid rgba(107,114,128,0.5);padding:6px 14px;border-radius:8px;font-size:13px;font-weight:900">❓ غير محدد</span>';
+  
+  var amountBox = isCOD 
+    ? '<div style="background:linear-gradient(135deg,rgba(245,158,11,0.18),rgba(217,119,6,0.12));border:2px solid rgba(245,158,11,0.6);border-radius:12px;padding:16px;margin:14px 0;text-align:center">' +
+        '<div style="color:#fcd34d;font-size:13px;font-weight:800;margin-bottom:6px">💰 تحصيل نقدي من العميل</div>' +
+        '<div style="color:#fbbf24;font-size:32px;font-weight:900;line-height:1.1">' + amount.toLocaleString('en') + ' <span style="font-size:16px">ر.ي</span></div>' +
+      '</div>' : '';
+  
+  resultDiv.innerHTML = 
+    '<div class="result-card">' +
+      '<div class="result-header"><div class="icon">✅</div><div class="text"><h3>تم التحقق</h3><div class="small">الطلب مسجل ويطابق الرمز</div></div></div>' +
+      '<div style="text-align:center;margin:12px 0">' + payBadge + '</div>' +
+      '<div class="info-grid">' +
+        '<div class="info-row"><span class="label">📋 رقم الطلب</span><span class="value">#' + esc(orderShort) + '</span></div>' +
+        '<div class="info-row"><span class="label">👤 العميل</span><span class="value">' + esc(o.customerName || '—') + '</span></div>' +
+        (o.customerPhone ? '<div class="info-row"><span class="label">📱 الهاتف</span><span class="value">' + esc(o.customerPhone) + '</span></div>' : '') +
+      '</div>' +
+      amountBox +
+      '<div class="items-title">🛒 المنتجات (' + items.length + ')</div>' +
+      (itemsHtml || '<div style="color:#6b7280;text-align:center;font-size:12px;padding:10px">لا تفاصيل</div>') +
+      '<div class="total-row"><span>إجمالي الطلب</span><span class="t">' + (o.total||0) + ' ر.ي</span></div>' +
+      '<div style="display:grid;gap:10px;margin-top:18px;padding-top:16px;border-top:2px solid rgba(168,85,247,0.2)">' +
+        '<button id="act-deliver" style="padding:16px;border-radius:12px;border:none;font-size:15px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-family:inherit;box-shadow:0 4px 16px rgba(16,185,129,0.4)">' + (isCOD ? '✅ تم التسليم والتحصيل' : '✅ تم التسليم للعميل') + '</button>' +
+        '<button id="act-return" style="padding:14px;border-radius:12px;border:2px solid #ef4444;background:rgba(239,68,68,0.1);color:#fca5a5;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">↩️ العميل لم يحضر — إرجاع البضاعة</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('act-deliver').onclick = function(){ handleDeliver(o, otp); };
+  document.getElementById('act-return').onclick = function(){ handleReturn(o, otp); };
+  input.value = '';
+}
+
+async function handleDeliver(o, otp){
+  var msg = o.paymentStatus === 'cod' 
+    ? 'تأكيد تسليم الطلب للعميل بعد تحصيل ' + Number(o.amountToCollect||0).toLocaleString('en') + ' ر.ي؟'
+    : 'تأكيد تسليم الطلب للعميل؟';
+  if(!confirm(msg)) return;
+  try {
+    var upd = {
+      fulfillmentStage: 'delivered',
+      workflowStatus: 'delivered',
+      deliveredAt: firebase.firestore.FieldValue.serverTimestamp(),
+      pickupPointDeliveryAt: firebase.firestore.FieldValue.serverTimestamp(),
+      receivedByCustomer: true,
+      __pvOTP: otp
+    };
+    if(o.paymentStatus === 'cod'){
+      upd.codCollected = true;
+      upd.codAmount = Number(o.amountToCollect || 0);
+      upd.codCollectedAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+    await db.collection('orders').doc(o.orderId).update(upd);
+    await db.collection('pickup_verifications').doc(otp).update({
+      used: true, action: 'delivered', usedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    var codLine = o.paymentStatus === 'cod' ? '<div style="background:rgba(16,185,129,0.15);padding:14px;border-radius:10px;text-align:center;color:#6ee7b7;font-weight:900;margin-top:12px">💰 تم تحصيل ' + Number(o.amountToCollect||0).toLocaleString('en') + ' ر.ي</div>' : '';
+    resultDiv.innerHTML = 
+      '<div class="result-card">' +
+        '<div class="result-header"><div class="icon">🎉</div><div class="text"><h3>تم التسليم بنجاح</h3><div class="small">الطلب مسجل كمسلَّم للعميل</div></div></div>' +
+        codLine +
+        '<button id="new-verify" style="width:100%;padding:14px;border-radius:12px;border:none;font-size:14px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:inherit;margin-top:16px">🔄 التحقق من عميل آخر</button>' +
+      '</div>';
+    document.getElementById('new-verify').onclick = function(){ resultDiv.innerHTML = ''; input.value=''; input.focus(); };
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+async function handleReturn(o, otp){
+  if(!confirm('تأكيد إرجاع البضاعة؟ سيُعلم المندوب لاستلامها من النقطة.')) return;
+  try {
+    await db.collection('orders').doc(o.orderId).update({
+      fulfillmentStage: 'return_pending',
+      workflowStatus: 'return_pending',
+      returnReason: 'العميل لم يحضر للاستلام من النقطة',
+      returnInitiatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      returnFromPickupPoint: true,
+      __pvOTP: otp
+    });
+    await db.collection('pickup_verifications').doc(otp).update({
+      used: true, action: 'returned', usedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    resultDiv.innerHTML = 
+      '<div class="result-card">' +
+        '<div class="result-header"><div class="icon">↩️</div><div class="text"><h3>تم الإرجاع</h3><div class="small">سيُعلم المندوب لاستلام البضاعة من النقطة</div></div></div>' +
+        '<button id="new-verify" style="width:100%;padding:14px;border-radius:12px;border:none;font-size:14px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:inherit;margin-top:16px">🔄 التحقق من عميل آخر</button>' +
+      '</div>';
+    document.getElementById('new-verify').onclick = function(){ resultDiv.innerHTML = ''; input.value=''; input.focus(); };
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+init();
+})();
+</script>
+</body>
+</html>
