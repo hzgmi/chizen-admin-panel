@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Move Order</title>
+<style>body{font-family:system-ui;background:#0b1220;color:#e5e7eb;padding:14px;max-width:760px;margin:0 auto}button{background:#10b981;color:#fff;border:0;padding:12px;border-radius:10px;font-weight:800;width:100%;margin:4px 0;cursor:pointer}button.danger{background:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#fff;margin:4px 0;box-sizing:border-box}#status{padding:8px;background:#1f2937;border-radius:8px;margin:8px 0;font-size:12px}#log{background:#000;color:#0f0;padding:10px;border-radius:8px;font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:60vh;overflow:auto}.hidden{display:none!important}</style></head>
+<body><h1>🎯 نقل الطلب إلى ready_for_pickup</h1>
+<div id="status">جارٍ...</div>
+<div id="login" class="hidden"><input id="em" placeholder="hazimchat@gmail.com" type="email"><input id="pw" type="password" placeholder="كلمة المرور"><button id="lbtn">🔐 دخول</button></div>
+<div id="act" class="hidden">
+<button id="showbtn" style="background:#3b82f6">👁 عرض الطلبات</button>
+<button id="movebtn" class="danger">🎯 نقل طلب preparing → ready_for_pickup (+ إضافة مورد تجريبي)</button>
+<button id="lobtn" style="background:#374151;font-size:12px;padding:8px;">🚪 خروج</button>
+</div>
+<pre id="log">[السجل]</pre>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function(){
+var st=document.getElementById('status'),lg=document.getElementById('login'),ac=document.getElementById('act'),logEl=document.getElementById('log');
+if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+var db=firebase.firestore(),auth=firebase.auth();
+function L(m){logEl.textContent+='\n'+m;logEl.scrollTop=logEl.scrollHeight}
+auth.onAuthStateChanged(function(u){if(u){st.textContent='✅ '+u.email;lg.classList.add('hidden');ac.classList.remove('hidden');}else{lg.classList.remove('hidden');ac.classList.add('hidden');}});
+document.getElementById('lbtn').onclick=async function(){try{await auth.signInWithEmailAndPassword(document.getElementById('em').value.trim(),document.getElementById('pw').value)}catch(e){st.textContent='❌ '+e.code}};
+document.getElementById('lobtn').onclick=async function(){await firebase.auth().signOut();location.reload()};
+
+document.getElementById('showbtn').onclick=async function(){
+logEl.textContent='[السجل]';
+var snap=await db.collection('orders').get();
+L('═══ كل الطلبات ═══');
+snap.forEach(function(d){
+var o=d.data();
+L('#'+d.id.slice(-8)+' | ws='+(o.workflowStatus||'—')+' | fs='+(o.fulfillmentStage||'—')+' | total='+(o.total||0));
+});
+};
+
+document.getElementById('movebtn').onclick=async function(){
+if(!confirm('نقل جميع طلبات "ready_to_send" إلى "ready_for_pickup" مع بيانات مورد تجريبي؟')) return;
+logEl.textContent='[السجل]';
+L('═══ بدء النقل ═══');
+try{
+var snap=await db.collection('orders').where('workflowStatus','==','ready_to_send').get();
+if(snap.empty){L('❌ لا توجد طلبات ready_to_send');return}
+var count=0;
+for(var i=0;i<snap.docs.length;i++){
+var d=snap.docs[i];
+await db.collection('orders').doc(d.id).update({
+workflowStatus:'ready_for_pickup',
+fulfillmentStage:'ready_for_pickup',
+supplierName:'مورد تجريبي - مستودع صنعاء',
+supplierPhone:'+967777000000',
+supplierAddress:'شارع حدة، صنعاء، اليمن',
+sourceLocation:{name:'مستودع صنعاء الرئيسي',address:'شارع حدة، صنعاء',phone:'+967777000000'},
+__readyAt:firebase.firestore.FieldValue.serverTimestamp()
+});
+L('✅ '+d.id.slice(-8)+' → ready_for_pickup + بيانات مورد');
+count++;
+}
+L('\n🎉 تم نقل '+count+' طلب');
+}catch(e){L('❌ '+e.code+' — '+e.message)}
+};
+})();
+</script></body></html>
