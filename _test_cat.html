@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHIZEN Test Cat</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0b1220;color:#e5e7eb;padding:14px;max-width:760px;margin:0 auto;line-height:1.5}
+h1{color:#FF8A00;font-size:16px;margin:0 0 6px}
+button{background:#10b981;color:#fff;border:0;padding:14px 18px;border-radius:10px;font-weight:800;font-size:14px;font-family:inherit;margin:4px 0;cursor:pointer;width:100%}
+button.danger{background:#ef4444}
+input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#fff;margin:4px 0;font-family:inherit;box-sizing:border-box;font-size:13px}
+#status{padding:8px;background:#1f2937;border-radius:8px;margin:8px 0;font-size:12px}
+#log{background:#000;color:#0f0;padding:10px;border-radius:8px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;max-height:60vh;overflow:auto;min-height:100px;margin-top:8px}
+.hidden{display:none!important}
+.err{color:#f87171}
+</style>
+</head>
+<body>
+<h1>🔬 اختبار: هل يستطيع cat_manager تأكيد طلب؟</h1>
+<div id="status">جارٍ التهيئة...</div>
+<div id="login" class="hidden">
+<input id="em" type="email" placeholder="mgdi776035709@gmail.com" autocomplete="username">
+<input id="pw" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+<button id="lbtn">🔐 تسجيل الدخول (cat_manager)</button>
+</div>
+<div id="act" class="hidden">
+<label style="font-size:12px;color:#fbbf24;">اختر طلبًا (سيتم إرسال أمر تأكيد تجريبي):</label>
+<select id="orderSel"><option value="">-- جاري تحميل الطلبات --</option></select>
+<button id="testbtn" class="danger">⚠️ اختبار التأكيد على هذا الطلب</button>
+<button id="lobtn" style="background:#374151;font-size:12px;padding:8px;">🚪 خروج</button>
+</div>
+<pre id="log">[السجل سيظهر هنا]</pre>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function(){
+var st=document.getElementById('status'),lg=document.getElementById('login'),ac=document.getElementById('act'),logEl=document.getElementById('log'),orderSel=document.getElementById('orderSel');
+if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+var db=firebase.firestore(),auth=firebase.auth();
+function L(m){logEl.textContent+='\n'+m;logEl.scrollTop=logEl.scrollHeight}
+
+auth.onAuthStateChanged(async function(u){
+if(u){
+st.textContent='✅ مسجل: '+u.email;
+lg.classList.add('hidden');ac.classList.remove('hidden');
+L('--- جاري تحميل الطلبات المتاحة ---');
+try{
+var snap=await db.collection('orders').where('workflowStatus','==','awaiting_categories').limit(5).get();
+orderSel.innerHTML='';
+if(snap.empty){L('⚠️ لا توجد طلبات بحالة awaiting_categories (قواعد الأمان قد تمنع قراءتها أو لا توجد طلبات)');}
+snap.forEach(function(d){
+var o=d.data();
+var opt=document.createElement('option');
+opt.value=d.id;
+opt.textContent=d.id.slice(0,8)+' | '+o.workflowStatus+' | '+ (o.categories ? Object.keys(o.categories).join(',') : 'no-cats');
+orderSel.appendChild(opt);
+L('📦 '+d.id+' | cats: '+ (o.categories ? JSON.stringify(o.categories) : 'none'));
+});
+}catch(e){L('❌ خطأ في قراءة الطلبات: '+e.code+' — '+e.message);}
+}else{
+st.textContent='⚠️ سجل دخول بحساب مدير القسم';
+lg.classList.remove('hidden');ac.classList.add('hidden');
+}
+});
+
+document.getElementById('lbtn').onclick=async function(){
+var em=document.getElementById('em').value.trim(),pw=document.getElementById('pw').value;
+if(!em||!pw){st.textContent='❌ املأ الحقول';return}
+st.textContent='جارٍ الدخول...';
+try{await auth.signInWithEmailAndPassword(em,pw)}catch(e){st.textContent='❌ '+e.code}
+};
+
+document.getElementById('lobtn').onclick=async function(){if(!confirm('خروج؟'))return;await firebase.auth().signOut();location.reload()};
+
+document.getElementById('testbtn').onclick=async function(){
+var oid=orderSel.value;
+if(!oid){alert('اختر طلبًا أولاً');return}
+if(!confirm('سيتم محاولة تحديث الطلب كمدير قسم. متابعة؟'))return;
+L('\n── اختبار التأكيد على الطلب: '+oid+' ──');
+var u=auth.currentUser;
+L('أنت: '+u.email+' ('+u.uid.slice(0,8)+')');
+try{
+var before=await db.collection('orders').doc(oid).get();
+L('قبل: workflowStatus='+before.data().workflowStatus);
+L('محاولة تحديث الحالة إلى payment_confirmed (كاختبار)...');
+await db.collection('orders').doc(oid).update({
+workflowStatus:'payment_confirmed',
+__testByCatAt:firebase.firestore.FieldValue.serverTimestamp(),
+__testByCatBy:u.uid
+});
+L('✅ نجح التحديث! القواعد تسمح لمدير القسم بالكتابة.');
+var after=await db.collection('orders').doc(oid).get();
+L('بعد: workflowStatus='+after.data().workflowStatus);
+}catch(e){
+L('❌ فشل التحديث: '+e.code);
+L('الرسالة: '+e.message);
+L('🔴 هذا هو السبب الذي يمنع مدير القسم من التأكيد.');
+}
+};
+})();
+</script>
+</body>
+</html>
