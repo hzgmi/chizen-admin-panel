@@ -5268,6 +5268,31 @@ else {try{A.init();}catch(e){console.error(e);}}
             'workflowStatus': 'awaiting_categories'
           }, catUpdates));
           
+          // ── 1) Advance fulfillment engine (best-effort) ──
+          if (window.FulfillmentEngine) {
+            try { await FulfillmentEngine.advance(id, 'payment_confirmed', { role: (window.CURRENT_ROLE || 'super_admin') }); }
+            catch(e) { console.warn('[fh1]', e.message); }
+            try { await FulfillmentEngine.advance(id, 'checking_availability', { role: 'system' }); }
+            catch(e) { console.warn('[fh2]', e.message); }
+          }
+
+          // ── 2) Write financial record to payments collection ──
+          try {
+            await FB.db.collection('payments').doc(id).set({
+              orderId: id,
+              customerId: customerId || '',
+              customerName: o.name || '',
+              amount: Number(o.total) || 0,
+              method: o.bank || 'غير محدد',
+              status: 'confirmed',
+              confirmedBy: FB.currentUser ? FB.currentUser.uid : '',
+              confirmedByName: FB.currentUser ? (FB.currentUser.displayName || FB.currentUser.email) : '',
+              confirmedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              reference: '',
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          } catch(pe) { console.warn('[payments record]', pe.message); }
+
           // Notify customer: payment received, products being checked
           if (customerId && window.notifyCustomer) {
             await window.notifyCustomer(customerId, 'order.verified', {
@@ -5318,6 +5343,9 @@ else {try{A.init();}catch(e){console.error(e);}}
     // Reject payment
     window.__v86Reject = function(id) {
       var self = window.A;
+      var rejectReason = prompt('سبب رفض الدفع (إجباري):', '');
+      if (!rejectReason || !rejectReason.trim()) { self.toast('⚠️ يجب إدخال سبب الرفض', 'err'); return; }
+      rejectReason = rejectReason.trim();
       self.confirm('رفض الدفع', 'سيتم إبلاغ العميل بالرفض. متابعة؟', async function() {
         try {
           var snap = await FB.db.collection('orders').where('id', '==', id).get();
@@ -5331,11 +5359,28 @@ else {try{A.init();}catch(e){console.error(e);}}
             'payment.verifiedAt': new Date(),
             'workflowStatus': 'payment_rejected'
           });
+
+          // Write rejected payment record
+          try {
+            await FB.db.collection('payments').doc(id).set({
+              orderId: id,
+              customerId: customerId || '',
+              customerName: o.name || '',
+              amount: Number(o.total) || 0,
+              method: o.bank || 'غير محدد',
+              status: 'rejected',
+              rejectedBy: FB.currentUser ? FB.currentUser.uid : '',
+              rejectedByName: FB.currentUser ? (FB.currentUser.displayName || FB.currentUser.email) : '',
+              rejectedReason: rejectReason,
+              rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          } catch(pe) { console.warn('[payments reject]', pe.message); }
           
           if (customerId && window.notifyCustomer) {
             await window.notifyCustomer(customerId, 'order.payment_rejected', {
               id: id.substring(0, 8).toUpperCase(),
-              reason: 'تواصل معنا'
+              reason: rejectReason
             });
           }
           
