@@ -133,4 +133,26 @@
 
   window.FulfillmentEngine = API;
   console.log('[CHIZEN] FulfillmentEngine v1 loaded — ' + Object.keys(STAGES).length + ' stages');
+
+  // شارة تشخيص — تظهر فقط عند ?debug=1
+  try {
+    if (window.location && window.location.search.indexOf('debug=1') !== -1) {
+      var showBadge = function() {
+        if (!document.body) { setTimeout(showBadge, 300); return; }
+        var test = API.selfTest();
+        var bg = test.ok ? '#10b981' : '#ef4444';
+        var txt = test.ok ? ('✅ المحرك يعمل — ' + test.total + ' حالة') : ('❌ أخطاء: ' + test.errors.join(' | '));
+        var el = document.createElement('div');
+        el.style.cssText = 'position:fixed;top:10px;left:10px;background:' + bg + ';color:#fff;padding:10px 16px;border-radius:12px;font-weight:900;font-size:13px;z-index:9999999;box-shadow:0 6px 20px rgba(0,0,0,0.4);font-family:sans-serif;direction:rtl;';
+        el.textContent = txt;
+        document.body.appendChild(el);
+        setTimeout(function() { try { el.remove(); } catch(e){} }, 8000);
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { setTimeout(showBadge, 1500); });
+      } else {
+        setTimeout(showBadge, 1500);
+      }
+    }
+  } catch(e) { console.warn('[FH] badge error:', e); }
 })();
