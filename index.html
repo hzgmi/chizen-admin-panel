@@ -3403,21 +3403,23 @@ else {try{A.init();}catch(e){console.error(e);}}
     '.dlv-app[data-theme="light"] .dlv-header-title{color:#1a1a2e;}';
   document.head.appendChild(style);
 
+  window.CHIZEN_DLV_WALLET_NATIVE = true;
+
   // ═══ بناء الهيكل ═══
   function buildShell() {
+    var user = (firebase.auth && firebase.auth().currentUser) || null;
+    var name = (window.CD && window.CD.userName) || (user && (user.displayName || (user.email && user.email.split('@')[0]))) || 'المندوب';
+    var hour = new Date().getHours();
+    var greet = hour < 12 ? 'صباح الخير' : (hour < 18 ? 'مساء الخير' : 'مساء النور');
     return '' +
-      '<header class="dlv-header">' +
-        '<div style="display:flex;align-items:center;gap:10px;">' +
-          '<div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 3px 10px rgba(16,185,129,0.4);">🚚</div>' +
-          '<div>' +
-            '<div class="dlv-header-title" style="font-weight:900;font-size:14px;color:var(--dlv-text);">لوحة المندوب</div>' +
-            '<div style="color:#10b981;font-size:10px;margin-top:1px;">إدارة التوصيل</div>' +
-          '</div>' +
+      '<header class="dlv-header" style="background:linear-gradient(135deg,#10b981,#059669);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:none;">' +
+        '<div style="width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🚚</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:900;font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + greet + '، ' + esc(name) + ' 👋</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;">لوحة المندوب — إدارة التوصيل</div>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:6px;">' +
-          '<button class="dlv-theme-btn" onclick="window.__dlvToggleTheme()" id="dlv-theme-icon">🌙</button>' +
-          '<button onclick="window.__dlvLogout()" style="background:rgba(239,68,68,0.15);border:1.5px solid #ef4444;color:#ef4444;padding:8px 12px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;">🚪 خروج</button>' +
-        '</div>' +
+        '<button class="dlv-theme-btn" onclick="window.__dlvToggleTheme()" id="dlv-theme-icon" style="background:rgba(255,255,255,0.2);color:#fff;border:none;width:40px;height:40px;border-radius:12px;font-size:16px;">🌙</button>' +
+        '<button onclick="window.__dlvLogout()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;padding:0 14px;height:40px;border-radius:12px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;">خروج</button>' +
       '</header>' +
       '<main class="dlv-main" id="dlv-main"></main>' +
       '<nav class="dlv-nav">' +
@@ -3430,8 +3432,11 @@ else {try{A.init();}catch(e){console.error(e);}}
           '<span class="count" id="dlv-count-shipping" style="display:none;">0</span>' +
         '</button>' +
         '<button class="dlv-nav-btn" data-tab="delivered" onclick="window.__dlvSwitchTab(\'delivered\',this)">' +
-          '<span class="icon">📦</span><span class="label">تم التسليم</span>' +
+          '<span class="icon">📦</span><span class="label">سلّمت</span>' +
           '<span class="count" id="dlv-count-delivered" style="display:none;">0</span>' +
+        '</button>' +
+        '<button class="dlv-nav-btn" data-tab="wallet" onclick="window.__dlvSwitchTab(\'wallet\',this)">' +
+          '<span class="icon">💰</span><span class="label">محفظة</span>' +
         '</button>' +
       '</nav>';
   }
@@ -3440,35 +3445,27 @@ else {try{A.init();}catch(e){console.error(e);}}
   function buildStats() {
     var today = new Date(); today.setHours(0,0,0,0);
     var todayTs = today.getTime();
-    var todayOrders = window.CD.orders.filter(function(o) {
-      return getTs(o) >= todayTs;
-    });
-    var todayRevenue = 0;
-    var todayDelivered = 0;
+    var todayOrders = window.CD.orders.filter(function(o) { return getTs(o) >= todayTs; });
+    var todayRevenue = 0, todayDelivered = 0;
     todayOrders.forEach(function(o) {
       var p = o.payment || {};
-      if (p.status === 'verified') {
-        todayRevenue += parseFloat(o.total) || 0;
-      }
-      if (o.status === 'completed' || (o.workflowStatus === 'delivered')) {
-        todayDelivered++;
-      }
+      if (p.status === 'verified') todayRevenue += parseFloat(o.total) || 0;
+      if (o.status === 'completed' || (o.workflowStatus === 'delivered')) todayDelivered++;
     });
-    
-    return '<div class="dlv-stats">' +
-      '<div class="dlv-stat" style="border-color:rgba(59,130,246,0.4);">' +
+    return '<div class="dlv-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">' +
+      '<div class="dlv-stat" style="border-color:rgba(59,130,246,0.4);cursor:pointer;" onclick="window.__dlvSwitchTab(\'ready\',document.querySelector(\'[data-tab=ready]\'))">' +
         '<div class="dlv-stat-icon">📦</div>' +
-        '<div class="dlv-stat-label">طلبات اليوم</div>' +
+        '<div class="dlv-stat-label" style="font-size:10px;">طلبات اليوم</div>' +
         '<div class="dlv-stat-value" style="color:#3b82f6;">' + todayOrders.length + '</div>' +
       '</div>' +
-      '<div class="dlv-stat" style="border-color:rgba(236,72,153,0.4);">' +
+      '<div class="dlv-stat" style="border-color:rgba(236,72,153,0.4);cursor:pointer;" onclick="window.__dlvSwitchTab(\'delivered\',document.querySelector(\'[data-tab=delivered]\'))">' +
         '<div class="dlv-stat-icon">💰</div>' +
-        '<div class="dlv-stat-label">إيرادات اليوم</div>' +
+        '<div class="dlv-stat-label" style="font-size:10px;">إيراد اليوم</div>' +
         '<div class="dlv-stat-value" style="color:#ec4899;">' + todayRevenue.toFixed(0) + '</div>' +
       '</div>' +
-      '<div class="dlv-stat" style="border-color:rgba(16,185,129,0.4);">' +
+      '<div class="dlv-stat" style="border-color:rgba(16,185,129,0.4);cursor:pointer;" onclick="window.__dlvSwitchTab(\'delivered\',document.querySelector(\'[data-tab=delivered]\'))">' +
         '<div class="dlv-stat-icon">✅</div>' +
-        '<div class="dlv-stat-label">تم التسليم</div>' +
+        '<div class="dlv-stat-label" style="font-size:10px;">سلّمت</div>' +
         '<div class="dlv-stat-value" style="color:#10b981;">' + todayDelivered + '</div>' +
       '</div>' +
     '</div>';
@@ -3479,11 +3476,8 @@ else {try{A.init();}catch(e){console.error(e);}}
     var D = window.CD;
     var main = document.getElementById('dlv-main');
     if (!main) return;
-    
-    // فلترة حسب التبويب
+    if (D.tab === 'wallet') { renderWalletTab(main); return; }
     var filtered = D.orders.filter(function(o) { return categorize(o) === D.tab; });
-    
-    // بحث
     if (D.search) {
       var q = D.search.toLowerCase().trim();
       filtered = filtered.filter(function(o) {
@@ -3493,16 +3487,12 @@ else {try{A.init();}catch(e){console.error(e);}}
                (o.pickup || '').toLowerCase().indexOf(q) > -1;
       });
     }
-    
-    // ترتيب: الطلبات المتأخرة أولاً ثم الأحدث
     filtered.sort(function(a, b) {
       var la = isLate(a), lb = isLate(b);
       if (la && !lb) return -1;
       if (!la && lb) return 1;
       return getTs(b) - getTs(a);
     });
-
-    // عدادات
     var counts = { ready: 0, shipping: 0, delivered: 0 };
     D.orders.forEach(function(o) {
       var cat = categorize(o);
@@ -3510,28 +3500,17 @@ else {try{A.init();}catch(e){console.error(e);}}
     });
     ['ready', 'shipping', 'delivered'].forEach(function(k) {
       var badge = document.getElementById('dlv-count-' + k);
-      if (badge) {
-        badge.textContent = counts[k];
-        badge.style.display = counts[k] > 0 ? 'inline-block' : 'none';
-      }
+      if (badge) { badge.textContent = counts[k]; badge.style.display = counts[k] > 0 ? 'inline-block' : 'none'; }
     });
-
-    // بناء HTML
     var html = buildStats();
-    
-    // بحث
     html += '<div class="dlv-search-wrap">' +
       '<input type="text" class="dlv-search" placeholder="🔍 ابحث برقم / اسم / هاتف / عنوان..." value="' + esc(D.search) + '" oninput="window.__dlvSearch(this.value)">' +
       '<span class="dlv-search-icon">🔍</span>' +
     '</div>';
-    
-    // قائمة
     if (filtered.length === 0) {
-      var emptyMsg = D.search 
-        ? 'لا نتائج للبحث "' + esc(D.search) + '"'
-        : (D.tab === 'ready' ? '🎉 لا طلبات جاهزة حالياً' :
-           D.tab === 'shipping' ? '🚚 لا توجد توصيلات نشطة' :
-           '📦 لا توجد طلبات مسلّمة');
+      var emptyMsg = D.search ? 'لا نتائج للبحث "' + esc(D.search) + '"' :
+        (D.tab === 'ready' ? '🎉 لا طلبات جاهزة حالياً' :
+         D.tab === 'shipping' ? '🚚 لا توجد توصيلات نشطة' : '📦 لا توجد طلبات مسلّمة');
       html += '<div class="dlv-empty">' +
         '<div style="font-size:72px;margin-bottom:16px;">' + (D.search ? '🔍' : '📭') + '</div>' +
         '<div style="font-size:15px;font-weight:800;color:var(--dlv-text);">' + emptyMsg + '</div>' +
@@ -3539,8 +3518,58 @@ else {try{A.init();}catch(e){console.error(e);}}
     } else {
       html += filtered.map(function(o) { return buildCard(o); }).join('');
     }
-    
     main.innerHTML = html;
+  }
+
+  function renderWalletTab(main) {
+    main.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--dlv-text-muted);"><div style="font-size:44px;margin-bottom:12px;">💰</div>جاري تحميل المحفظة...</div>';
+    if (!window.CommissionEngine || typeof window.CommissionEngine.getWallet !== 'function') {
+      main.innerHTML = '<div style="padding:60px 20px;text-align:center;"><div style="font-size:44px;margin-bottom:12px;">⚠️</div><div style="font-weight:800;">محرك العمولات غير متاح</div><div style="font-size:11px;color:var(--dlv-text-muted);margin-top:8px;">CommissionEngine لم يُحمَّل</div></div>';
+      return;
+    }
+    var user = firebase.auth && firebase.auth().currentUser;
+    if (!user) { main.innerHTML = '<div style="padding:60px 20px;text-align:center;"><div style="font-size:44px;">🔒</div>يجب تسجيل الدخول</div>'; return; }
+    window.CommissionEngine.getWallet(user.uid).then(function(w) {
+      w = w || { total: 0, earned: 0, pending: 0, paid: 0, items: [] };
+      var html = '<div style="padding:0 0 20px;">';
+      html += '<div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);border-radius:22px;padding:26px 22px;color:#fff;text-align:center;margin-bottom:16px;box-shadow:0 10px 30px rgba(16,185,129,0.35);">' +
+        '<div style="font-size:44px;line-height:1;margin-bottom:6px;">💰</div>' +
+        '<div style="font-size:11px;opacity:0.9;letter-spacing:0.5px;">رصيدك الإجمالي</div>' +
+        '<div style="font-size:38px;font-weight:900;letter-spacing:-1px;margin:4px 0;">' + (w.total || 0) + '<span style="font-size:16px;font-weight:700;margin-right:4px;">ر.س</span></div>' +
+        '<div style="display:flex;justify-content:space-around;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.22);font-size:11px;">' +
+          '<div><div style="opacity:0.85;margin-bottom:4px;">✅ مكتسبة</div><div style="font-weight:900;font-size:16px;">' + (w.earned || 0) + '</div></div>' +
+          '<div><div style="opacity:0.85;margin-bottom:4px;">⏳ معلقة</div><div style="font-weight:900;font-size:16px;">' + (w.pending || 0) + '</div></div>' +
+          '<div><div style="opacity:0.85;margin-bottom:4px;">💵 مدفوعة</div><div style="font-weight:900;font-size:16px;">' + (w.paid || 0) + '</div></div>' +
+        '</div>' +
+      '</div>';
+      if (!w.items || w.items.length === 0) {
+        html += '<div style="text-align:center;padding:40px 20px;color:var(--dlv-text-muted);">' +
+          '<div style="font-size:56px;margin-bottom:12px;">📭</div>' +
+          '<div style="font-weight:800;font-size:14px;">لا توجد عمولات بعد</div>' +
+          '<div style="font-size:11px;margin-top:6px;opacity:0.85;">ابدأ بتسليم الطلبات لتكسب عمولة 10 ر.س لكل طلب</div>' +
+        '</div>';
+      } else {
+        html += '<div style="font-weight:800;font-size:12px;margin-bottom:8px;color:var(--dlv-text-muted);">📊 سجل العمولات (' + w.items.length + ')</div>';
+        html += '<div style="background:var(--dlv-input-bg);border-radius:14px;overflow:hidden;border:1px solid var(--dlv-input-border);">';
+        w.items.forEach(function(item, i) {
+          var st = item.status || 'pending';
+          var icon = st === 'earned' ? '✅' : (st === 'paid' ? '💵' : '⏳');
+          var color = st === 'earned' ? '#10b981' : (st === 'paid' ? '#3b82f6' : '#f59e0b');
+          var label = st === 'earned' ? 'مكتسبة' : (st === 'paid' ? 'مدفوعة' : 'قيد المراجعة');
+          var oid = String(item.orderId || item.id || '').substring(0, 10);
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;' + (i > 0 ? 'border-top:1px solid var(--dlv-input-border);' : '') + '">' +
+            '<div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:13px;color:var(--dlv-text);">' + icon + ' طلب #' + esc(oid) + '</div><div style="font-size:10px;color:var(--dlv-text-muted);margin-top:2px;">' + label + '</div></div>' +
+            '<div style="font-weight:900;color:' + color + ';font-size:16px;white-space:nowrap;margin-right:8px;">+' + (item.commissionAmount || item.amount || 0) + ' ر.س</div>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+      main.innerHTML = html;
+    }).catch(function(e) {
+      console.error('[wallet tab]', e);
+      main.innerHTML = '<div style="padding:60px 20px;text-align:center;"><div style="font-size:44px;margin-bottom:12px;">⚠️</div><div style="font-weight:800;color:#ef4444;">تعذر تحميل المحفظة</div><div style="font-size:11px;color:var(--dlv-text-muted);margin-top:8px;">' + esc(e.message || '') + '</div></div>';
+    });
   }
 
   // ═══ بطاقة طلب ═══

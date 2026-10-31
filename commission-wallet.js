@@ -276,6 +276,7 @@ W.load = async function() {
   };
 
   W.init = function() {
+    if (window.CHIZEN_DLV_WALLET_NATIVE) { diag('native wallet active — skip injection'); return; }
     injectStyles();
     diag('init called');
     if (typeof firebase === 'undefined' || !firebase.auth) {
