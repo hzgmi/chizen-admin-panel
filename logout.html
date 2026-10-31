@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تسجيل الخروج - CHIZEN</title>
+<style>
+body{font-family:system-ui;background:#0b1220;color:#e5e7eb;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box}
+.card{background:rgba(255,255,255,0.05);border:1px solid rgba(168,85,247,0.3);border-radius:16px;padding:30px;max-width:400px;width:100%;text-align:center}
+h1{color:#FF8A00;font-size:20px;margin-bottom:10px}
+p{color:#9ca3af;font-size:13px;margin-bottom:20px;line-height:1.5}
+button{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;padding:14px;border-radius:10px;font-weight:900;font-size:16px;width:100%;cursor:pointer;font-family:inherit}
+button:active{transform:scale(0.97)}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🚪 تسجيل الخروج</h1>
+  <p>سيتم مسح الجلسة الحالية لكي تتمكن من تسجيل الدخول بحساب آخر.</p>
+  <button id="btn">مسح الجلسة والخروج</button>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+document.getElementById('btn').onclick=async function(){
+  this.textContent='جارٍ الخروج...';
+  try{await firebase.auth().signOut();}catch(e){}
+  try{
+    Object.keys(localStorage).forEach(function(k){
+      if(k.indexOf('firebase')>-1 || k.indexOf('chizen')>-1) localStorage.removeItem(k);
+    });
+    if(window.indexedDB && indexedDB.databases){
+      var dbs = await indexedDB.databases();
+      dbs.forEach(function(d){ if(d.name && d.name.indexOf('firebase')>-1) indexedDB.deleteDatabase(d.name); });
+    }
+  }catch(e){}
+  this.textContent='✅ تم الخروج — جاري التحويل...';
+  setTimeout(function(){ location.href='delivery.html'; }, 800);
+};
+</script>
+</body>
+</html>
