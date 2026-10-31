@@ -1,36 +1,25 @@
 /* ═══════════════════════════════════════════════════════════════
-   CHIZEN — Commission Wallet Widget
-   محفظة العمولات — تظهر في أعلى لوحة كل موظف
+   CHIZEN — Commission Wallet Widget (v2 — Robust Mount)
    ═══════════════════════════════════════════════════════════════ */
 (function() {
   'use strict';
 
   var W = window.CommissionWallet = window.CommissionWallet || {};
-  var MOUNTED = false;
 
-  // ═══ Styles (حقن مرة واحدة) ═══
   var STYLES = `
   .cw-card {
     background: linear-gradient(135deg, #FF8A00 0%, #FF3D9A 30%, #9B4DFF 60%, #4D8CFF 100%);
-    border-radius: 22px;
-    padding: 22px 20px;
-    margin-bottom: 18px;
-    color: #fff;
-    position: relative;
-    overflow: hidden;
+    border-radius: 22px; padding: 22px 20px; color: #fff;
+    position: relative; overflow: hidden;
     box-shadow: 0 12px 36px rgba(236,72,153,0.35);
   }
   .cw-card::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 180px; height: 180px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 50%;
-    filter: blur(30px);
+    content: ''; position: absolute; top: -60px; right: -60px;
+    width: 180px; height: 180px; background: rgba(255,255,255,0.15);
+    border-radius: 50%; filter: blur(30px);
   }
   .cw-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; position: relative; z-index: 1; }
-  .cw-title { font-size: 14px; font-weight: 800; opacity: 0.95; }
+  .cw-title { font-size: 14px; font-weight: 800; }
   .cw-toggle { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 6px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 700; font-family: inherit; }
   .cw-total-label { font-size: 11px; opacity: 0.85; margin-bottom: 4px; position: relative; z-index: 1; }
   .cw-total-value { font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 4px; position: relative; z-index: 1; }
@@ -51,7 +40,7 @@
   .cw-log-status.paid { background: rgba(59,130,246,0.35); }
   .cw-log-status.pending { background: rgba(251,191,36,0.35); }
   .cw-empty { text-align: center; padding: 20px; opacity: 0.8; font-size: 12px; }
-  .cw-loading { text-align: center; padding: 20px; font-size: 12px; opacity: 0.8; }
+  .cw-slot { padding: 12px 16px 4px; }
   `;
 
   function injectStyles() {
@@ -62,10 +51,9 @@
     document.head.appendChild(s);
   }
 
-  // ═══ Render ═══
   W.render = function(wallet) {
     var fmt = function(n) { return Number(n || 0).toLocaleString('ar-EG'); };
-    var html = 
+    return 
       '<div class="cw-header">' +
         '<div class="cw-title">💰 محفظة عمولاتي</div>' +
         '<button class="cw-toggle" id="cw-toggle-btn">📋 السجل</button>' +
@@ -100,21 +88,48 @@
           }).join('')
         ) +
       '</div>';
-    return html;
   };
 
-  // ═══ Load & Mount ═══
+  // ═══ البحث عن نقطة تركيب مناسبة ═══
+  function findMountPoint() {
+    // 1. داخل #ct (منطقة المحتوى في index.html)
+    var ct = document.getElementById('ct');
+    if (ct) return { el: ct, mode: 'prepend' };
+    
+    // 2. داخل #sc-dash (قسم الرئيسية)
+    var scDash = document.getElementById('sc-dash');
+    if (scDash) return { el: scDash, mode: 'prepend' };
+    
+    // 3. داخل #am (لوحة الأدمن) بعد الهيدر
+    var am = document.getElementById('am');
+    if (am && am.style.display !== 'none') {
+      var tabs = am.querySelector('.tbs');
+      if (tabs) return { el: tabs, mode: 'before' };
+      return { el: am, mode: 'prepend' };
+    }
+    
+    // 4. dash-v2 (للسوبر أدمن في dashboard.html)
+    var dashV2 = document.getElementById('dash-v2');
+    if (dashV2) return { el: dashV2, mode: 'before' };
+    
+    return null;
+  }
+
   W.load = async function() {
     if (typeof firebase === 'undefined' || !firebase.auth) return;
     var user = firebase.auth().currentUser;
-    if (!user) return;
-    if (typeof window.CommissionEngine === 'undefined') {
-      console.warn('[CW] CommissionEngine not loaded yet');
+    if (!user) { console.log('[CW] no user yet'); return; }
+    if (typeof window.CommissionEngine === 'undefined') { console.log('[CW] engine not loaded'); return; }
+    
+    var mount = findMountPoint();
+    if (!mount) {
+      console.log('[CW] no mount point — retry in 2s');
+      setTimeout(W.load, 2000);
       return;
     }
+    
     try {
       var wallet = await window.CommissionEngine.getWallet(user.uid);
-      // عدد المنتجات الفعلي
       var itemsCount = 0;
       try {
         var ordersSnap = await firebase.firestore().collection('orders')
@@ -125,20 +140,24 @@
         });
       } catch(e) {}
       wallet.itemsCount = itemsCount;
-
-      // Mount
-      var slot = document.getElementById('commission-wallet-slot');
-      if (!slot) {
-        // ننشئ slot ديناميكياً ونضعه فوق #dash-v2
-        var dashV2 = document.getElementById('dash-v2');
-        if (!dashV2) return;
-        slot = document.createElement('div');
-        slot.id = 'commission-wallet-slot';
-        dashV2.parentNode.insertBefore(slot, dashV2);
-      }
-      slot.innerHTML = '<div class="cw-card" id="cw-main-card">' + W.render(wallet) + '</div>';
       
-      // Toggle details
+      // إزالة قديم
+      var old = document.getElementById('commission-wallet-slot');
+      if (old) old.remove();
+      
+      // إنشاء slot
+      var slot = document.createElement('div');
+      slot.id = 'commission-wallet-slot';
+      slot.className = 'cw-slot';
+      slot.innerHTML = '<div class="cw-card">' + W.render(wallet) + '</div>';
+      
+      if (mount.mode === 'prepend') {
+        mount.el.insertBefore(slot, mount.el.firstChild);
+      } else if (mount.mode === 'before') {
+        mount.el.parentNode.insertBefore(slot, mount.el);
+      }
+      
+      // زر السجل
       var toggleBtn = document.getElementById('cw-toggle-btn');
       if (toggleBtn) {
         toggleBtn.onclick = function() {
@@ -147,44 +166,39 @@
         };
       }
       
-      MOUNTED = true;
-      console.log('[CW] mounted for', user.email, '— total:', wallet.total);
+      console.log('[CW] ✅ mounted to', mount.el.id, '— total:', wallet.total);
     } catch(e) {
-      console.warn('[CW] load error:', e.message);
+      console.log('[CW] load error:', e.message);
     }
   };
 
-  // ═══ Init ═══
   W.init = function() {
     injectStyles();
+    console.log('[CW] init');
     if (typeof firebase === 'undefined' || !firebase.auth) {
       setTimeout(W.init, 1000);
       return;
     }
     firebase.auth().onAuthStateChanged(function(user) {
-      if (!user) return;
-      // انتظر حتى يظهر #dash-v2 (بعد الدخول للوحة)
+      if (!user) { console.log('[CW] logged out'); return; }
+      console.log('[CW] auth:', user.email);
+      // نحاول التحميل عدة مرات (لأن اللوحة قد تستغرق وقتاً)
       var attempts = 0;
-      var waitForDash = setInterval(function() {
+      var timer = setInterval(function() {
         attempts++;
-        if (document.getElementById('dash-v2') || document.getElementById('commission-wallet-slot')) {
-          clearInterval(waitForDash);
-          W.load();
-          // إعادة التحميل كل 30 ثانية
-          setInterval(W.load, 30000);
-        } else if (attempts > 30) {
-          clearInterval(waitForDash);
-        }
+        W.load();
+        if (attempts >= 5) clearInterval(timer); // 5 محاولات في 5 ثوان
       }, 1000);
+      // إعادة التحميل كل 30 ثانية
+      setInterval(W.load, 30000);
     });
   };
 
-  // Auto-init
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', W.init);
   } else {
     W.init();
   }
 
-  console.log('[CW] Commission Wallet ready.');
+  console.log('[CW] Commission Wallet v2 loaded.');
 })();
