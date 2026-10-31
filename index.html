@@ -3225,6 +3225,10 @@ else {try{A.init();}catch(e){console.error(e);}}
   function categorize(o) {
     var p = o.payment || {};
     var w = o.workflowStatus || '';
+    var fs = o.fulfillmentStage || '';
+    if (fs === 'on_the_way' || fs === 'picked_up' || fs === 'partially_picked_up') return 'shipping';
+    if (fs === 'delivered' || fs === 'completed') return 'delivered';
+    if (fs === 'ready_for_pickup' || fs === 'assigned_to_courier' || fs === 'preparing' || fs === 'confirmed') return 'ready';
     if (o.sentToCustomer === true || w === 'sent_to_customer' || o.status === 'shipped') return 'shipping';
     if (w === 'delivered' || o.status === 'completed') return 'delivered';
     if (w === 'ready_to_send') return 'ready';
@@ -3549,7 +3553,24 @@ else {try{A.init();}catch(e){console.error(e);}}
       : '';
     
     var actions = '';
-    if (window.CD.tab === 'ready') {
+    var _fs = o.fulfillmentStage || '';
+    if (_fs === 'preparing' || _fs === 'confirmed') {
+      actions = '<div style="margin-top:10px;padding:10px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:10px;font-size:11px;text-align:center;color:#3b82f6;font-weight:800;">⏳ بانتظار تجهيز المورد</div>';
+    } else if (_fs === 'ready_for_pickup' || _fs === 'assigned_to_courier') {
+      actions = '<button onclick="event.stopPropagation();window.__dlvPickupFromSupplier(\'' + oid + '\')" style="width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(59,130,246,0.3);">📥 استلمت من المورد</button>';
+    } else if (_fs === 'picked_up' || _fs === 'partially_picked_up') {
+      actions = '<button onclick="event.stopPropagation();window.__dlvStartDelivery(\'' + oid + '\')" style="width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(245,158,11,0.3);">🚚 بدء التوصيل</button>';
+    } else if (_fs === 'on_the_way') {
+      actions = '<div style="margin-top:10px;padding:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;font-size:11px;">' +
+        '<div style="color:#10b981;font-weight:800;margin-bottom:3px;">🚚 ' + esc(di.driverName || 'في الطريق') + '</div>' +
+        '<div style="color:var(--dlv-text-sub);direction:ltr;text-align:right;">' + esc(di.driverPhone || '—') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:8px;">' +
+        '<button onclick="event.stopPropagation();window.__dlvDeliverWithOTP(\'' + oid + '\')" style="flex:1;padding:10px;background:rgba(16,185,129,0.15);border:1.5px solid #10b981;color:#10b981;border-radius:10px;font-weight:900;font-size:12px;cursor:pointer;font-family:inherit;">✅ تم التسليم (OTP)</button>' +
+      '</div>';
+    } else if (_fs === 'delivered' || _fs === 'completed') {
+      actions = '<button onclick="event.stopPropagation();window.__dlvShowReceipt(\'' + oid + '\')" style="width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(16,185,129,0.3);">📄 سند الاستلام</button>';
+    } else if (window.CD.tab === 'ready') {
       actions = '<button onclick="event.stopPropagation();window.__dlvOpenAssign(\'' + oid + '\')" style="width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(16,185,129,0.3);">🚚 تعيين سائق</button>';
     } else if (window.CD.tab === 'shipping') {
       actions = '<div style="margin-top:10px;padding:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;font-size:11px;">' +
@@ -8379,6 +8400,7 @@ console.log("[CHIZEN] doLogin loaded from clean block");
 
 <!-- ═══ COMMISSION ENGINE — محرك العمولات ═══ -->
 <script src="fulfillment-engine.js"></script>
+<script src="delivery-cycle.js"></script>
 <script src="commission-engine.js"></script>
 <script src="commission-wallet.js"></script>
 <script src="purge-orders.js"></script>
