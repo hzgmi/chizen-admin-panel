@@ -813,6 +813,33 @@ async function verifyPayment(orderId){
       });
     }
     await db.collection("orders").doc(orderId).update(updates);
+
+    // ═══ Write financial record to payments collection ═══
+    try {
+      await db.collection("payments").doc(orderId).set({
+        orderId: orderId,
+        customerId: order.customerId || order.userId || "",
+        customerName: order.name || "",
+        amount: Number(order.total) || 0,
+        method: order.bank || (order.payment && order.payment.method) || "",
+        status: "confirmed",
+        confirmedBy: state.user.uid,
+        confirmedByName: state.user.email || "",
+        confirmedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        reference: "",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      console.log("[payments] written:", orderId);
+    } catch(pe) { console.error("[payments write ERROR]", pe.message); }
+
+    // ═══ Advance fulfillment engine if available ═══
+    if (window.FulfillmentEngine && typeof window.FulfillmentEngine.advance === 'function') {
+      try { await FulfillmentEngine.advance(orderId, 'payment_confirmed', { role: 'super_admin' }); }
+      catch(e) { console.warn('[fh1]', e.message); }
+      try { await FulfillmentEngine.advance(orderId, 'checking_availability', { role: 'system' }); }
+      catch(e) { console.warn('[fh2]', e.message); }
+    }
+
     var custId = order.customerId || order.userId;
     if (custId) {
       db.collection("notifications").add({
