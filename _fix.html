@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHIZEN Fix A</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0b1220;color:#e5e7eb;padding:14px;max-width:760px;margin:0 auto;line-height:1.5}
+h1{color:#FF8A00;font-size:16px;margin:0 0 6px}
+button{background:#10b981;color:#fff;border:0;padding:12px 18px;border-radius:10px;font-weight:800;font-size:14px;font-family:inherit;margin:4px 0;cursor:pointer;width:100%}
+button:disabled{background:#374151}
+input{width:100%;padding:10px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#fff;margin:4px 0;font-family:inherit;box-sizing:border-box;font-size:13px}
+#status{padding:8px;background:#1f2937;border-radius:8px;margin:8px 0;font-size:12px}
+#log{background:#000;color:#0f0;padding:10px;border-radius:8px;font-size:10.5px;font-family:monospace;white-space:pre-wrap;word-break:break-all;max-height:60vh;overflow:auto;min-height:100px;margin-top:8px}
+.hidden{display:none!important}
+.warn{color:#fbbf24}
+.err{color:#f87171}
+.ok{color:#10b981}
+</style>
+</head>
+<body>
+<h1>🔧 CHIZEN — إصلاح البيانات (المرحلة A)</h1>
+<div id="status">جارٍ التهيئة...</div>
+<div id="login" class="hidden">
+<input id="em" type="email" placeholder="hazimchat@gmail.com" autocomplete="username">
+<input id="pw" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+<button id="lbtn">🔐 تسجيل الدخول</button>
+</div>
+<div id="act" class="hidden">
+<button id="rbtn">▶ تشغيل الإصلاح</button>
+</div>
+<pre id="log">[السجل سيظهر هنا]</pre>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function(){
+var st=document.getElementById('status'),lg=document.getElementById('login'),ac=document.getElementById('act'),logEl=document.getElementById('log');
+if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+var db=firebase.firestore(),auth=firebase.auth();
+function L(m){logEl.textContent+='\n'+m;logEl.scrollTop=logEl.scrollHeight}
+function clean(){logEl.textContent='[السجل سيظهر هنا]'}
+auth.onAuthStateChanged(function(u){
+if(u){
+st.textContent='✅ مسجل: '+u.email;
+lg.classList.add('hidden');ac.classList.remove('hidden');
+}else{
+st.textContent='⚠️ سجل دخول super_admin أولاً';
+lg.classList.remove('hidden');ac.classList.add('hidden');
+}
+});
+document.getElementById('lbtn').onclick=async function(){
+var em=document.getElementById('em').value.trim(),pw=document.getElementById('pw').value;
+if(!em||!pw){st.textContent='❌ املأ الحقول';return}
+st.textContent='جارٍ الدخول...';
+try{await auth.signInWithEmailAndPassword(em,pw)}catch(e){st.textContent='❌ '+e.code}
+};
+document.getElementById('rbtn').onclick=async function(){
+this.disabled=true;clean();
+L('═══════════ المرحلة A — بدء ═══════════');
+var u=auth.currentUser;
+if(!u){L('❌ لا يوجد مستخدم');this.disabled=false;return}
+L('👤 المستخدم: '+u.email+' ('+u.uid.slice(0,8)+')');
+
+// A1: فحص الدور + إصلاحه
+L('\n── A1: تصحيح admins.role ──');
+try{
+var meAdm=await db.collection('admins').doc(u.uid).get();
+if(!meAdm.exists){L('⚠️ مستندك غير موجود في admins — سأحاول إنشاءه');
+  try{await db.collection('admins').doc(u.uid).set({email:u.email,role:'super_admin',grantedAt:firebase.firestore.FieldValue.serverTimestamp(),source:'phase-a'});
+  L('✅ أنشأنا مستندك في admins');}catch(e){L('❌ فشل: '+e.code+' — '+e.message)}
+}else{
+var r=meAdm.data().role;
+L('الدور الحالي: "'+r+'"');
+if(r==='superadmin'){await db.collection('admins').doc(u.uid).update({role:'super_admin'});L('✅ تم: superadmin → super_admin');}
+else if(r==='super_admin'){L('✅ سليم بالفعل');}
+else if(r!=='super_admin'&&r!=='superadmin'){await db.collection('admins').doc(u.uid).update({role:'super_admin'});L('✅ تصحيح: "'+r+'" → super_admin');}
+}
+}catch(e){L('❌ A1: '+e.code+' — '+e.message)}
+
+// A2: cat_managers → admins
+L('\n── A2: نسخ cat_managers إلى admins ──');
+try{
+var cats=await db.collection('users').where('role','==','cat_manager').get();
+L('عدد cat_managers: '+cats.size);
+var added=0,skipped=0;
+for(var i=0;i<cats.docs.length;i++){
+var c=cats.docs[i];var data=c.data();
+try{
+var existing=await db.collection('admins').doc(c.id).get();
+await db.collection('admins').doc(c.id).set({
+  email:data.email||'',
+  name:data.name||'',
+  role:'cat_manager',
+  assignedCategory:data.assignedCategory||null,
+  grantedAt:firebase.firestore.FieldValue.serverTimestamp(),
+  grantedBy:'phase-a-migration',
+  source:'users'
+},{merge:true});
+if(existing.exists){L('🔄 '+data.email+' (updated)');skipped++;}
+else{L('✅ '+data.email+' → admins');added++;}
+}catch(e){L('❌ '+data.email+': '+e.code+' — '+e.message)}
+}
+L('النتيجة: '+added+' مُضاف، '+skipped+' مُحدّث');
+}catch(e){L('❌ A2: '+e.code+' — '+e.message)}
+
+// A3: delivery_mgr
+L('\n── A3: delivery_mgr ──');
+try{
+var dlvs=await db.collection('users').where('role','==','delivery_mgr').get();
+if(dlvs.empty){L('⚠️ لا يوجد delivery_mgr في users — يجب إنشاؤه من لوحة الأدمن أولاً');}
+else{
+for(var j=0;j<dlvs.docs.length;j++){
+var d=dlvs.docs[j];var dd=d.data();
+try{
+await db.collection('admins').doc(d.id).set({
+  email:dd.email||'',name:dd.name||'',role:'delivery_mgr',
+  grantedAt:firebase.firestore.FieldValue.serverTimestamp(),
+  grantedBy:'phase-a-migration',source:'users'
+},{merge:true});
+L('✅ '+dd.email+' → admins');
+}catch(e){L('❌ '+dd.email+': '+e.code)}
+}
+}
+}catch(e){L('❌ A3: '+e.code+' — '+e.message)}
+
+// A4: activity_log write test
+L('\n── A4: اختبار كتابة activity_log ──');
+try{
+await db.collection('activity_log').add({
+type:'phase_a_migration',
+action:'data consistency fix',
+by:u.uid,
+byEmail:u.email,
+at:firebase.firestore.FieldValue.serverTimestamp(),
+details:{completedAt:new Date().toISOString()}
+});
+L('✅ activity_log يعمل — الكتابة ناجحة!');
+L('🎉 القواعد المنشورة تسمح بالكتابة — لا عائق أمام المراحل القادمة');
+}catch(e){
+L('❌ activity_log: '+e.code+' — '+e.message);
+L('🔴 هذا يعني أن القواعد تحظر الكتابة — يجب تعديلها قبل المتابعة');
+}
+
+L('\n═══════════ انتهى — أرسل صورة كاملة ═══════════');
+this.disabled=false;
+};
+})();
+</script>
+</body>
+</html>
