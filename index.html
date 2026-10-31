@@ -8322,5 +8322,24 @@ console.log("[CHIZEN] doLogin loaded from clean block");
 })();
 </script>
 
+
+<!-- ═══ COMMISSION ENGINE — محرك العمولات ═══ -->
+<script src="commission-engine.js"></script>
+<script>
+window.addEventListener("load", function() {
+  setTimeout(function() {
+    if (typeof window.CommissionEngine !== "undefined" && window.CURRENT_ROLE === "super_admin") {
+      window.CommissionEngine.process().then(function(r) {
+        if (r && r.created > 0) {
+          console.log("[CE] " + r.created + " عمولة جديدة");
+          if (typeof A !== "undefined" && A.toast) {
+            A.toast("💰 " + r.created + " عمولة جديدة أضيفت لمحافظ الموظفين", "suc");
+          }
+        }
+      }).catch(function(e) { console.warn("[CE] auto-run:", e.message); });
+    }
+  }, 4000);
+});
+</script>
 </body>
 </html>
