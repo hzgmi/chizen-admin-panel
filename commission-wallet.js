@@ -109,6 +109,10 @@
   };
 
   function findMountPoint() {
+    // 0. #dlv-main — لوحة المندوب (أولوية أولى)
+    var dlvMain = document.getElementById('dlv-main');
+    if (dlvMain && dlvMain.parentNode) return { el: dlvMain, mode: 'before' };
+
     // 1. #dash-v2 (أفضل مكان - داخل قسم الرئيسية)
     var dashV2 = document.getElementById('dash-v2');
     if (dashV2 && dashV2.parentNode) return { el: dashV2, mode: 'before' };
