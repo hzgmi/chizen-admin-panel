@@ -132,7 +132,59 @@
     return null;
   }
 
-  W.load = async function() {
+    W._hookTabs = function() {
+    var slot = W._slot, mount = W._mount;
+    if (!slot || !mount || W._hooksInstalled) return;
+    W._hooksInstalled = true;
+
+    function showWallet() {
+      slot.style.display = 'block';
+      if (mount.el) mount.el.style.display = 'none';
+      document.querySelectorAll('.cm-tabs button, .dlv-nav-btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      var w = document.querySelector('[data-cw-wallet-tab]');
+      if (w) w.classList.add('active');
+    }
+    function hideWallet() {
+      slot.style.display = 'none';
+      if (mount.el) mount.el.style.display = '';
+    }
+
+    var cmTabs = document.querySelector('.cm-tabs');
+    if (cmTabs && !cmTabs.querySelector('[data-cw-wallet-tab]')) {
+      var btn = document.createElement('button');
+      btn.textContent = '💰 محفظتي';
+      btn.setAttribute('data-cw-wallet-tab', '1');
+      btn.onclick = showWallet;
+      cmTabs.appendChild(btn);
+    }
+
+    var dlvNav = document.querySelector('.dlv-nav');
+    if (dlvNav && !dlvNav.querySelector('[data-cw-wallet-tab]')) {
+      var btn2 = document.createElement('button');
+      btn2.className = 'dlv-nav-btn';
+      btn2.setAttribute('data-cw-wallet-tab', '1');
+      btn2.innerHTML = '<span class="icon">💰</span><span class="label">محفظة</span>';
+      btn2.onclick = showWallet;
+      dlvNav.appendChild(btn2);
+    }
+
+    if (window.catMgrApp && typeof window.catMgrApp.switchTab === 'function' && !window.catMgrApp.__cwHooked) {
+      var orig = window.catMgrApp.switchTab;
+      window.catMgrApp.switchTab = function(t) { hideWallet(); return orig.call(this, t); };
+      window.catMgrApp.__cwHooked = true;
+    }
+
+    if (typeof window.__dlvSwitchTab === 'function' && !window.__dlvSwitchTab.__cwHooked) {
+      var origDlv = window.__dlvSwitchTab;
+      var newFn = function(t, el) { hideWallet(); return origDlv.call(this, t, el); };
+      newFn.__cwHooked = true;
+      window.__dlvSwitchTab = newFn;
+    }
+  };
+
+W.load = async function() {
     diag('load() called');
     
     if (typeof firebase === 'undefined' || !firebase.auth) {
@@ -175,20 +227,23 @@
       var html = W.render(wallet);
       diag('render OK, ' + html.length + ' chars');
       
-      var old = document.getElementById('commission-wallet-slot');
-      if (old) old.remove();
-      
-      var slot = document.createElement('div');
-      slot.id = 'commission-wallet-slot';
-      slot.className = 'cw-slot';
-      slot.innerHTML = '<div class="cw-card">' + html + '</div>';
-      
-      if (mount.mode === 'prepend') {
-        mount.el.insertBefore(slot, mount.el.firstChild);
-      } else if (mount.mode === 'before') {
-        mount.el.parentNode.insertBefore(slot, mount.el);
+            var slot = document.getElementById('commission-wallet-slot');
+      if (!slot) {
+        slot = document.createElement('div');
+        slot.id = 'commission-wallet-slot';
+        slot.className = 'cw-slot';
+        slot.style.display = 'none';
+        if (mount.mode === 'prepend') {
+          mount.el.insertBefore(slot, mount.el.firstChild);
+        } else if (mount.mode === 'before') {
+          mount.el.parentNode.insertBefore(slot, mount.el);
+        }
+        W._slot = slot;
+        W._mount = mount;
+        W._hookTabs();
       }
-      
+      slot.innerHTML = '<div class="cw-card">' + html + '</div>';
+
       var toggleBtn = document.getElementById('cw-toggle-btn');
       if (toggleBtn) {
         toggleBtn.onclick = function() {
