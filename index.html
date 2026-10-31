@@ -882,7 +882,17 @@ var A={
         }
       } catch(e) { console.warn('user role check:', e.message); }
 
-      var effRole = isLegacy ? 'super_admin' : role;
+      var effRole = role;
+      if (isLegacy) {
+        try {
+          var admData = legacyDoc.data();
+          var admRole = admData.role;
+          if (admRole === 'super_admin' || admRole === 'superadmin') effRole = 'super_admin';
+          else if (admRole) effRole = admRole;
+          else effRole = 'super_admin'; // fallback for old admins
+        } catch(e) { effRole = 'super_admin'; }
+      }
+      console.log('[RBAC] effective role:', effRole, 'for', u.email);
 
       if (effRole === 'customer') {
         var err = document.getElementById('login-err');
