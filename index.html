@@ -5806,14 +5806,14 @@ window.catMgrApp = (function(){
   }
 
   function toggleItem(orderId,idx,checked){
-    const o=state.pending.find(x=>x.id===orderId);if(!o)return;
+    const o=state.pending.find(x=>x.id===orderId);if(!o){console.error("[CM] order not in state.pending:", orderId);return;}
     const items=o.categories[state.cat].items;items[idx]._catStatus=checked;
     const card=document.querySelector('[data-order="'+orderId+'"]');
     if(card){const all=items.every(i=>i._catStatus!==false);const btn=card.querySelector('.cm-btn-ok');if(btn)btn.disabled=!all;}
   }
 
   async function confirm(orderId){
-    const o=state.pending.find(x=>x.id===orderId);if(!o)return;
+    const o=state.pending.find(x=>x.id===orderId);if(!o){console.error("[CM] order not in state.pending:", orderId);return;}
     try{
       await db.runTransaction(async tx=>{
         const ref=db.collection('orders').doc(orderId);const doc=await tx.get(ref);if(!doc.exists)throw new Error('MISSING_DOC');
@@ -5827,7 +5827,7 @@ window.catMgrApp = (function(){
         const anyRejected=Object.keys(merged).some(k=>merged[k]&&merged[k].status==='rejected');
         if(allResolved){
           updates.workflowStatus=anyRejected?'payment_rejected':'ready_to_send';
-          updates.fulfillmentStage=anyRejected?'awaiting_customer_decision':'confirmed';
+          updates.fulfillmentStage=anyRejected?'awaiting_customer_decision':'preparing';
         }
         tx.update(ref,updates);
       });
@@ -5849,7 +5849,7 @@ window.catMgrApp = (function(){
   }
 
   async function reject(orderId){
-    const o=state.pending.find(x=>x.id===orderId);if(!o)return;
+    const o=state.pending.find(x=>x.id===orderId);if(!o){console.error("[CM] order not in state.pending:", orderId);return;}
     const el=$('cm-reason-'+orderId);const reason=el?el.value.trim():'';
     if(!reason){toast('⚠️ أدخل سبب الرفض');if(el)el.focus();return;}
     try{
