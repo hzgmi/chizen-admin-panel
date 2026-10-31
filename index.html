@@ -6304,7 +6304,7 @@ window.catMgrApp = (function(){
             var data = d.data();
             var c = data.categories && data.categories[state.cat];
             if(c && c.status === 'pending'){
-              var fresh = Object.assign({id:d.id}, data);
+              var fresh = Object.assign({}, data, {id: d.id});
               var old = oldMap[d.id];
               if(old && old.categories && old.categories[state.cat] && old.categories[state.cat].items){
                 var oldItems = old.categories[state.cat].items;
@@ -7289,7 +7289,7 @@ window.catMgrApp = (function(){
           snap.forEach(function(d){
             var data = d.data();
             var c = data.categories && data.categories[state.cat];
-            if(c && c.status === 'pending') pending.push(Object.assign({id:d.id}, data));
+            if(c && c.status === 'pending') pending.push(Object.assign({}, data, {id: d.id}));
           });
           state.pending = pending;
           updateBadge();
@@ -7463,7 +7463,7 @@ window.catMgrApp = (function(){
   setInterval(function(){
     try {
       if(window.catMgrApp){
-        if(window.catMgrApp.confirm !== fixedConfirm) window.catMgrApp.confirm = fixedConfirm;
+        // [DISABLED] if(window.catMgrApp.confirm !== fixedConfirm) window.catMgrApp.confirm = fixedConfirm;
         if(window.catMgrApp.reject !== fixedReject) window.catMgrApp.reject = fixedReject;
       }
       if(window.__v102c_uploadBatch !== workerUpload) window.__v102c_uploadBatch = workerUpload;
@@ -7473,7 +7473,7 @@ window.catMgrApp = (function(){
   
   // فرض فوري عند التحميل
   var quick = setInterval(function(){
-    if(window.catMgrApp && window.__v102c_uploadBatch){
+    if(window.catMgrApp && window.__v102c_uploadBatch && false){
       window.catMgrApp.confirm = fixedConfirm;
       window.catMgrApp.reject = fixedReject;
       window.__v102c_uploadBatch = workerUpload;
