@@ -73,6 +73,7 @@ main{padding:8px 12px}
 .btn-start{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 14px rgba(245,158,11,0.35)}
 .btn-deliver{background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 14px rgba(16,185,129,0.35)}
 .btn-receipt{background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 4px 14px rgba(168,85,247,0.35)}
+.btn-accountant{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 14px rgba(245,158,11,0.35)}
 .empty{text-align:center;padding:50px 20px;color:#6b7280;font-size:14px}
 .empty-icon{font-size:48px;margin-bottom:12px}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;overflow-y:auto}
@@ -137,17 +138,7 @@ main{padding:8px 12px}
   </main>
 </div>
 
-<div id="otp-modal" class="modal-overlay hidden">
-  <div class="modal">
-    <h3>🔐 رمز التسليم</h3>
-    <p>اطلب من العميل الرمز المكوَّن من 6 أرقام</p>
-    <input id="otp-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000">
-    <div class="modal-actions">
-      <button class="modal-cancel" id="otp-cancel">إلغاء</button>
-      <button class="modal-ok" id="otp-submit">✅ تأكيد التسليم</button>
-    </div>
-  </div>
-</div>
+
 
 <div id="receipt-modal" class="modal-overlay hidden">
   <div class="modal">
@@ -168,6 +159,7 @@ main{padding:8px 12px}
 <script src="firebase-config.js"></script>
 <script src="fulfillment-engine.js"></script>
 <script src="delivery-cycle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -216,7 +208,7 @@ var db = firebase.firestore();
 var auth = firebase.auth();
 window.FB.db = db; window.FB.auth = auth;
 
-var state = { user: null, displayName: '', orders: [], filter: 'available', unsub: null, pendingOtpOrder: null };
+var state = { user: null, displayName: '', orders: [], filter: 'available', unsub: null, };
 
 var loginScreen = document.getElementById('login-screen');
 var app = document.getElementById('app');
@@ -227,8 +219,6 @@ var loginErr = document.getElementById('login-err');
 var logoutBtn = document.getElementById('logout-btn');
 var ordersList = document.getElementById('orders-list');
 var userLabel = document.getElementById('user-label');
-var otpModal = document.getElementById('otp-modal');
-var otpInput = document.getElementById('otp-input');
 
 loginBtn.onclick = async function(){
   var em = emailIn.value.trim(); var pw = passwordIn.value;
@@ -408,9 +398,10 @@ function renderOrder(o){
   } else if(isMine && stage === 'picked_up'){
     actionsHtml = '<button class="action-btn btn-start" data-action="start" data-id="' + o.id + '">🚚 بدء التوصيل</button>';
   } else if(isMine && stage === 'on_the_way'){
-    actionsHtml = '<button class="action-btn btn-deliver" data-action="deliver" data-id="' + o.id + '">✅ تسليم (OTP)</button>';
+    actionsHtml = '<button class="action-btn btn-deliver" data-action="deliver" data-id="' + o.id + '">✅ تم التسليم</button>';
   } else if(isMine && stage === 'delivered'){
-    actionsHtml = '<button class="action-btn btn-receipt" data-action="receipt" data-id="' + o.id + '">🧾 عرض السند</button>';
+    actionsHtml = '<button class="action-btn btn-receipt" data-action="pdf" data-id="' + o.id + '">📄 سند PDF</button>' +
+        '<button class="action-btn btn-accountant" data-action="send-accountant" data-id="' + o.id + '">📤 للمحاسب</button>';
   } else if(o.deliveryMgrId && o.deliveryMgrId !== state.user.uid){
     actionsHtml = '<div style="text-align:center;color:#9ca3af;font-size:11px;padding:8px">👤 مع مندوب آخر: ' + esc(o.deliveryMgrName || '—') + '</div>';
   }
@@ -457,11 +448,13 @@ async function handleAction(action, id){
       if(!confirm('بدء التوصيل؟ سيُولَّد رمز OTP للعميل')) return;
       await startDelivery(id);
     } else if(action === 'deliver'){
-      state.pendingOtpOrder = id; otpInput.value = '';
-      otpModal.classList.remove('hidden');
-      setTimeout(function(){ otpInput.focus(); }, 100);
-    } else if(action === 'receipt'){
-      await showReceipt(id);
+      if(!confirm('تأكيد تسليم الطلب للعميل؟')) return;
+      await deliverOrder(id);
+    } else if(action === 'pdf'){
+      await downloadPDF(id);
+    } else if(action === 'send-accountant'){
+      if(!confirm('إرسال السند للمحاسب للمراجعة؟')) return;
+      await sendToAccountant(id);
     }
   } catch(e) {
     console.error('[action]', action, e);
@@ -549,19 +542,15 @@ async function startDelivery(id){
   }
 }
 
-async function deliverOrder(id, otp){
+async function deliverOrder(id){
   var doc = await db.collection('orders').doc(id).get();
   if(!doc.exists) throw new Error('الطلب غير موجود');
-  var data = doc.data();
-  if(String(data.deliveryOTP) !== String(otp)) throw new Error('الرمز غير صحيح');
-  if(typeof window.__dlvDeliverWithOTP === 'function'){
-    try { await window.__dlvDeliverWithOTP(id, otp); toast('✅ تم التسليم', 'ok'); return; } catch(e){ console.warn('__dlvDeliver failed:', e); }
-  }
   await db.collection('orders').doc(id).update({
     fulfillmentStage: 'delivered',
     workflowStatus: 'delivered',
     deliveredAt: firebase.firestore.FieldValue.serverTimestamp(),
-    deliveredBy: state.user.uid
+    deliveredBy: state.user.uid,
+    deliveryOTPUsed: true
   });
   toast('✅ تم التسليم بنجاح', 'ok');
 }
@@ -605,7 +594,116 @@ async function showReceipt(id){
   } catch(e){ content.textContent = '❌ ' + e.message; }
 }
 
-document.getElementById('otp-cancel').onclick = function(){ otpModal.classList.add('hidden'); state.pendingOtpOrder = null; };
+async function downloadPDF(id){
+  try {
+    var doc = await db.collection('orders').doc(id).get();
+    if(!doc.exists){ toast('❌ الطلب غير موجود', 'err'); return; }
+    var o = doc.data();
+    var items = getItems(o);
+    var sup = supplierInfo(o);
+    var dAt = o.deliveredAt && o.deliveredAt.seconds ? new Date(o.deliveredAt.seconds * 1000) : new Date();
+    var htmlStr = '<div style="padding:20px;font-family:Arial,Tahoma,sans-serif;direction:rtl;max-width:800px;color:#333;background:#fff">' +
+      '<div style="text-align:center;border-bottom:3px solid #FF8A00;padding-bottom:15px;margin-bottom:20px">' +
+        '<h1 style="color:#FF8A00;margin:0;font-size:36px;letter-spacing:2px">CHIZEN</h1>' +
+        '<h2 style="margin:10px 0;color:#333;font-size:20px">سند تسليم طلب</h2>' +
+        '<p style="color:#666;font-size:14px;margin:5px 0">رقم الطلب: #' + id.slice(-6).toUpperCase() + '</p>' +
+      '</div>' +
+      '<table style="width:100%;margin-bottom:20px;border-collapse:collapse;font-size:14px">' +
+        '<tr><td style="padding:8px;color:#666;width:35%;background:#f9fafb;font-weight:600">👤 العميل:</td><td style="padding:8px;font-weight:bold">' + esc(o.name || o.customerName || '—') + '</td></tr>' +
+        '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📱 الهاتف:</td><td style="padding:8px">' + esc(o.phone || o.customerPhone || '—') + '</td></tr>' +
+        '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📍 التسليم إلى:</td><td style="padding:8px">' + esc(o.deliveryAddress || o.address || o.pickup || '—') + '</td></tr>' +
+        '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">🏪 المصدر:</td><td style="padding:8px">' + esc(sup.name) + '</td></tr>' +
+        '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">🚚 المندوب:</td><td style="padding:8px">' + esc(state.displayName) + '</td></tr>' +
+        '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📅 تاريخ التسليم:</td><td style="padding:8px">' + dAt.toLocaleString('ar') + '</td></tr>' +
+      '</table>' +
+      '<h3 style="color:#a855f7;border-top:2px solid #e5e7eb;padding-top:15px">🛒 المنتجات (' + items.length + ')</h3>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+        '<thead><tr style="background:#a855f7;color:#fff">' +
+          '<th style="padding:10px;text-align:right;border:1px solid #7c3aed">المنتج</th>' +
+          '<th style="padding:10px;text-align:center;border:1px solid #7c3aed">الكمية</th>' +
+          '<th style="padding:10px;text-align:center;border:1px solid #7c3aed">السعر</th>' +
+          '<th style="padding:10px;text-align:center;border:1px solid #7c3aed">المجموع</th>' +
+        '</tr></thead>' +
+        '<tbody>' +
+          items.map(function(it){
+            return '<tr>' +
+              '<td style="padding:8px;border:1px solid #ddd">' + esc(it.name || '—') + '</td>' +
+              '<td style="padding:8px;border:1px solid #ddd;text-align:center">' + (it.qty || 1) + '</td>' +
+              '<td style="padding:8px;border:1px solid #ddd;text-align:center">' + (it.price || 0) + ' ر</td>' +
+              '<td style="padding:8px;border:1px solid #ddd;text-align:center">' + ((it.price || 0) * (it.qty || 1)) + ' ر</td>' +
+            '</tr>';
+          }).join('') +
+        '</tbody>' +
+      '</table>' +
+      '<div style="margin-top:20px;padding:15px;background:#fef3c7;border-radius:10px;text-align:left;font-size:20px;font-weight:bold;border:2px solid #f59e0b">' +
+        'الإجمالي: ' + (o.total || 0) + ' ر.ي' +
+      '</div>' +
+      '<div style="text-align:center;margin-top:40px;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:20px">' +
+        '<p style="margin:5px 0">شكراً لثقتك بـ CHIZEN</p>' +
+        '<p style="font-size:10px;margin:5px 0">تم إنشاؤه: ' + new Date().toLocaleString('ar') + '</p>' +
+      '</div>' +
+    '</div>';
+    var el = document.createElement('div');
+    el.innerHTML = htmlStr;
+    html2pdf().from(el).set({
+      margin: 10,
+      filename: 'CHIZEN-' + id.slice(-6).toUpperCase() + '.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'p' }
+    }).save().then(function(){ toast('✅ تم تحميل PDF', 'ok'); }).catch(function(e){ toast('❌ ' + (e.message || 'فشل التحميل'), 'err'); });
+  } catch(e){
+    toast('❌ ' + (e.message || 'خطأ'), 'err');
+  }
+}
+
+async function sendToAccountant(id){
+  try {
+    var doc = await db.collection('orders').doc(id).get();
+    if(!doc.exists) throw new Error('الطلب غير موجود');
+    var order = doc.data();
+    var receiptRef = await db.collection('receipts').add({
+      orderId: id,
+      orderNumber: id.slice(-6).toUpperCase(),
+      customerName: order.name || order.customerName || 'عميل',
+      customerPhone: order.phone || order.customerPhone || '',
+      items: getItems(order),
+      total: order.total || 0,
+      deliveryAddress: order.deliveryAddress || order.address || order.pickup || '',
+      paymentMethod: (order.payment && order.payment.status === 'verified') ? 'paid' : 'cod',
+      deliveryMgrId: state.user.uid,
+      deliveryMgrName: state.displayName,
+      deliveredAt: order.deliveredAt || null,
+      sentAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'pending_review'
+    });
+    await db.collection('orders').doc(id).update({
+      accountantReviewStatus: 'pending',
+      receiptSentToAccountantAt: firebase.firestore.FieldValue.serverTimestamp(),
+      receiptId: receiptRef.id
+    });
+    try {
+      var accs = await db.collection('users').where('role', '==', 'accountant').get();
+      var ps = [];
+      accs.forEach(function(a){
+        ps.push(db.collection('notifications').add({
+          userId: a.id,
+          title: '📄 سند جديد للمراجعة',
+          body: 'طلب #' + id.slice(-6).toUpperCase() + ' — ' + (order.total || 0) + ' ر.ي',
+          type: 'receipt', event: 'receipt_received', icon: '📄',
+          deepLink: 'receipts/' + receiptRef.id, read: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(function(){}));
+      });
+      await Promise.all(ps);
+    } catch(e){ console.warn('[acc notify]', e.message); }
+    toast('✅ تم إرسال السند للمحاسب', 'ok');
+  } catch(e){
+    toast('❌ ' + (e.message || 'فشل'), 'err');
+  }
+}
+
+
 document.getElementById('receipt-close').onclick = function(){ document.getElementById('receipt-modal').classList.add('hidden'); };
 document.getElementById('receipt-copy').onclick = function(){
   var t = document.getElementById('receipt-content').textContent;
@@ -613,16 +711,7 @@ document.getElementById('receipt-copy').onclick = function(){
   else { toast('انسخ يدوياً', 'info'); }
 };
 
-document.getElementById('otp-submit').onclick = async function(){
-  var otp = otpInput.value.trim();
-  if(!/^\d{6}$/.test(otp)){ toast('❌ أدخل 6 أرقام', 'err'); return; }
-  if(!state.pendingOtpOrder){ toast('❌ لا يوجد طلب محدد', 'err'); return; }
-  var id = state.pendingOtpOrder;
-  otpModal.classList.add('hidden');
-  state.pendingOtpOrder = null;
-  toast('⏳ جارٍ التحقق...', 'info');
-  try { await deliverOrder(id, otp); } catch(e){ toast('❌ ' + e.message, 'err'); }
-};
+
 
 document.querySelectorAll('.tab').forEach(function(tab){
   tab.onclick = function(){
