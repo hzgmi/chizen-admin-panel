@@ -5814,6 +5814,7 @@ window.catMgrApp = (function(){
 
   async function confirm(orderId){
     const o=state.pending.find(x=>x.id===orderId);if(!o){console.error("[CM] order not in state.pending:", orderId);return;}
+    var db = firebase.firestore();
     try{
       await db.runTransaction(async tx=>{
         const ref=db.collection('orders').doc(orderId);const doc=await tx.get(ref);if(!doc.exists)throw new Error('MISSING_DOC');
@@ -7458,9 +7459,8 @@ window.catMgrApp = (function(){
   
   var noTokenModal = function(){ return Promise.resolve("no-token-needed"); };
   
-  // ═══ الفارض الأبدي: يعيد الفرض كل 300ms ═══
-  // هذا يضمن أن أي سكربت قديم يعيد الكتابة، سيُطغى عليه بعد 300ms
-  setInterval(function(){
+  // ═══ [DISABLED v2] Enforcer — لم يعد ضرورياً بعد إصلاح catMgrApp ═══
+  if(false) setInterval(function(){
     try {
       if(window.catMgrApp){
         // [DISABLED] if(window.catMgrApp.confirm !== fixedConfirm) window.catMgrApp.confirm = fixedConfirm;
@@ -7472,7 +7472,7 @@ window.catMgrApp = (function(){
   }, 300);
   
   // فرض فوري عند التحميل
-  var quick = setInterval(function(){
+  var quick = (function(){ if(false) setInterval(function(){
     if(window.catMgrApp && window.__v102c_uploadBatch && false){
       window.catMgrApp.confirm = fixedConfirm;
       window.catMgrApp.reject = fixedReject;
