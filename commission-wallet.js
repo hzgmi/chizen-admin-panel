@@ -133,22 +133,27 @@
   }
 
     W._hookTabs = function() {
+    if (!document.getElementById('cw-wallet-style')) {
+      var _st = document.createElement('style');
+      _st.id = 'cw-wallet-style';
+      _st.textContent = '#commission-wallet-slot{display:none!important}body.cw-wallet-active #commission-wallet-slot{display:block!important}body.cw-wallet-active #cm-content,body.cw-wallet-active #dlv-main{display:none!important}';
+      document.head.appendChild(_st);
+    }
     var slot = W._slot, mount = W._mount;
     if (!slot || !mount || W._hooksInstalled) return;
     W._hooksInstalled = true;
 
     function showWallet() {
-      slot.style.display = 'block';
-      if (mount.el) mount.el.style.display = 'none';
-      document.querySelectorAll('.cm-tabs button, .dlv-nav-btn').forEach(function(b) {
-        b.classList.remove('active');
-      });
-      var w = document.querySelector('[data-cw-wallet-tab]');
-      if (w) w.classList.add('active');
+      try {
+        if (typeof diag === 'function') diag('wallet click');
+        document.body.classList.add('cw-wallet-active');
+        document.querySelectorAll('.cm-tabs button, .dlv-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+        var w = document.querySelector('[data-cw-wallet-tab]'); if (w) w.classList.add('active');
+      } catch(e) { console.error('[CW] showWallet', e); }
     }
     function hideWallet() {
-      slot.style.display = 'none';
-      if (mount.el) mount.el.style.display = '';
+      try { document.body.classList.remove('cw-wallet-active'); }
+      catch(e) { console.error('[CW] hideWallet', e); }
     }
 
     var cmTabs = document.querySelector('.cm-tabs');
@@ -181,6 +186,18 @@
       var newFn = function(t, el) { hideWallet(); return origDlv.call(this, t, el); };
       newFn.__cwHooked = true;
       window.__dlvSwitchTab = newFn;
+    }
+
+    if (!W._docClickHooked) {
+      W._docClickHooked = true;
+      document.addEventListener('click', function(e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('[data-cw-wallet-tab]')) {
+          e.preventDefault();
+          showWallet();
+        }
+      }, true);
     }
   };
 
