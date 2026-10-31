@@ -214,7 +214,11 @@ auth.onAuthStateChanged(async function(user){
   try {
     var isSuper = false;
     var legacyDoc = await db.collection('admins').doc(user.uid).get();
-    if (legacyDoc.exists) isSuper = true;
+    if (legacyDoc.exists) {
+      var _lr = legacyDoc.data().role;
+      // فقط super_admin (أو legacy بدون role) يُعتبر super
+      if (_lr === 'super_admin' || _lr === 'superadmin' || !_lr) isSuper = true;
+    }
     else {
       var udoc = await db.collection('users').doc(user.uid).get();
       if (udoc.exists && udoc.data().role === 'super_admin') isSuper = true;
