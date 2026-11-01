@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login Test</title>
+<style>
+body{font-family:system-ui;background:#0a0825;color:#fff;padding:20px;max-width:500px;margin:0 auto}
+h1{color:#a855f7;font-size:18px;margin-bottom:16px}
+.step{background:rgba(255,255,255,0.05);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:12px;margin-bottom:8px;font-size:13px}
+.ok{color:#10b981}.err{color:#ef4444}.warn{color:#f59e0b}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid #374151;background:#1f2937;color:#fff;margin:6px 0;box-sizing:border-box;font-size:14px;font-family:inherit}
+button{width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;font-weight:900;font-size:15px;cursor:pointer;margin-top:10px;font-family:inherit}
+#log{background:#000;color:#0f0;padding:12px;border-radius:10px;font-family:monospace;font-size:11px;margin-top:14px;white-space:pre-wrap;max-height:50vh;overflow:auto;min-height:150px}
+</style>
+</head>
+<body>
+<h1>🔍 اختبار Firebase Auth</h1>
+
+<div class="step" id="step1">⏳ اختبار 1: هل HTML يعمل؟</div>
+<div class="step" id="step2">⏳ اختبار 2: هل Firebase CDN محمّل؟</div>
+<div class="step" id="step3">⏳ اختبار 3: هل firebase-config.js محمّل؟</div>
+<div class="step" id="step4">⏳ اختبار 4: هل يمكن تهيئة Firebase؟</div>
+
+<input id="email" type="email" placeholder="البريد الإلكتروني" value="mgdi776035709@gmail.com">
+<input id="password" type="password" placeholder="كلمة المرور">
+<button onclick="doTest()">🔐 اختبر الدخول</button>
+
+<div id="log">[السجل]</div>
+
+<script>
+// مباشرة عند التحميل
+document.getElementById('step1').innerHTML = '<span class="ok">✅ HTML + JS أساسي يعمل</span>';
+
+// اختبار 2: Firebase CDN
+setTimeout(function(){
+  var s2 = document.getElementById('step2');
+  if(typeof firebase !== 'undefined'){
+    s2.innerHTML = '<span class="ok">✅ Firebase CDN محمّل (v' + (firebase.SDK_VERSION || '?') + ')</span>';
+  } else {
+    s2.innerHTML = '<span class="err">❌ Firebase CDN لم يُحمّل — تحقق من الإنترنت</span>';
+  }
+}, 500);
+
+// اختبار 3: firebase-config.js
+setTimeout(function(){
+  var s3 = document.getElementById('step3');
+  if(typeof window.FIREBASE_CONFIG !== 'undefined'){
+    s3.innerHTML = '<span class="ok">✅ firebase-config.js محمّل (project: ' + window.FIREBASE_CONFIG.projectId + ')</span>';
+  } else {
+    s3.innerHTML = '<span class="err">❌ firebase-config.js لم يُحمّل</span>';
+  }
+}, 1000);
+
+// اختبار 4: Firebase init
+setTimeout(function(){
+  var s4 = document.getElementById('step4');
+  if(typeof firebase === 'undefined'){
+    s4.innerHTML = '<span class="err">❌ Firebase غير متاح — لا يمكن التهيئة</span>';
+    return;
+  }
+  try {
+    if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+    var db = firebase.firestore();
+    var auth = firebase.auth();
+    window.__testDb = db;
+    window.__testAuth = auth;
+    s4.innerHTML = '<span class="ok">✅ Firebase تمت تهيئته بنجاح</span>';
+  } catch(e) {
+    s4.innerHTML = '<span class="err">❌ فشل التهيئة: ' + e.message + '</span>';
+  }
+}, 1500);
+
+function log(msg){
+  var l = document.getElementById('log');
+  l.textContent += '\n' + msg;
+  l.scrollTop = l.scrollHeight;
+}
+
+async function doTest(){
+  log('━━━━━━━━━━━━━━━━━');
+  log('▶ بدء الاختبار في ' + new Date().toLocaleTimeString('ar'));
+  
+  if(typeof firebase === 'undefined'){
+    log('❌ Firebase غير محمّل — توقف');
+    return;
+  }
+  log('✅ Firebase موجود');
+  
+  var em = document.getElementById('email').value.trim();
+  var pw = document.getElementById('password').value;
+  if(!em || !pw){
+    log('❌ أدخل البريد وكلمة المرور');
+    return;
+  }
+  log('📧 البريد: ' + em);
+  log('🔑 كلمة المرور: ' + '*'.repeat(pw.length));
+  
+  try {
+    log('⏳ محاولة signInWithEmailAndPassword...');
+    var auth = window.__testAuth || firebase.auth();
+    var result = await auth.signInWithEmailAndPassword(em, pw);
+    log('✅ نجح الدخول!');
+    log('👤 UID: ' + result.user.uid);
+    log('📧 Email: ' + result.user.email);
+    
+    log('⏳ فحص الدور من Firestore...');
+    var udoc = await window.__testDb.collection('users').doc(result.user.uid).get();
+    if(udoc.exists){
+      var u = udoc.data();
+      log('📋 users data: role=' + (u.role||'?') + ', cat=' + (u.assignedCategory||'?'));
+      if(u.role === 'cat_manager'){
+        log('✅ دورك cat_manager — سيتم التحويل إلى cat-manager.html');
+        setTimeout(function(){ location.href='cat-manager.html'; }, 1500);
+      } else {
+        log('⚠️ دورك ' + u.role + ' — ليس cat_manager');
+      }
+    } else {
+      log('⚠️ مستند users غير موجود لهذا UID');
+    }
+    
+    log('⏳ فحص admins...');
+    var adoc = await window.__testDb.collection('admins').doc(result.user.uid).get();
+    if(adoc.exists){
+      log('📋 admins role=' + (adoc.data().role||'?'));
+    } else {
+      log('📋 لا يوجد مستند في admins');
+    }
+  } catch(e) {
+    log('❌ فشل الدخول:');
+    log('   code: ' + (e.code||'?'));
+    log('   message: ' + (e.message||'?'));
+  }
+}
+
+// Global error handler
+window.addEventListener('error', function(e){
+  log('🚨 GLOBAL ERROR: ' + e.message + ' (line ' + e.lineno + ')');
+});
+</script>
+</body>
+</html>
