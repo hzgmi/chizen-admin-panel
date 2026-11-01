@@ -241,7 +241,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
   <p>لوحة إدارة القسم</p>
   <input id="email" type="email" placeholder="البريد الإلكتروني">
   <input id="password" type="password" placeholder="كلمة المرور">
-  <button id="login-btn">🔐 دخول</button>
+  <button id="login-btn" onclick="window.__doLogin()">🔐 دخول</button>
   <div id="login-err"></div>
 </div>
 
@@ -500,14 +500,49 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 
 <div id="toast-container"></div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onerror="window.__cdnFail=1"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" onerror="window.__cdnFail=1"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onerror="window.__cdnFail=1"></script>
 <script src="firebase-config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 (function(){
 'use strict';
+
+// ═══ IMMEDIATE: زر الدخول يعمل فوراً ═══
+window.__doLogin = async function(){
+  var em = (document.getElementById('email')||{}).value || '';
+  var pw = (document.getElementById('password')||{}).value || '';
+  var errEl = document.getElementById('login-err');
+  var btn = document.getElementById('login-btn');
+  em = em.trim();
+  if(!em || !pw){
+    if(errEl) errEl.textContent = '❌ أدخل البريد وكلمة المرور';
+    return;
+  }
+  if(window.__cdnFail || typeof firebase === 'undefined'){
+    if(errEl) errEl.textContent = '❌ فشل تحميل Firebase — تحقق من الإنترنت وأعد تحميل الصفحة';
+    return;
+  }
+  if(btn){ btn.disabled = true; btn.textContent = 'جارٍ الدخول...'; }
+  if(errEl) errEl.textContent = '⏳ جارٍ التحقق...';
+  try {
+    await firebase.auth().signInWithEmailAndPassword(em, pw);
+    if(errEl) errEl.textContent = '✅ تم الدخول — جاري التحويل...';
+  } catch(e) {
+    if(errEl) errEl.textContent = '❌ ' + (e.code || e.message);
+    if(btn){ btn.disabled = false; btn.textContent = '🔐 دخول'; }
+  }
+};
+
+// ═══ Global error handler (يعرض الأخطاء على الشاشة) ═══
+window.addEventListener('error', function(e){
+  console.error('[GLOBAL ERROR]', e.message, e.filename, e.lineno);
+  var errEl = document.getElementById('login-err');
+  if(errEl && !errEl.textContent){
+    errEl.textContent = '⚠️ خطأ: ' + (e.message || 'unknown');
+  }
+});
 
 var db, auth;
 var CAT_LABELS = {electronics:'إلكترونيات',fashion:'أزياء وموضة',clothing:'ملابس',shoes_bags:'أحذية وحقائب',beauty:'جمال وعطور',kids_sports:'أطفال ورياضة',home:'منزل وأثاث',supermarket:'سوبرماركت',sports:'رياضة',kids:'أطفال',tools:'أدوات منزلية'};
@@ -537,16 +572,20 @@ function fmtDate(ts){if(!ts)return '—';var d=ts.seconds?new Date(ts.seconds*10
 function isToday(ts){if(!ts)return false;var d=ts.seconds?new Date(ts.seconds*1000):new Date(ts);return d.toDateString()===new Date().toDateString();}
 function timeAgo(ts){if(!ts)return {label:'—',cls:'t-fresh',hours:0};var ms=ts.seconds?ts.seconds*1000:new Date(ts).getTime();var diff=Math.floor((Date.now()-ms)/60000);if(diff<60)return{label:'منذ '+diff+' د',cls:'t-fresh',hours:0};var h=Math.floor(diff/60);if(h<6)return{label:'منذ '+h+' ساعة',cls:'t-warn',hours:h};return{label:'⚠️ منذ '+h+' ساعة',cls:'t-urgent',hours:h};}
 
-if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
-db=firebase.firestore();auth=firebase.auth();
+try {
+  if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+  db=firebase.firestore();
+  auth=firebase.auth();
+  console.log('[INIT] Firebase ready');
+} catch(err){
+  console.error('[FIREBASE INIT ERROR]', err);
+  var _el = document.getElementById('login-err');
+  if(_el) _el.textContent = '❌ Firebase: ' + err.message;
+  throw err;
+}
 
 // ═══ AUTH ═══
-document.getElementById('login-btn').onclick=async function(){
-  var em=document.getElementById('email').value.trim();var pw=document.getElementById('password').value;
-  if(!em||!pw){document.getElementById('login-err').textContent='❌ أدخل البريد وكلمة المرور';return;}
-  this.disabled=true;this.textContent='جارٍ...';document.getElementById('login-err').textContent='';
-  try{await auth.signInWithEmailAndPassword(em,pw);}catch(e){document.getElementById('login-err').textContent='❌ '+e.code;this.disabled=false;this.textContent='🔐 دخول';}
-};
+// Old login handler removed (now using window.__doLogin)
 
 window.doLogout=function(){
   if(!confirm('تسجيل الخروج؟'))return;
