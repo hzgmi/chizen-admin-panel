@@ -158,7 +158,15 @@ function fmt(n){ return Math.round(Number(n)||0).toLocaleString('ar-EG'); }
 function fmtDate(ts){ try { var d = ts && ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('ar-YE',{month:'short',day:'numeric'}); } catch(e){ return '—'; } }
 
 auth.onAuthStateChanged(async function(user){
-  if(!user){ showError('غير مسجل','يجب تسجيل الدخول أولاً'); return; }
+  if(!user){
+    // ⏳ انتظار 2 ثانية — قد تكون الجلسة في طريقها (race condition)
+    await new Promise(function(r){ setTimeout(r, 2000); });
+    if(!firebase.auth().currentUser){
+      window.location.href = 'accountant-login.html';
+      return;
+    }
+    user = firebase.auth().currentUser;
+  }
   try {
     var udoc = await db.collection('users').doc(user.uid).get();
     var adm = await db.collection('admins').doc(user.uid).get();
