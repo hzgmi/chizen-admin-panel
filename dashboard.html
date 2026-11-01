@@ -273,17 +273,45 @@ auth.onAuthStateChanged(function(u){
 initAdminDashboard();
 
 async function loadAll(){
-  var results = await Promise.all([
-    db.collection('orders').orderBy('createdAt', 'desc').get().catch(function(){ return {docs: []}; }),
+  // ═══ نستخدم allSettled بدلاً من all — لا تفشل الدالة إذا فشل استعلام واحد ═══
+  var queries = [
+    db.collection('orders').orderBy('createdAt','desc').limit(300).get(),
     db.collection('products').get(),
     db.collection('users').get(),
-    db.collection('notifications').orderBy('createdAt', 'desc').limit(30).get().catch(function(){ return {docs: []}; })
-  ]);
+    db.collection('bookings').get(),
+    db.collection('listings').get(),
+    db.collection('payments').get()
+  ];
   
-  state.orders = results[0].docs.map(function(d){ return Object.assign({}, d.data(), {id: d.id}); });
-  state.products = results[1].docs.map(function(d){ return Object.assign({}, d.data(), {id: d.id}); });
-  state.users = results[2].docs.map(function(d){ return Object.assign({}, d.data(), {id: d.id}); });
-  state.notifications = results[3].docs.map(function(d){ return Object.assign({}, d.data(), {id: d.id}); });
+  var results = await Promise.allSettled(queries);
+  
+  function safeGet(idx, defaultVal){
+    var r = results[idx];
+    if(r.status === 'fulfilled') return r.value;
+    console.warn('⚠️ Query #' + idx + ' failed:', r.reason && r.reason.message);
+    return defaultVal;
+  }
+  
+  function mapDocs(snap){
+    if(!snap || !snap.docs) return [];
+    return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+  }
+  
+  state.orders = mapDocs(safeGet(0, {docs:[]}));
+  state.products = mapDocs(safeGet(1, {docs:[]}));
+  state.users = mapDocs(safeGet(2, {docs:[]}));
+  state.bookings = mapDocs(safeGet(3, {docs:[]}));
+  state.listings = mapDocs(safeGet(4, {docs:[]}));
+  state.payments = mapDocs(safeGet(5, {docs:[]}));
+  
+  // فحص إضافي: هل أي استعلام فشل؟
+  var failed = results.filter(function(r){ return r.status === 'rejected'; }).length;
+  if(failed > 0){
+    console.warn('⚠️ ' + failed + ' من ' + queries.length + ' استعلامات فشلت — لكن dashboard يعمل');
+  }
+  if(failed === queries.length){
+    throw new Error('فشلت جميع الاستعلامات — تحقق من قواعد Firestore');
+  }
 }
 
 async function reloadData(){
