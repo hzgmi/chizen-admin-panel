@@ -1201,6 +1201,7 @@ function renderMore(){
     {icon:'🏷️', lbl:'الماركات', tool:'brands'},
     {icon:'📂', lbl:'الأقسام', tool:'categories'},
     {icon:'🏭', lbl:'الموردين', tool:'suppliers'},
+    {icon:'📍', lbl:'مواقع التسليم', tool:'pickup'},
     {icon:'🖼️', lbl:'البانرات', tool:'banners'},
     {icon:'💳', lbl:'الديون', tool:'transactions'},
     {icon:'💳', lbl:'طرق الدفع', tool:'payments'},
@@ -1230,6 +1231,7 @@ document.addEventListener('click', async function(e){
   if (tool === 'brands') return showConfigEditor('brands', 'الماركات');
   if (tool === 'categories') return showConfigEditor('categories', 'الأقسام');
   if (tool === 'suppliers') return showSupplierManager();
+  if (tool === 'pickup') return showPickupLocationsManager();
   if (tool === 'banners') return showBannerManager();
   if (tool === 'transactions') return showTransactionsList();
   if (tool === 'notifications') return showNotificationManager();
