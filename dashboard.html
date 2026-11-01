@@ -1601,15 +1601,103 @@ async function showConfigEditor(docName, title){
   try {
     var doc = await db.collection('config').doc(docName).get();
     var data = doc.exists ? doc.data() : {};
-    var list = data.list || data.items || data[docName] || data;
-    var items = Array.isArray(list) ? list : Object.keys(list).map(function(k){ var v = list[k]; return {id:k, name: typeof v==='string'?v:(v&&v.name||k)}; });
-    var html = items.length ? items.map(function(item, i){
-      var nm = normName(item) || (typeof item === 'string' ? item : '—');
-      return '<div style="padding:8px 0;border-bottom:1px solid rgba(155,77,255,0.1);font-size:13px;color:#fff"><span style="color:#a78bfa;margin-left:6px">' + (i+1) + '.</span>' + nm + '</div>';
-    }).join('') : '<div class="vempty-txt">لا توجد عناصر</div>';
-    showModal('🏷️ ' + title + ' (' + items.length + ')', html);
+    var list = data.list || data.items || data[docName] || [];
+    if (!Array.isArray(list)) {
+      list = Object.keys(list || {}).map(function(k){ 
+        var v = list[k]; 
+        return typeof v === 'string' ? v : (v && v.name ? v.name : k); 
+      });
+    }
+    list = list.map(function(item){
+      return typeof item === 'string' ? { name: item } : item;
+    });
+
+    var html = '';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px">';
+    html += '<div style="font-size:13px;color:#a78bfa;font-weight:800">' + list.length + ' عنصر</div>';
+    html += '<button onclick="__configAdd(\'' + docName + '\')" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;padding:10px 16px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">➕ إضافة</button>';
+    html += '</div>';
+    html += '<div style="max-height:60vh;overflow-y:auto">';
+    if (!list.length) {
+      html += '<div class="vempty-txt" style="text-align:center;padding:30px;color:#a78bfa">لا توجد عناصر — أضف عنصراً جديداً</div>';
+    } else {
+      list.forEach(function(item, i){
+        var nm = item.name || item.id || '—';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(155,77,255,0.1);gap:8px">';
+        html += '<div style="font-size:13px;color:#fff;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="color:#a78bfa;margin-left:6px">' + (i+1) + '.</span>' + esc(nm) + '</div>';
+        html += '<div style="display:flex;gap:6px;flex-shrink:0">';
+        html += '<button onclick="__configEdit(\'' + docName + '\',' + i + ')" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:6px 10px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">✏️</button>';
+        html += '<button onclick="__configDelete(\'' + docName + '\',' + i + ')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:6px 10px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">🗑</button>';
+        html += '</div></div>';
+      });
+    }
+    html += '</div>';
+    showModal('🏷️ ' + title + ' (' + list.length + ')', html);
   } catch(e){ toast('❌ ' + e.message, 'error'); }
 }
+
+window.__configAdd = async function(docName){
+  var name = prompt('اسم العنصر الجديد:');
+  if (!name || !name.trim()) return;
+  name = name.trim();
+  try {
+    var doc = await db.collection('config').doc(docName).get();
+    var data = doc.exists ? doc.data() : {};
+    var list = data.list || data.items || [];
+    if (!Array.isArray(list)) list = [];
+    list = list.map(function(item){ return typeof item === 'string' ? item : (item && item.name ? item.name : ''); }).filter(Boolean);
+    if (list.indexOf(name) !== -1) { toast('⚠️ موجودة مسبقاً', 'error'); return; }
+    list.push(name);
+    await db.collection('config').doc(docName).set({ list: list }, { merge: true });
+    toast('✅ تمت الإضافة', 'success');
+    if (typeof closeModal === 'function') closeModal();
+    var titles = { brands:'الماركات', categories:'الأقسام', cats:'الفئات', banners:'البانرات' };
+    showConfigEditor(docName, titles[docName] || docName);
+  } catch(e){ toast('❌ ' + e.message, 'error'); }
+};
+
+window.__configEdit = async function(docName, index){
+  try {
+    var doc = await db.collection('config').doc(docName).get();
+    var data = doc.exists ? doc.data() : {};
+    var list = data.list || data.items || [];
+    if (!Array.isArray(list)) list = [];
+    var items = list.map(function(item){ return typeof item === 'string' ? { name: item } : item; });
+    if (!items[index]) return;
+    var currentName = items[index].name || '';
+    var newName = prompt('تعديل الاسم:', currentName);
+    if (!newName || !newName.trim() || newName.trim() === currentName) return;
+    var newList = list.map(function(item, i){
+      if (i === index) {
+        if (typeof item === 'string') return newName.trim();
+        return Object.assign({}, item, { name: newName.trim() });
+      }
+      return item;
+    });
+    await db.collection('config').doc(docName).set({ list: newList }, { merge: true });
+    toast('✅ تم التعديل', 'success');
+    if (typeof closeModal === 'function') closeModal();
+    var titles = { brands:'الماركات', categories:'الأقسام', cats:'الفئات', banners:'البانرات' };
+    showConfigEditor(docName, titles[docName] || docName);
+  } catch(e){ toast('❌ ' + e.message, 'error'); }
+};
+
+window.__configDelete = async function(docName, index){
+  if (!confirm('⚠️ حذف هذا العنصر نهائياً؟')) return;
+  try {
+    var doc = await db.collection('config').doc(docName).get();
+    var data = doc.exists ? doc.data() : {};
+    var list = data.list || data.items || [];
+    if (!Array.isArray(list)) list = [];
+    var newList = list.filter(function(item, i){ return i !== index; });
+    await db.collection('config').doc(docName).set({ list: newList }, { merge: true });
+    toast('✅ تم الحذف', 'success');
+    if (typeof closeModal === 'function') closeModal();
+    var titles = { brands:'الماركات', categories:'الأقسام', cats:'الفئات', banners:'البانرات' };
+    showConfigEditor(docName, titles[docName] || docName);
+  } catch(e){ toast('❌ ' + e.message, 'error'); }
+};
+
 
 async function showTransactionsList(){
   try {
