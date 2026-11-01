@@ -236,6 +236,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 </head>
 <body>
 
+<div id="login-screen" class="login-wrap">
+  <h1>📦 CHIZEN</h1>
+  <p>لوحة إدارة القسم</p>
+  <input id="email" type="email" placeholder="البريد الإلكتروني">
+  <input id="password" type="password" placeholder="كلمة المرور">
+  <button id="login-btn" onclick="window.__doLogin()">🔐 دخول</button>
+  <div id="login-err"></div>
+</div>
+
 <div id="app" class="hidden">
   <header class="app-header">
     <div class="left">
@@ -501,7 +510,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 'use strict';
 
 // ═══ IMMEDIATE: زر الدخول يعمل فوراً ═══
-// login moved
+
 
 // ═══ Global error handler (يعرض الأخطاء على الشاشة) ═══
 window.addEventListener('error', function(e){
@@ -583,7 +592,7 @@ window.addEventListener('error', function(e){
 });
 
 auth.onAuthStateChanged(async function(u){
-  if(!u){ location.href='cat-login.html'; return; }
+  if(!u){document.getElementById('login-screen').classList.remove('hidden');document.getElementById('app').classList.add('hidden');return;}
   try{
     var udoc=await db.collection('users').doc(u.uid).get();
     var role=udoc.exists?(udoc.data().role||''):'';
@@ -1086,10 +1095,34 @@ window.downloadCatPDF=async function(oid){
   html2pdf().from(el).set({margin:10,filename:'CHIZEN-CAT-'+oid.slice(-6).toUpperCase()+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'p'}}).save().then(()=>toast('✅ تم تحميل PDF','ok')).catch(e=>toast('❌ '+e.message,'err'));
 };
 
-
-// login moved
-
 })();
 </script>
+
+<script>
+// كود دخول مبسط جداً - يعمل دائماً
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    var btn = document.getElementById('login-btn');
+    if (btn) {
+      btn.onclick = function() {
+        var em = document.getElementById('email').value.trim();
+        var pw = document.getElementById('password').value;
+        var err = document.getElementById('login-err');
+        if (!em || !pw) { if (err) err.textContent = '❌ املأ الحقول'; return; }
+        if (err) err.textContent = '⏳ جاري الدخول...';
+        btn.disabled = true;
+        btn.textContent = 'جارٍ...';
+        
+        firebase.auth().signInWithEmailAndPassword(em, pw).catch(function(e) {
+          if (err) err.textContent = '❌ ' + e.message;
+          btn.disabled = false;
+          btn.textContent = '🔐 دخول';
+        });
+      };
+    }
+  }, 500);
+});
+</script>
+
 </body>
 </html>
