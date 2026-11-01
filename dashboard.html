@@ -217,7 +217,7 @@ auth.onAuthStateChanged(async function(user){
     if (legacyDoc.exists) {
       var _lr = legacyDoc.data().role;
       // فقط super_admin (أو legacy بدون role) يُعتبر super
-      if (_lr === 'super_admin' || _lr === 'superadmin' || !_lr) isSuper = true;
+      if (_lr === 'super_admin' || _lr === 'superadmin') isSuper = true;
     }
     else {
       var udoc = await db.collection('users').doc(user.uid).get();
@@ -225,7 +225,8 @@ auth.onAuthStateChanged(async function(user){
     }
     
     if (!isSuper) {
-      showError('غير مصرح', 'هذه اللوحة مخصصة للإدارة العامة فقط.', '🔐 دخول الأدمن');
+      try { await auth.signOut(); } catch(e){}
+      showError('غير مصرح', 'هذا الحساب ليس مديراً عاماً.', '🔐 دخول الأدمن');
       return;
     }
     
