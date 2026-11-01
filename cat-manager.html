@@ -236,15 +236,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 </head>
 <body>
 
-<div id="login-screen" class="login-wrap">
-  <h1>📦 CHIZEN</h1>
-  <p>لوحة إدارة القسم</p>
-  <input id="email" type="email" placeholder="البريد الإلكتروني">
-  <input id="password" type="password" placeholder="كلمة المرور">
-  <button id="login-btn" onclick="window.__doLogin()">🔐 دخول</button>
-  <div id="login-err"></div>
-</div>
-
 <div id="app" class="hidden">
   <header class="app-header">
     <div class="left">
@@ -564,12 +555,7 @@ try {
 // ═══ AUTH ═══
 // Old login handler removed (now using window.__doLogin)
 
-window.doLogout=function(){
-  if(!confirm('تسجيل الخروج؟'))return;
-  if(state.unsubPending)state.unsubPending();
-  if(state.unsubConfirmed)state.unsubConfirmed();
-  auth.signOut().then(()=>location.href='cat-login.html');
-};
+window.doLogout=function(){if(confirm('تسجيل الخروج؟')){auth.signOut().then(()=>location.href='cat-login.html');}};
 
 // ═══ Timeout fallback: إن لم يستجب Firebase في 4 ثوان، أظهر صفحة الدخول ═══
 setTimeout(function(){
@@ -592,32 +578,41 @@ window.addEventListener('error', function(e){
 });
 
 auth.onAuthStateChanged(async function(u){
-  if(!u){document.getElementById('login-screen').classList.remove('hidden');document.getElementById('app').classList.add('hidden');return;}
-  try{
-    var udoc=await db.collection('users').doc(u.uid).get();
-    var role=udoc.exists?(udoc.data().role||''):'';
-    var cat=udoc.exists?(udoc.data().assignedCategory||''):'';
-    var adoc=await db.collection('admins').doc(u.uid).get();
-    if(adoc.exists&&adoc.data().role==='cat_manager'){role='cat_manager';cat=cat||adoc.data().assignedCategory||'';}
-    if(role!=='cat_manager'||!cat){document.getElementById('login-err').textContent='⛔ لست مدير قسم';await auth.signOut();return;}
-    state.user=u;state.userData=udoc.exists?udoc.data():{};state.cat=cat;
-    document.getElementById('cat-name').textContent=catLabel(cat);
-    document.getElementById('user-name').textContent=state.userData.name||u.email;
-    document.getElementById('user-avatar').textContent=(state.userData.name||u.email||'م').charAt(0).toUpperCase();
-    var hr=new Date().getHours();
-    document.getElementById('greeting').textContent=hr<12?'☀️ صباح الخير':hr<17?'🌤️ مساء الخير':'🌙 مساء الخير';
-    document.getElementById('greeting-sub').textContent='مرحباً '+((state.userData.name||'').split(' ')[0]||'بك')+' — إليك ملخص قسمك';
-    document.getElementById('login-screen').classList.add('hidden');
+  if(!u){
+    window.location.href = 'cat-login.html';
+    return;
+  }
+  try {
+    var udoc = await db.collection('users').doc(u.uid).get();
+    var role = udoc.exists ? (udoc.data().role || '') : '';
+    var cat = udoc.exists ? (udoc.data().assignedCategory || '') : '';
+    var adoc = await db.collection('admins').doc(u.uid).get();
+    if(adoc.exists && adoc.data().role === 'cat_manager'){
+      role = 'cat_manager';
+      cat = cat || adoc.data().assignedCategory || '';
+    }
+    if(role !== 'cat_manager' || !cat){
+      await auth.signOut();
+      window.location.href = 'cat-login.html';
+      return;
+    }
+    state.user = u;
+    state.userData = udoc.exists ? udoc.data() : {};
+    state.cat = cat;
+    document.getElementById('cat-name').textContent = catLabel(cat);
+    document.getElementById('user-name').textContent = state.userData.name || u.email;
+    document.getElementById('user-avatar').textContent = (state.userData.name || u.email || 'م').charAt(0).toUpperCase();
+    var hr = new Date().getHours();
+    document.getElementById('greeting').textContent = hr<12?'☀️ صباح الخير':hr<17?'🌤️ مساء الخير':'🌙 مساء الخير';
+    document.getElementById('greeting-sub').textContent = 'مرحباً ' + ((state.userData.name||'').split(' ')[0] || 'بك') + ' — إليك ملخص قسمك';
     document.getElementById('app').classList.remove('hidden');
     startListeners();
     loadProducts();
     showView('home');
-  }catch(e){
-    console.error('[AUTH ERROR]', e);
-    document.getElementById('login-screen').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('login-err').textContent='❌ '+e.message;
-    try{ await auth.signOut(); }catch(x){}
+  } catch(e) {
+    console.error('[AUTH INIT ERROR]', e);
+    await auth.signOut();
+    window.location.href = 'cat-login.html';
   }
 });
 
@@ -1100,28 +1095,7 @@ window.downloadCatPDF=async function(oid){
 
 <script>
 // كود دخول مبسط جداً - يعمل دائماً
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() {
-    var btn = document.getElementById('login-btn');
-    if (btn) {
-      btn.onclick = function() {
-        var em = document.getElementById('email').value.trim();
-        var pw = document.getElementById('password').value;
-        var err = document.getElementById('login-err');
-        if (!em || !pw) { if (err) err.textContent = '❌ املأ الحقول'; return; }
-        if (err) err.textContent = '⏳ جاري الدخول...';
-        btn.disabled = true;
-        btn.textContent = 'جارٍ...';
-        
-        firebase.auth().signInWithEmailAndPassword(em, pw).catch(function(e) {
-          if (err) err.textContent = '❌ ' + e.message;
-          btn.disabled = false;
-          btn.textContent = '🔐 دخول';
-        });
-      };
-    }
-  }, 500);
-});
+
 </script>
 
 </body>
