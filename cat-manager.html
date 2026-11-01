@@ -250,11 +250,31 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
     </div>
 
     <div class="form-section">
+      <div class="form-section-title">🏪 المورد</div>
+      <div class="form-field">
+        <label>اختر المورد المسؤول عن توريد هذا المنتج</label>
+        <select id="pf-supplier" style="width:100%;padding:11px 12px;border-radius:10px;border:1px solid rgba(155,77,255,.3);background:rgba(0,0,0,.3);color:#fff;font-size:13px;font-family:inherit">
+          <option value="">— بدون مورد —</option>
+        </select>
+        <div id="pf-supplier-hint" style="font-size:11px;color:#a78bfa;margin-top:6px;opacity:.8"></div>
+      </div>
+    </div>
+
+    <div class="form-section">
       <div class="form-section-title">🖼️ صور المنتج</div>
       <div class="form-images" id="pf-images">
         <!-- Added dynamically -->
       </div>
       <div style="font-size:11px;color:#a78bfa;margin-top:8px;opacity:.8">يمكنك إضافة صورة واحدة أو أكثر. اضغط على المربع المنقط لرفع صورة من جهازك.</div>
+    </div>
+
+    <div id="pf-edit-actions" class="form-section" style="display:none;background:rgba(239,68,68,.05);border-color:rgba(239,68,68,.2)">
+      <div class="form-section-title" style="color:#fca5a5">⚠️ إدارة المنتج</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="toggleProductVisibility()" id="pf-toggle-btn" style="flex:1;min-width:130px;padding:12px;border-radius:10px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.4);font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">👁 إخفاء</button>
+        <button onclick="deleteProduct()" style="flex:1;min-width:130px;padding:12px;border-radius:10px;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.4);font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">🗑 حذف نهائي</button>
+      </div>
+      <div style="font-size:11px;color:#a78bfa;margin-top:10px;opacity:.7">الإخفاء يُخفي المنتج من المتجر لكن يحتفظ ببياناته.</div>
     </div>
   </div>
 </div>
@@ -279,7 +299,10 @@ var state = {
   pendingFilter:'all', pendingSearch:'',
   confirmedSearch:'',
   editingProductId:null,
+  editingProductStatus:null,
+  editingProductActive:true,
   formImages:[],
+  suppliers:[],
   unsubPending:null, unsubConfirmed:null
 };
 
@@ -629,9 +652,74 @@ function renderProductsGrid(query){
 }
 
 // ═══ PRODUCT FORM (with image upload) ═══
-window.openProductForm = function(pid){
+async function loadSuppliers(){
+  try {
+    var list = [];
+    // Source 1: config/suppliers
+    try {
+      var cfg = await db.collection('config').doc('suppliers').get();
+      if(cfg.exists){
+        var data = cfg.data();
+        if(Array.isArray(data.list)){
+          data.list.forEach(function(s){
+            if(s.category === state.cat || (Array.isArray(s.categories) && s.categories.includes(state.cat))){
+              list.push({id: s.id||s.name||'', name: s.name||'مورد', phone: s.phone||'', source:'config'});
+            }
+          });
+        }
+        if(data[state.cat] && data[state.cat].phone && data[state.cat].name){
+          list.push({id: state.cat, name: data[state.cat].name, phone: data[state.cat].phone, source:'config'});
+        }
+      }
+    } catch(e){ console.warn('[cfg sup]', e.message); }
+    // Source 2: suppliers collection
+    try {
+      var snap = await db.collection('suppliers').where('category','==',state.cat).get();
+      snap.forEach(function(d){
+        var x = d.data();
+        if(!list.some(s=>s.phone===x.phone)){
+          list.push({id:d.id, name:x.name||'مورد', phone:x.phone||'', source:'collection'});
+        }
+      });
+    } catch(e){ console.warn('[sup col]', e.message); }
+    state.suppliers = list;
+    return list;
+  } catch(e){
+    console.warn('[loadSuppliers]', e.message);
+    state.suppliers = [];
+    return [];
+  }
+}
+
+function populateSupplierSelect(selected){
+  var sel = document.getElementById('pf-supplier');
+  var hint = document.getElementById('pf-supplier-hint');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— بدون مورد —</option>';
+  if(state.suppliers.length === 0){
+    hint.textContent = '⚠️ لا يوجد موردون في قسمك. أضفهم من لوحة الأدمن العام.';
+    hint.style.color = '#fca5a5';
+    return;
+  }
+  hint.textContent = '✅ ' + state.suppliers.length + ' مورد متاح في قسم ' + catLabel(state.cat);
+  hint.style.color = '#a78bfa';
+  state.suppliers.forEach(function(s, i){
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = s.name + (s.phone ? ' — ' + s.phone : '');
+    sel.appendChild(opt);
+  });
+  if(selected){
+    var idx = state.suppliers.findIndex(function(s){ return s.phone === selected || s.id === selected || s.name === selected; });
+    if(idx >= 0) sel.value = String(idx);
+  }
+}
+
+window.openProductForm = async function(pid){
   state.editingProductId = pid || null;
-  var p = pid ? state.products.find(x=>x.id===pid) : null;
+  var p = pid ? state.products.find(function(x){ return x.id === pid; }) : null;
+  state.editingProductStatus = p ? (p.status || 'pending_review') : null;
+  state.editingProductActive = p ? (p.isActive !== false && p.active !== false) : true;
   document.getElementById('pf-title').textContent = p ? 'تعديل المنتج' : 'إضافة منتج';
   document.getElementById('pf-name').value = p ? (p.name||'') : '';
   document.getElementById('pf-brand').value = p ? (p.brand||'') : '';
@@ -644,6 +732,21 @@ window.openProductForm = function(pid){
   document.getElementById('pf-threshold').value = p ? (p.lowStockThreshold||5) : 5;
   state.formImages = p && Array.isArray(p.images) ? p.images.slice() : (p && p.img ? [p.img] : []);
   renderFormImages();
+  // Suppliers
+  if(!state.suppliers.length) await loadSuppliers();
+  populateSupplierSelect(p ? p.supplierPhone : null);
+  // Show/hide edit actions
+  var editBox = document.getElementById('pf-edit-actions');
+  var toggleBtn = document.getElementById('pf-toggle-btn');
+  if(p){
+    editBox.style.display = 'block';
+    toggleBtn.textContent = state.editingProductActive ? '👁 إخفاء' : '👁 إظهار';
+    toggleBtn.style.background = state.editingProductActive ? 'rgba(245,158,11,.15)' : 'rgba(34,197,94,.15)';
+    toggleBtn.style.color = state.editingProductActive ? '#fbbf24' : '#4ade80';
+    toggleBtn.style.borderColor = state.editingProductActive ? 'rgba(245,158,11,.4)' : 'rgba(34,197,94,.4)';
+  } else {
+    editBox.style.display = 'none';
+  }
   document.getElementById('product-form').classList.remove('hidden');
   document.getElementById('product-form').scrollTop = 0;
 };
@@ -700,36 +803,86 @@ window.saveProduct = async function(){
   var price = Number(document.getElementById('pf-price').value);
   if(!name || price <= 0){ toast('❌ أدخل الاسم والسعر','err'); return; }
   if(!state.formImages.length){ toast('❌ أضف صورة واحدة على الأقل','err'); return; }
+  // Supplier
+  var supIdx = document.getElementById('pf-supplier').value;
+  var sup = (supIdx !== '' && state.suppliers[parseInt(supIdx)]) ? state.suppliers[parseInt(supIdx)] : null;
   var data = {
-    name:name,
-    brand:document.getElementById('pf-brand').value.trim(),
-    sku:document.getElementById('pf-sku').value.trim(),
-    description:document.getElementById('pf-desc').value.trim(),
-    price:price,
-    oldPrice:Number(document.getElementById('pf-oldprice').value)||0,
-    cost:Number(document.getElementById('pf-cost').value)||0,
-    stock:Number(document.getElementById('pf-stock').value)||0,
-    lowStockThreshold:Number(document.getElementById('pf-threshold').value)||5,
-    category:state.cat,
-    categories:[state.cat],
-    images:state.formImages,
-    img:state.formImages[0],
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    name: name,
+    brand: document.getElementById('pf-brand').value.trim(),
+    sku: document.getElementById('pf-sku').value.trim(),
+    description: document.getElementById('pf-desc').value.trim(),
+    price: price,
+    oldPrice: Number(document.getElementById('pf-oldprice').value)||0,
+    cost: Number(document.getElementById('pf-cost').value)||0,
+    stock: Number(document.getElementById('pf-stock').value)||0,
+    lowStockThreshold: Number(document.getElementById('pf-threshold').value)||5,
+    category: state.cat,
+    categories: [state.cat],
+    images: state.formImages,
+    img: state.formImages[0],
+    supplierId: sup ? sup.id : null,
+    supplierName: sup ? sup.name : null,
+    supplierPhone: sup ? sup.phone : null,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   try {
     if(state.editingProductId){
+      data.status = state.editingProductStatus || 'pending_review';
+      data.isActive = state.editingProductActive;
+      data.active = state.editingProductActive;
+      data.updatedBy = {uid: state.user.uid, name: state.userData.name || state.user.email, at: firebase.firestore.FieldValue.serverTimestamp()};
       await db.collection('products').doc(state.editingProductId).update(data);
-      toast('✅ تم تحديث المنتج','ok');
+      toast('✅ تم حفظ التعديلات','ok');
     } else {
-      data.status='pending_review';
-      data.active=false;
-      data.submittedBy={uid:state.user.uid, name:state.userData.name||state.user.email, at:firebase.firestore.FieldValue.serverTimestamp()};
-      data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      data.status = 'pending_review';
+      data.active = false;
+      data.isActive = false;
+      data.submittedBy = {uid: state.user.uid, name: state.userData.name || state.user.email, at: firebase.firestore.FieldValue.serverTimestamp()};
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       await db.collection('products').add(data);
       toast('✅ تم إرسال المنتج للمراجعة','ok');
     }
     closeProductForm();
-    loadProducts();
+    await loadProducts();
+    render();
+  } catch(e){ toast('❌ '+e.message,'err'); }
+};
+
+// ═══ Toggle Visibility ═══
+window.toggleProductVisibility = async function(){
+  if(!state.editingProductId){ return; }
+  var newState = !state.editingProductActive;
+  try {
+    await db.collection('products').doc(state.editingProductId).update({
+      isActive: newState,
+      active: newState,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: {uid: state.user.uid, name: state.userData.name || state.user.email, at: firebase.firestore.FieldValue.serverTimestamp()}
+    });
+    state.editingProductActive = newState;
+    var btn = document.getElementById('pf-toggle-btn');
+    btn.textContent = newState ? '👁 إخفاء' : '👁 إظهار';
+    btn.style.background = newState ? 'rgba(245,158,11,.15)' : 'rgba(34,197,94,.15)';
+    btn.style.color = newState ? '#fbbf24' : '#4ade80';
+    btn.style.borderColor = newState ? 'rgba(245,158,11,.4)' : 'rgba(34,197,94,.4)';
+    toast(newState ? '✅ المنتج ظاهر الآن' : '👁 المنتج مخفي', newState ? 'ok' : 'warn');
+    await loadProducts();
+    render();
+  } catch(e){ toast('❌ '+e.message,'err'); }
+};
+
+// ═══ Delete Product ═══
+window.deleteProduct = async function(){
+  if(!state.editingProductId){ return; }
+  var p = state.products.find(function(x){ return x.id === state.editingProductId; });
+  var nm = p ? p.name : 'المنتج';
+  if(!confirm('⚠️ حذف "'+nm+'" نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه.')) return;
+  if(!confirm('تأكيد أخير: حذف نهائي؟')) return;
+  try {
+    await db.collection('products').doc(state.editingProductId).delete();
+    toast('🗑 تم حذف المنتج نهائياً','ok');
+    closeProductForm();
+    await loadProducts();
     render();
   } catch(e){ toast('❌ '+e.message,'err'); }
 };
@@ -750,26 +903,29 @@ async function getSupplierPhone(){
   return '';
 }
 
-function buildWAMessage(orders){
-  var lines = ['🛍️ *طلبات جديدة من CHIZEN*','━━━━━━━━━━━━━━━━','','🏷️ *القسم:* '+catLabel(state.cat),'📅 *التاريخ:* '+new Date().toLocaleDateString('ar-YE'),'📦 *عدد الطلبات:* '+orders.length,''];
-  orders.forEach((o,idx)=>{
+function buildWAMessage(orders, supplierName){
+  var title = supplierName ? ('🏪 *' + supplierName + '*') : '🏪 *مرحباً*';
+  var lines = [title, '','🛍️ *طلبات جديدة من CHIZEN*','━━━━━━━━━━━━━━━━','','🏷️ *القسم:* '+catLabel(state.cat),'📅 *التاريخ:* '+new Date().toLocaleDateString('ar-YE'),'📦 *عدد الطلبات:* '+orders.length,''];
+  orders.forEach(function(o,idx){
     var c = (o.categories[state.cat])||{};
     var items = c.items||[];
-    var total = items.reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
+    var totalQty = items.reduce(function(s,i){ return s + (Number(i.qty)||1); },0);
     lines.push('━━━━━━━━━━━━━━━━');
-    lines.push('📋 *طلب '+(idx+1)+'* — #'+o.id.slice(-6).toUpperCase());
-    lines.push('👤 *العميل:* '+(o.name||o.customerName||'عميل'));
-    if(o.phone||o.customerPhone) lines.push('📱 *هاتف:* '+(o.phone||o.customerPhone));
+    lines.push('📋 *طلب رقم:* #'+o.id.slice(-6).toUpperCase());
     lines.push('');
-    lines.push('🛒 *المنتجات:*');
-    items.forEach(it=>lines.push('  • '+(it.name||'—')+' × '+(it.qty||1)));
-    lines.push('💰 *الإجمالي:* '+total.toLocaleString('en')+' ر.ي');
+    lines.push('🛒 *المنتجات المطلوبة:*');
+    items.forEach(function(it){
+      lines.push('  • '+(it.name||'—')+' × '+(it.qty||1)+' قطعة');
+    });
+    lines.push('📦 *إجمالي القطع:* '+totalQty);
     lines.push('');
   });
   lines.push('━━━━━━━━━━━━━━━━');
   lines.push('🚚 *تنبيه مهم:*');
   lines.push('سيزورك *المندوب* لاستلام هذه الطلبات.');
-  lines.push('الرجاء *تجهيز الطلبات* في أقرب وقت.');
+  lines.push('الرجاء *تجهيز الطلبات* في أقرب وقت ممكن.');
+  lines.push('');
+  lines.push('📍 *ملاحظة:* بيانات العميل محفوظة لدى CHIZEN — لن تحتاجها.');
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━');
   lines.push('شكراً لتعاونك 🤝');
@@ -781,14 +937,16 @@ var _waOrders=null, _waMessage='';
 
 window.openWAModal = async function(ids){
   var orders;
-  if(ids && ids.length) orders = ids.map(i=>state.confirmed.find(x=>x.id===i)).filter(Boolean);
+  if(ids && ids.length) orders = ids.map(function(i){ return state.confirmed.find(function(x){ return x.id===i; }); }).filter(Boolean);
   else orders = state.confirmed.slice();
   if(!orders.length){ toast('❌ لا طلبات','err'); return; }
   _waOrders = orders;
-  _waMessage = buildWAMessage(orders);
+  if(!state.suppliers.length) await loadSuppliers();
+  var sup = state.suppliers[0] || null;
+  _waMessage = buildWAMessage(orders, sup ? sup.name : null);
   document.getElementById('wa-preview').textContent = _waMessage;
-  var phone = await getSupplierPhone();
-  document.getElementById('wa-phone').value = phone||'';
+  var phone = sup ? sup.phone : await getSupplierPhone();
+  document.getElementById('wa-phone').value = phone || '';
   document.getElementById('wa-modal').classList.remove('hidden');
 };
 
@@ -831,40 +989,84 @@ window.openOrderModal = function(oid, type){
 };
 
 // ═══ PDF ═══
-window.downloadPDF = async function(oid){
-  var o = state.confirmed.find(x=>x.id===oid);
-  if(!o) return;
-  if(typeof html2pdf === 'undefined'){ toast('⏳ تحميل PDF...','info'); setTimeout(()=>downloadPDF(oid),1500); return; }
-  var c = (o.categories[state.cat])||{};
-  var items = c.items||[];
+window.downloadAllPDF = async function(){
+  var ids = state.confirmed.map(function(o){ return o.id; });
+  if(!ids.length){ toast('❌ لا طلبات مؤكدة','err'); return; }
+  await downloadPDF(ids);
+};
+
+window.downloadPDF = async function(oidOrIds){
+  var ids = Array.isArray(oidOrIds) ? oidOrIds : [oidOrIds];
+  var orders = ids.map(function(id){ return state.confirmed.find(function(x){ return x.id===id; }); }).filter(Boolean);
+  if(!orders.length){ toast('❌ لا طلبات','err'); return; }
+  if(typeof html2pdf === 'undefined'){ toast('⏳ تحميل PDF...','info'); setTimeout(function(){ downloadPDF(oidOrIds); },1500); return; }
+  if(!state.suppliers.length) await loadSuppliers();
+  var sup = state.suppliers[0] || null;
+  var supName = sup ? sup.name : 'مورد قسم ' + catLabel(state.cat);
+  var supPhone = sup ? sup.phone : '';
   var dateStr = new Date().toLocaleString('ar');
-  var total = items.reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
-  var html = '<div style="padding:20px;font-family:Arial,sans-serif;direction:rtl;max-width:800px;color:#333;background:#fff">'+
-    '<div style="text-align:center;border-bottom:3px solid #a855f7;padding-bottom:15px;margin-bottom:20px">'+
-      '<h1 style="color:#a855f7;margin:0;font-size:36px">CHIZEN</h1>'+
-      '<h2 style="margin:10px 0;font-size:20px">كشف استلام — '+esc(catLabel(state.cat))+'</h2>'+
-      '<p style="color:#666">#'+oid.slice(-6).toUpperCase()+'</p>'+
-    '</div>'+
-    '<table style="width:100%;margin-bottom:20px;border-collapse:collapse;font-size:14px">'+
-      '<tr><td style="padding:8px;background:#f9fafb;width:35%;font-weight:600">👤 العميل:</td><td style="padding:8px;font-weight:bold">'+esc(o.name||o.customerName||'—')+'</td></tr>'+
-      '<tr><td style="padding:8px;background:#f9fafb;font-weight:600">📱 الهاتف:</td><td style="padding:8px">'+esc(o.phone||o.customerPhone||'—')+'</td></tr>'+
-      '<tr><td style="padding:8px;background:#f9fafb;font-weight:600">📍 العنوان:</td><td style="padding:8px">'+esc(o.deliveryAddress||o.address||o.pickup||'—')+'</td></tr>'+
-      '<tr><td style="padding:8px;background:#f9fafb;font-weight:600">📅 التاريخ:</td><td style="padding:8px">'+dateStr+'</td></tr>'+
-    '</table>'+
-    '<h3 style="color:#a855f7">🛒 المنتجات</h3>'+
-    '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#a855f7;color:#fff">'+
-      '<th style="padding:10px;text-align:right;border:1px solid #7c3aed">المنتج</th><th style="padding:10px;text-align:center;border:1px solid #7c3aed">الكمية</th><th style="padding:10px;text-align:center;border:1px solid #7c3aed">السعر</th><th style="padding:10px;text-align:center;border:1px solid #7c3aed">المجموع</th>'+
-    '</tr></thead><tbody>'+
-    items.map(it=>'<tr><td style="padding:8px;border:1px solid #ddd">'+esc(it.name||'—')+'</td><td style="padding:8px;border:1px solid #ddd;text-align:center">'+(it.qty||1)+'</td><td style="padding:8px;border:1px solid #ddd;text-align:center">'+(it.price||0)+'</td><td style="padding:8px;border:1px solid #ddd;text-align:center">'+((Number(it.price)||0)*(Number(it.qty)||1))+'</td></tr>').join('')+
-    '</tbody></table>'+
-    '<div style="margin-top:20px;padding:15px;background:#f3e8ff;border-radius:10px;text-align:left;font-size:18px;font-weight:bold;border:2px solid #a855f7">إجمالي القسم: '+total.toFixed(0)+' ر.ي</div>'+
-    '<div style="text-align:center;margin-top:40px;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:20px">CHIZEN — كشف استلام</div>'+
+
+  var rows = '';
+  var totalItemsCount = 0;
+  orders.forEach(function(o, idx){
+    var c = (o.categories[state.cat])||{};
+    var items = c.items||[];
+    var totalQty = items.reduce(function(s,i){ return s+(Number(i.qty)||1); },0);
+    totalItemsCount += totalQty;
+    rows += '<tr style="background:#f3e8ff"><td colspan="3" style="padding:10px;font-weight:900;color:#7c3aed;border:1px solid #c4b5fd">طلب #'+o.id.slice(-6).toUpperCase()+' — '+totalQty+' قطعة</td></tr>';
+    items.forEach(function(it){
+      rows += '<tr>' +
+        '<td style="padding:8px;border:1px solid #ddd;text-align:right">'+esc(it.name||'—')+'</td>' +
+        '<td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:700">'+(it.qty||1)+'</td>' +
+        '<td style="padding:8px;border:1px solid #ddd;text-align:center;color:#059669;font-weight:700">✓</td>' +
+      '</tr>';
+    });
+  });
+
+  var html = '<div style="padding:20px;font-family:Arial,sans-serif;direction:rtl;max-width:800px;color:#333;background:#fff">' +
+    '<div style="text-align:center;border-bottom:3px solid #a855f7;padding-bottom:15px;margin-bottom:20px">' +
+      '<h1 style="color:#a855f7;margin:0;font-size:36px;letter-spacing:2px">CHIZEN</h1>' +
+      '<h2 style="margin:10px 0;font-size:20px;color:#333">كشف تجهيز طلبات</h2>' +
+      '<p style="color:#666;font-size:13px">للتسليم إلى: <b style="color:#7c3aed">'+esc(supName)+'</b></p>' +
+    '</div>' +
+    '<table style="width:100%;margin-bottom:20px;border-collapse:collapse;font-size:14px">' +
+      '<tr><td style="padding:10px;background:#f9fafb;width:35%;font-weight:700">🏪 المورد:</td><td style="padding:10px;font-weight:800">'+esc(supName)+'</td></tr>' +
+      (supPhone?'<tr><td style="padding:10px;background:#f9fafb;font-weight:700">📱 الهاتف:</td><td style="padding:10px">'+esc(supPhone)+'</td></tr>':'') +
+      '<tr><td style="padding:10px;background:#f9fafb;font-weight:700">🏷️ القسم:</td><td style="padding:10px">'+esc(catLabel(state.cat))+'</td></tr>' +
+      '<tr><td style="padding:10px;background:#f9fafb;font-weight:700">📅 التاريخ:</td><td style="padding:10px">'+dateStr+'</td></tr>' +
+      '<tr><td style="padding:10px;background:#f9fafb;font-weight:700">📦 عدد الطلبات:</td><td style="padding:10px">'+orders.length+' طلب</td></tr>' +
+    '</table>' +
+    '<h3 style="color:#a855f7;margin-bottom:12px">📋 قائمة الطلبات للتجهيز</h3>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+      '<thead><tr style="background:#a855f7;color:#fff">' +
+        '<th style="padding:10px;text-align:right;border:1px solid #7c3aed;width:60%">المنتج</th>' +
+        '<th style="padding:10px;text-align:center;border:1px solid #7c3aed;width:20%">الكمية</th>' +
+        '<th style="padding:10px;text-align:center;border:1px solid #7c3aed;width:20%">الحالة</th>' +
+      '</tr></thead>' +
+      '<tbody>'+rows+'</tbody>' +
+    '</table>' +
+    '<div style="margin-top:20px;padding:15px;background:#fef3c7;border-radius:10px;border:2px solid #f59e0b;font-size:13px;color:#92400e">' +
+      '<div style="font-weight:900;margin-bottom:6px">🚚 تنبيه مهم:</div>' +
+      '<div>سيزورك مندوب CHIZEN لاستلام هذه الطلبات ('+totalItemsCount+' قطعة إجمالاً).</div>' +
+      '<div style="margin-top:4px">الرجاء تجهيزها في أقرب وقت ممكن.</div>' +
+    '</div>' +
+    '<div style="text-align:center;margin-top:30px;color:#999;font-size:11px;border-top:1px solid #eee;padding-top:15px">' +
+      'CHIZEN — نظام إدارة الطلبات<br>' +
+      'هذا الكشف لا يحتوي على بيانات العميل — يتم إدارتها مركزياً<br>' +
+      'طُبع في: '+dateStr +
+    '</div>' +
   '</div>';
+
   var el = document.createElement('div');
   el.innerHTML = html;
-  html2pdf().from(el).set({margin:10, filename:'CHIZEN-CAT-'+oid.slice(-6).toUpperCase()+'.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'p'}}).save()
-    .then(()=>toast('✅ تم تحميل PDF','ok'))
-    .catch(e=>toast('❌ '+e.message,'err'));
+  var fname = 'CHIZEN-ORDER-' + (orders.length === 1 ? orders[0].id.slice(-6).toUpperCase() : 'BATCH-'+orders.length);
+  html2pdf().from(el).set({
+    margin:10,
+    filename: fname + '.pdf',
+    image:{type:'jpeg',quality:0.98},
+    html2canvas:{scale:2,useCORS:true},
+    jsPDF:{unit:'mm',format:'a4',orientation:'p'}
+  }).save().then(function(){ toast('✅ تم تحميل PDF','ok'); }).catch(function(e){ toast('❌ '+e.message,'err'); });
 };
 
 // ═══ LOGOUT ═══
@@ -906,6 +1108,8 @@ async function loadProducts(){
   try {
     var snap = await db.collection('products').where('category','==',state.cat).get();
     state.products = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    // Pre-load suppliers for faster form opening
+    if(!state.suppliers.length) await loadSuppliers();
     if(state.activeTab==='products') render();
   } catch(e){ console.warn('[products]', e.message); }
 }
