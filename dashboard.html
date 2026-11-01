@@ -205,32 +205,54 @@ function logout(){
   }
 }
 
-auth.onAuthStateChanged(async function(user){
+// ═══ Auth Guard مع حماية من الحلقة ═══
+var __dashInitDone = false;
+
+async function waitForAuth(){
+  if (auth.currentUser) return auth.currentUser;
+  return new Promise(function(resolve){
+    var settled = false;
+    var unsub = auth.onAuthStateChanged(function(u){
+      if (settled) return;
+      if (u) { settled = true; unsub(); resolve(u); }
+    });
+    setTimeout(function(){
+      if (!settled) { settled = true; unsub(); resolve(auth.currentUser); }
+    }, 5000);
+  });
+}
+
+async function initAdminDashboard(){
+  var errEl = document.getElementById('error');
+  if(errEl) errEl.style.display = 'none';
+
+  var user = await waitForAuth();
+
   if (!user) {
-    await new Promise(function(r){ setTimeout(r, 2000); });
-    if (!auth.currentUser) { location.href = 'admin-login.html'; return; }
-    user = auth.currentUser;
-  }
-  
-  try {
-    var isSuper = false;
-    var legacyDoc = await db.collection('admins').doc(user.uid).get();
-    if (legacyDoc.exists) {
-      var _lr = legacyDoc.data().role;
-      // فقط super_admin (أو legacy بدون role) يُعتبر super
-      if (_lr === 'super_admin' || _lr === 'superadmin') isSuper = true;
-    }
-    else {
-      var udoc = await db.collection('users').doc(user.uid).get();
-      if (udoc.exists && udoc.data().role === 'super_admin') isSuper = true;
-    }
-    
-    if (!isSuper) {
-      try { await auth.signOut(); } catch(e){}
-      showError('غير مصرح', 'هذا الحساب ليس مديراً عاماً.', '🔐 دخول الأدمن');
+    if (sessionStorage.getItem('__dashLoop')){
+      sessionStorage.removeItem('__dashLoop');
+      showError('فشل الدخول', 'لم نتمكن من تحميل الجلسة. أعد تسجيل الدخول.', '🔐 تسجيل الدخول');
       return;
     }
-    
+    sessionStorage.setItem('__dashLoop', '1');
+    location.href = 'admin-login.html';
+    return;
+  }
+
+  try {
+    var adminDoc = await db.collection('admins').doc(user.uid).get();
+    var userDoc = await db.collection('users').doc(user.uid).get();
+    var adminRole = adminDoc.exists ? adminDoc.data().role : null;
+    var userRole = userDoc.exists ? userDoc.data().role : null;
+    var isSuper = (adminRole === 'super_admin' || adminRole === 'superadmin' || userRole === 'super_admin');
+
+    if (!isSuper) {
+      showError('غير مصرح', 'هذا الحساب (' + (adminRole || userRole || 'مستخدم') + ') ليس مديراً عاماً.', '🔐 دخول الأدمن');
+      return;
+    }
+
+    sessionStorage.removeItem('__dashLoop');
+    __dashInitDone = true;
     state.user = user;
     await loadAll();
     showMain();
@@ -238,9 +260,17 @@ auth.onAuthStateChanged(async function(user){
     updateReviewBadge();
     updatePaymentsBadge();
   } catch(e){
+    console.error('Init failed:', e);
     showError('خطأ', e.message || 'فشل تحميل البيانات', '🔄 إعادة المحاولة');
   }
+}
+
+// مراقب ما بعد التهيئة (للخروج الفعلي فقط)
+auth.onAuthStateChanged(function(u){
+  if (__dashInitDone && !u) location.href = 'admin-login.html';
 });
+
+initAdminDashboard();
 
 async function loadAll(){
   var results = await Promise.all([
