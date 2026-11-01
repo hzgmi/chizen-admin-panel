@@ -384,6 +384,19 @@ window.confirmReceipt = async function(id){
   
   try {
     var commissionAmount = 10;
+    // Try config/settings first, then config/commission_rates (legacy)
+    try {
+      var st = await db.collection('config').doc('settings').get();
+      if(st.exists && st.data().commission_rates && st.data().commission_rates.delivery_mgr){
+        commissionAmount = Number(st.data().commission_rates.delivery_mgr);
+      } else {
+        var cfg = await db.collection('config').doc('commission_rates').get();
+        if(cfg.exists && cfg.data().delivery_mgr){
+          commissionAmount = Number(cfg.data().delivery_mgr);
+        }
+      }
+    } catch(e){ console.warn('[commission config]', e.message); }
+    
     // 1. Update receipt
     await db.collection('receipts').doc(id).update({
       status: 'confirmed',

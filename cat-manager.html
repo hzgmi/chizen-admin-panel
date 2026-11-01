@@ -462,8 +462,9 @@ async function handleAuth(u){
     document.getElementById('app').classList.remove('hidden');
     bootDone();
     attachNav();
+    await __loadChizenSettings();
     startListeners();
-    loadProducts();
+    await loadProducts();
     render();
   } catch(e){ bootSet('❌ '+e.message,'err'); clearTimeout(initTimer); }
 }
@@ -813,7 +814,7 @@ window.openProductForm = async function(pid){
   document.getElementById('pf-oldprice').value = p ? (p.oldPrice||'') : '';
   document.getElementById('pf-cost').value = p ? (p.cost||'') : '';
   document.getElementById('pf-stock').value = p ? (p.stock||'') : '';
-  document.getElementById('pf-threshold').value = p ? (p.lowStockThreshold||5) : 5;
+  document.getElementById('pf-threshold').value = p ? (p.lowStockThreshold || window.__getLowStockThreshold()) : window.__getLowStockThreshold();
   state.formImages = p && Array.isArray(p.images) ? p.images.slice() : (p && p.img ? [p.img] : []);
   state.formSizes = p && Array.isArray(p.sizes) ? p.sizes.slice() : [];
   state.formSizeStock = p && p.sizeStock ? Object.assign({}, p.sizeStock) : {};
@@ -904,7 +905,7 @@ window.saveProduct = async function(){
     oldPrice: Number(document.getElementById('pf-oldprice').value)||0,
     cost: Number(document.getElementById('pf-cost').value)||0,
     stock: Number(document.getElementById('pf-stock').value)||0,
-    lowStockThreshold: Number(document.getElementById('pf-threshold').value)||5,
+    lowStockThreshold: Number(document.getElementById('pf-threshold').value) || window.__getLowStockThreshold(),
     category: state.cat,
     categories: [state.cat],
     sizes: state.formSizes,
