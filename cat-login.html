@@ -10,8 +10,11 @@ body{font-family:system-ui;background:#0a0825;color:#fff;display:flex;justify-co
 h1{color:#a855f7;margin-bottom:5px;font-size:24px}
 p{color:#9ca3af;font-size:13px;margin-bottom:20px}
 input{width:100%;padding:14px;margin-bottom:12px;border-radius:10px;border:1px solid #374151;background:#1f2937;color:#fff;box-sizing:border-box;font-family:inherit;font-size:15px}
+input:focus{outline:none;border-color:#a855f7}
 button{width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;font-weight:900;font-size:16px;cursor:pointer;font-family:inherit}
-#err{color:#ef4444;font-size:13px;margin-top:12px;min-height:20px}
+button:disabled{opacity:0.6;cursor:not-allowed}
+#err{color:#ef4444;font-size:13px;margin-top:12px;min-height:20px;line-height:1.4}
+#status{color:#6ee7b7;font-size:12px;margin-top:8px;min-height:16px}
 </style>
 </head>
 <body>
@@ -20,40 +23,79 @@ button{width:100%;padding:14px;border-radius:10px;background:linear-gradient(135
   <p>بوابة مدير القسم</p>
   <input id="email" type="email" placeholder="البريد الإلكتروني" value="mna783130578@gmail.com">
   <input id="password" type="password" placeholder="كلمة المرور">
-  <button id="btn" onclick="window.doLogin()">🔐 دخول</button>
+  <button id="btn" onclick="doLogin()">🔐 دخول</button>
   <div id="err"></div>
+  <div id="status"></div>
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
 if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
-window.doLogin = function() {
+var auth = firebase.auth();
+
+// فحص أولي: إذا كان المستخدم مسجل بالفعل، حوّل مباشرة
+auth.onAuthStateChanged(function(u){
+  if(u && !window.__loggingIn){
+    document.getElementById('status').textContent = '✅ أنت مسجل: ' + u.email + ' — جاري التحويل...';
+    setTimeout(function(){ location.href = 'cat-manager.html'; }, 500);
+  }
+});
+
+window.doLogin = async function(){
+  window.__loggingIn = true;
   var em = document.getElementById('email').value.trim();
   var pw = document.getElementById('password').value;
   var err = document.getElementById('err');
+  var status = document.getElementById('status');
   var btn = document.getElementById('btn');
-  if(!em || !pw) { err.textContent = '❌ املأ الحقول'; return; }
-  btn.disabled = true; btn.textContent = '⏳ جاري التحقق...'; err.textContent = '';
-  firebase.auth().signInWithEmailAndPassword(em, pw).then(function(cred) {
-    firebase.firestore().collection('users').doc(cred.user.uid).get().then(function(doc) {
-      var role = doc.exists ? doc.data().role : 'customer';
-      if(role === 'cat_manager') {
-        window.location.href = 'cat-manager.html';
-      } else {
-        err.textContent = '⛔ لست مدير قسم (دورك: ' + role + ')';
-        firebase.auth().signOut();
-        btn.disabled = false; btn.textContent = '🔐 دخول';
-      }
-    });
-  }).catch(function(e) {
-    err.textContent = '❌ ' + e.message;
-    btn.disabled = false; btn.textContent = '🔐 دخول';
-  });
+  
+  err.textContent = '';
+  status.textContent = '';
+  
+  if(!em || !pw){ err.textContent = '❌ املأ الحقول'; window.__loggingIn = false; return; }
+  
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري التحقق...';
+  status.textContent = '📡 إرسال الطلب...';
+  
+  // timeout احتياطي (15 ثانية)
+  var timeout = setTimeout(function(){
+    if(btn.disabled){
+      err.textContent = '⏱️ انتهت المهلة — تحقق من الإنترنت';
+      btn.disabled = false;
+      btn.textContent = '🔐 دخول';
+      window.__loggingIn = false;
+    }
+  }, 15000);
+  
+  try {
+    status.textContent = '🔐 التحقق من البيانات...';
+    var cred = await auth.signInWithEmailAndPassword(em, pw);
+    clearTimeout(timeout);
+    
+    status.textContent = '✅ تم الدخول: ' + cred.user.email + ' — جاري التحويل...';
+    btn.textContent = '✅ جاري التحويل...';
+    
+    // تحويل فوري — بدون أي فحص إضافي
+    setTimeout(function(){
+      location.href = 'cat-manager.html';
+    }, 300);
+    
+  } catch(e) {
+    clearTimeout(timeout);
+    err.textContent = '❌ ' + (e.code || e.message);
+    status.textContent = '';
+    btn.disabled = false;
+    btn.textContent = '🔐 دخول';
+    window.__loggingIn = false;
+    console.error('[LOGIN ERROR]', e.code, e.message);
+  }
 };
-firebase.auth().onAuthStateChanged(function(u) {
-  if(u) window.location.href = 'cat-manager.html';
+
+// enter key
+document.getElementById('password').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') doLogin();
 });
 </script>
 </body>
