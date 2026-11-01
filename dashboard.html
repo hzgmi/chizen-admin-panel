@@ -124,7 +124,7 @@ body{background:radial-gradient(ellipse at 50% 0%,rgba(124,58,237,0.18) 0%,trans
 <body>
 
 <div class="vloading" id="loading"><div class="vspin"></div><div class="vload-txt">جاري التحميل...</div></div>
-<div class="verror" id="error" style="display:none"><div class="verror-box"><div class="verror-icon" id="errIcon">⚠️</div><div class="verror-title" id="errTitle">خطأ</div><div class="verror-msg" id="errMsg"></div><a href="admin-login.html" class="verror-btn" id="errBtn">العودة للدخول</a></div></div>
+<div class="verror" id="error" style="display:none"><div class="verror-box"><div class="verror-icon" id="errIcon">⚠️</div><div class="verror-title" id="errTitle">خطأ</div><div class="verror-msg" id="errMsg"></div><a href="admin-login.html" class="verror-btn" id="errBtn">🔐 تسجيل الدخول</a></div></div>
 
 <div id="main" style="display:none">
   <div class="vh">
@@ -225,7 +225,7 @@ auth.onAuthStateChanged(async function(user){
     }
     
     if (!isSuper) {
-      showError('غير مصرح', 'هذه اللوحة مخصصة للإدارة العامة فقط. عد للصفحة الرئيسية.', '🏠 العودة');
+      showError('غير مصرح', 'هذه اللوحة مخصصة للإدارة العامة فقط.', '🔐 دخول الأدمن');
       return;
     }
     
