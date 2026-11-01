@@ -65,12 +65,15 @@ btn.onclick = async function(){
     var role = udoc.exists ? (udoc.data().role || 'customer') : 'customer';
     var adoc = await db.collection('admins').doc(u.uid).get();
     var adminRole = adoc.exists ? adoc.data().role : null;
-    if (adminRole === 'super_admin' || adminRole === 'superadmin' || role === 'super_admin') {
+    // ⚠️ صارم: super_admin فقط
+    var isSuperAdmin = (adminRole === 'super_admin' || adminRole === 'superadmin' || role === 'super_admin');
+    if (isSuperAdmin) {
       btn.textContent = '✅ مرحباً — جاري التحويل...';
       setTimeout(function(){ location.href = 'dashboard.html'; }, 500);
     } else {
       await auth.signOut();
-      errEl.textContent = '⛔ هذا الحساب ليس مديراً عاماً (دورك: ' + (adminRole || role) + ')';
+      var currentRole = adminRole || role || 'customer';
+      errEl.textContent = '⛔ هذا الحساب (' + currentRole + ') ليس مديراً عاماً. استخدم بوابة دورك.';
       btn.disabled = false; btn.textContent = '🔐 دخول آمن';
     }
   } catch(e) {
@@ -88,8 +91,9 @@ auth.onAuthStateChanged(async function(u){
   try {
     var udoc = await db.collection('users').doc(u.uid).get();
     var adoc = await db.collection('admins').doc(u.uid).get();
-    var role = adoc.exists ? adoc.data().role : (udoc.exists ? udoc.data().role : '');
-    if (role === 'super_admin' || role === 'superadmin' || role === 'super_admin') {
+    var ar = adoc.exists ? adoc.data().role : null;
+    var ur = udoc.exists ? udoc.data().role : null;
+    if (ar === 'super_admin' || ar === 'superadmin' || ur === 'super_admin') {
       location.href = 'dashboard.html';
     }
   } catch(e){}
