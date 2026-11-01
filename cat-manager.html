@@ -519,7 +519,7 @@ window.toggleItem = function(oid, idx, checked){
   if(card) card.disabled = !items.every(i=>i._catStatus !== false);
 };
 
-async function confirmOrder(oid){
+window.confirmOrder = async function(oid){
   if(!confirm('تأكيد توفر جميع منتجات هذا الطلب؟')) return;
   try {
     var o = state.pending.find(x=>x.id===oid);
@@ -557,7 +557,7 @@ async function confirmOrder(oid){
   } catch(e){ toast('❌ '+e.message,'err'); }
 }
 
-async function rejectOrder(oid){
+window.rejectOrder = async function(oid){
   var reason = prompt('سبب الرفض:');
   if(!reason || !reason.trim()) return;
   try {
@@ -623,7 +623,7 @@ function renderProducts(){
   return h;
 }
 
-function renderProductsGrid(query){
+window.renderProductsGrid = function(query){
   var el = document.getElementById('products-grid');
   if(!el) return;
   var arr = state.products;
@@ -753,7 +753,7 @@ window.openProductForm = async function(pid){
 
 window.closeProductForm = function(){ document.getElementById('product-form').classList.add('hidden'); };
 
-function renderFormImages(){
+window.renderFormImages = function(){
   var el = document.getElementById('pf-images');
   var imgs = state.formImages.map((url, i)=>{
     return '<div class="form-image"><img src="'+esc(url)+'"><button class="form-image-remove" onclick="removeFormImage('+i+')">✕</button></div>';
