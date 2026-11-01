@@ -355,6 +355,34 @@ function renderHome(){
     + '<div class="vlist">' + (recentHtml || '<div class="vempty"><div class="vempty-icon">✨</div><div class="vempty-txt">لا توجد طلبات بعد</div></div>') + '</div>';
 }
 
+var STAGE_INFO = {
+  'pending_payment': {label:'⏳ دفع معلق', group:'needs_action', cls:'pending'},
+  'payment_confirmed': {label:'✅ دفع مؤكد', group:'in_progress', cls:'shipped'},
+  'checking_availability': {label:'🔍 قيد التوفر', group:'in_progress', cls:'shipped'},
+  'confirmed': {label:'🏷️ مؤكد', group:'in_progress', cls:'shipped'},
+  'preparing': {label:'📦 قيد التجهيز', group:'in_progress', cls:'shipped'},
+  'ready_for_pickup': {label:'🚚 جاهز للاستلام', group:'in_progress', cls:'shipped'},
+  'picked_up': {label:'📥 مستلم', group:'in_progress', cls:'shipped'},
+  'on_the_way': {label:'🛣️ في الطريق', group:'in_progress', cls:'shipped'},
+  'delivered': {label:'✅ مسلّم', group:'in_progress', cls:'shipped'},
+  'completed': {label:'🏁 مكتمل', group:'done', cls:'done'},
+  'cancelled': {label:'❌ ملغى', group:'cancelled', cls:'rejected'},
+  'payment_rejected': {label:'❌ دفع مرفوض', group:'cancelled', cls:'rejected'},
+  'problem': {label:'⚠️ مشكلة', group:'needs_action', cls:'rejected'},
+  'refund_pending': {label:'💸 استرداد', group:'cancelled', cls:'rejected'},
+  'refunded': {label:'💸 مسترد', group:'cancelled', cls:'rejected'},
+  'return_pending': {label:'↩️ إرجاع', group:'cancelled', cls:'rejected'}
+};
+
+function getOrderStage(o){
+  if(!o) return 'pending_payment';
+  if(o.fulfillmentStage && STAGE_INFO[o.fulfillmentStage]) return o.fulfillmentStage;
+  var wsMap = {'awaiting_verification':'pending_payment','awaiting_categories':'checking_availability','ready_to_send':'ready_for_pickup','sent_to_customer':'on_the_way','delivered':'delivered','completed':'completed','payment_rejected':'payment_rejected'};
+  if(o.workflowStatus && wsMap[o.workflowStatus]) return wsMap[o.workflowStatus];
+  var sMap = {'pending':'pending_payment','shipped':'on_the_way','completed':'completed','cancelled':'cancelled'};
+  return sMap[o.status] || 'pending_payment';
+}
+
 function renderOrders(){
   var filter = state.ordersFilter;
   var filtered = state.orders.filter(function(o){
