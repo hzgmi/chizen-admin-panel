@@ -236,7 +236,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 </head>
 <body>
 
-<div id="login-screen" class="login-wrap hidden">
+<div id="login-screen" class="login-wrap">
   <h1>📦 CHIZEN</h1>
   <p>لوحة إدارة القسم</p>
   <input id="email" type="email" placeholder="البريد الإلكتروني">
@@ -555,6 +555,26 @@ window.doLogout=function(){
   auth.signOut().then(()=>location.href='cat-login.html');
 };
 
+// ═══ Timeout fallback: إن لم يستجب Firebase في 4 ثوان، أظهر صفحة الدخول ═══
+setTimeout(function(){
+  var ls = document.getElementById('login-screen');
+  var app = document.getElementById('app');
+  if(ls && app && app.classList.contains('hidden') && ls.classList.contains('hidden')){
+    ls.classList.remove('hidden');
+  }
+}, 4000);
+
+// ═══ Error handling global ═══
+window.addEventListener('error', function(e){
+  console.error('[GLOBAL ERROR]', e.message, e.filename, e.lineno);
+  var ls = document.getElementById('login-screen');
+  var errEl = document.getElementById('login-err');
+  if(ls){
+    ls.classList.remove('hidden');
+    if(errEl) errEl.textContent = '❌ خطأ: ' + e.message;
+  }
+});
+
 auth.onAuthStateChanged(async function(u){
   if(!u){document.getElementById('login-screen').classList.remove('hidden');document.getElementById('app').classList.add('hidden');return;}
   try{
@@ -576,7 +596,13 @@ auth.onAuthStateChanged(async function(u){
     startListeners();
     loadProducts();
     showView('home');
-  }catch(e){document.getElementById('login-err').textContent='❌ '+e.message;await auth.signOut();}
+  }catch(e){
+    console.error('[AUTH ERROR]', e);
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('login-err').textContent='❌ '+e.message;
+    try{ await auth.signOut(); }catch(x){}
+  }
 });
 
 // ═══ NAVIGATION ═══
