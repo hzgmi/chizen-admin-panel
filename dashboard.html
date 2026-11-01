@@ -1261,10 +1261,90 @@ async function showProductsList(){
   } catch(e){ toast('❌ ' + e.message, 'error'); }
 }
 
-window.__adminAddProduct = function(){ __openProductForm(null); };
+async function __loadAdminSuppliers(){
+  var list = [];
+  try {
+    var cfg = await db.collection('config').doc('suppliers').get();
+    if(cfg.exists){
+      var data = cfg.data();
+      if(Array.isArray(data.list)){
+        data.list.forEach(function(s){ if(s && s.name) list.push({name:s.name, phone:s.phone||'', category:s.category||''}); });
+      }
+    }
+  } catch(e){}
+  try {
+    var snap = await db.collection('suppliers').get();
+    snap.forEach(function(d){
+      var s = d.data();
+      if(s && s.name && !list.some(function(x){ return x.phone && x.phone === s.phone; })){
+        list.push({name:s.name, phone:s.phone||'', category:s.category||''});
+      }
+    });
+  } catch(e){}
+  window.__adminFormSuppliers = list;
+}
+
+function __renderAdminSizes(){
+  var chipsEl = document.getElementById('apf-sizes-chips');
+  var stockEl = document.getElementById('apf-sizes-stock');
+  if(!chipsEl) return;
+  chipsEl.innerHTML = ALL_SIZES.map(function(s){
+    var sel = window.__adminFormSizes.indexOf(s) > -1;
+    return '<button type="button" onclick="__toggleAdminSize(\'' + s + '\')" style="padding:8px 14px;border-radius:10px;font-weight:800;font-size:12px;font-family:inherit;cursor:pointer;border:1.5px solid ' + (sel ? 'transparent' : 'rgba(155,77,255,.3)') + ';background:' + (sel ? 'linear-gradient(135deg,#a855f7,#7c3aed)' : 'rgba(0,0,0,.3)') + ';color:' + (sel ? '#fff' : '#a78bfa') + '">' + s + '</button>';
+  }).join('');
+  if(stockEl){
+    if(!window.__adminFormSizes.length){ stockEl.innerHTML = ''; return; }
+    stockEl.innerHTML = '<div style="font-size:11px;color:#a78bfa;margin-bottom:6px;opacity:.8">مخزون كل مقاس:</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' + window.__adminFormSizes.map(function(s){
+      var v = window.__adminFormSizeStock[s] || 0;
+      return '<div style="padding:6px;background:rgba(0,0,0,.3);border-radius:8px;text-align:center"><div style="font-size:11px;font-weight:800;color:#a78bfa;margin-bottom:3px">' + s + '</div><input type="number" min="0" value="' + v + '" onchange="__setAdminSizeStock(\'' + s + '\',this.value)" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(155,77,255,.3);background:rgba(0,0,0,.4);color:#fff;text-align:center;font-size:12px;font-family:inherit;box-sizing:border-box"></div>';
+    }).join('') + '</div>';
+  }
+}
+window.__toggleAdminSize = function(s){
+  var i = window.__adminFormSizes.indexOf(s);
+  if(i > -1) window.__adminFormSizes.splice(i, 1);
+  else window.__adminFormSizes.push(s);
+  __renderAdminSizes();
+};
+window.__setAdminSizeStock = function(s, v){ window.__adminFormSizeStock[s] = parseInt(v) || 0; };
+
+function __renderAdminColors(){
+  var el = document.getElementById('apf-colors-list');
+  if(!el) return;
+  if(!window.__adminFormColors.length){ el.innerHTML = '<div style="font-size:11px;color:#a78bfa;opacity:.6;padding:6px">لا ألوان بعد</div>'; return; }
+  el.innerHTML = window.__adminFormColors.map(function(c, i){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.3);border:1px solid rgba(155,77,255,.3);font-size:12px;font-weight:700"><span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:' + esc(c.hex||'#000') + '"></span><span>' + esc(c.name||'—') + '</span><button type="button" onclick="__removeAdminColor(' + i + ')" style="background:rgba(239,68,68,.2);color:#f87171;border:none;width:18px;height:18px;border-radius:50%;font-size:10px;cursor:pointer;font-family:inherit">✕</button></div>';
+  }).join('');
+}
+window.__addAdminColor = function(){
+  var nameEl = document.getElementById('apf-new-color-name');
+  var hexEl = document.getElementById('apf-new-color-hex');
+  var name = (nameEl.value||'').trim();
+  if(!name){ toast('❌ أدخل اسم اللون', 'error'); return; }
+  window.__adminFormColors.push({name:name, hex:hexEl.value||'#000000'});
+  nameEl.value = '';
+  __renderAdminColors();
+};
+window.__removeAdminColor = function(i){ window.__adminFormColors.splice(i, 1); __renderAdminColors(); };
+
+function __renderAdminSuppliers(selectedPhone){
+  var sel = document.getElementById('apf-supplier');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— بدون مورد —</option>';
+  window.__adminFormSuppliers.forEach(function(s, i){
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = s.name + (s.phone ? ' — ' + s.phone : '');
+    if(selectedPhone && s.phone === selectedPhone) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+window.__adminAddProduct = async function(){ await __loadAdminSuppliers(); __openProductForm(null); };
 
 window.__adminEditProduct = async function(id){
   try {
+    await __loadAdminSuppliers();
     var doc = await db.collection('products').doc(id).get();
     if(!doc.exists){ toast('❌ المنتج غير موجود', 'error'); return; }
     var p = Object.assign({id: doc.id}, doc.data());
@@ -1283,12 +1363,21 @@ window.__adminDeleteProduct = async function(id){
 };
 
 window.__currentProductImages = [];
+window.__adminFormSizes = [];
+window.__adminFormSizeStock = {};
+window.__adminFormColors = [];
+window.__adminFormSuppliers = [];
+var ALL_SIZES = ['XS','S','M','L','XL','XXL','3XL','36','38','40','42','44'];
+
 window.__currentProductId = null;
 
 function __openProductForm(p){
   var isEdit = !!(p && p.id);
   window.__currentProductId = isEdit ? p.id : null;
   window.__currentProductImages = isEdit ? (p.images || (p.img ? [p.img] : [])) : [];
+  window.__adminFormSizes = isEdit && Array.isArray(p.sizes) ? p.sizes.slice() : [];
+  window.__adminFormSizeStock = isEdit && p.sizeStock ? Object.assign({}, p.sizeStock) : {};
+  window.__adminFormColors = isEdit && Array.isArray(p.colors) ? p.colors.map(function(c){ return Object.assign({}, c); }) : [];
   var cats = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',shoes_bags:'أحذية وحقائب',beauty:'جمال وعطور',kids_sports:'أطفال ورياضة',home:'منزل وأثاث',supermarket:'سوبرماركت',sports:'رياضة',kids:'أطفال',tools:'أدوات'};
   
   var html = '<div style="text-align:right;max-height:75vh;overflow-y:auto;padding:2px;font-size:13px">';
@@ -1316,6 +1405,18 @@ function __openProductForm(p){
   Object.keys(cats).forEach(function(c){ html += '<option value="' + c + '"' + ((p&&p.category) === c ? ' selected' : '') + '>' + cats[c] + '</option>'; });
   html += '</select>';
   
+  html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px;font-size:12px">📏 المقاسات</div>';
+  html += '<div id="apf-sizes-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>';
+  html += '<div id="apf-sizes-stock" style="margin-bottom:12px"></div>';
+  html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px;font-size:12px">🎨 الألوان</div>';
+  html += '<div id="apf-colors-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>';
+  html += '<div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:12px">';
+  html += '<input id="apf-new-color-name" placeholder="اسم اللون" style="padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box">';
+  html += '<div style="display:flex;gap:6px"><input id="apf-new-color-hex" type="color" value="#a855f7" style="width:50px;padding:4px;cursor:pointer;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3)"><button type="button" onclick="__addAdminColor()" style="background:#a855f7;color:#fff;border:none;border-radius:10px;font-weight:800;cursor:pointer;font-family:inherit;padding:0 16px">+</button></div>';
+  html += '</div>';
+  html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px;font-size:12px">🏪 المورد</div>';
+  html += '<select id="apf-supplier" style="width:100%;padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;margin-bottom:12px"></select>';
+  html += '<input id="apf-threshold" type="number" placeholder="حد التنبيه للمخزون (افتراضي 5)" value="' + ((p&&p.lowStockThreshold)||5) + '" style="width:100%;padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;margin-bottom:12px;box-sizing:border-box">';
   html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px;font-size:12px">🖼️ الصور</div>';
   html += '<div id="apf-images" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px"></div>';
   html += '<label style="display:block;padding:12px;border:2px dashed rgba(155,77,255,0.4);border-radius:10px;text-align:center;cursor:pointer;color:#a78bfa;font-weight:800;font-size:12px;margin-bottom:12px"><input type="file" accept="image/*" multiple id="apf-file" style="display:none" onchange="__handleProductImages(this)">📸 اختر صور من الهاتف</label>';
@@ -1333,6 +1434,9 @@ function __openProductForm(p){
   html += '</div>';
   showModal(isEdit ? '✏️ تعديل المنتج' : '➕ إضافة منتج', html);
   __renderProductImages();
+  __renderAdminSizes();
+  __renderAdminColors();
+  __renderAdminSuppliers(isEdit ? p.supplierPhone : null);
 }
 
 function __renderProductImages(){
@@ -1389,8 +1493,19 @@ window.__adminSaveProduct = async function(){
   if(!name || price <= 0){ toast('❌ أدخل الاسم والسعر', 'error'); return; }
   if(!window.__currentProductImages.length){ toast('❌ أضف صورة واحدة على الأقل', 'error'); return; }
   var cat = document.getElementById('apf-category').value;
+  var supIdx = document.getElementById('apf-supplier').value;
+  var sup = (supIdx !== '' && window.__adminFormSuppliers[parseInt(supIdx)]) ? window.__adminFormSuppliers[parseInt(supIdx)] : null;
+  var thEl = document.getElementById('apf-threshold');
   var data = {
     name: name,
+    sizes: window.__adminFormSizes,
+    sizeStock: window.__adminFormSizeStock,
+    colors: window.__adminFormColors,
+    lowStockThreshold: thEl ? (Number(thEl.value)||5) : 5,
+    supplierId: sup ? (sup.phone || sup.name) : null,
+    supplierName: sup ? sup.name : null,
+    supplierPhone: sup ? sup.phone : null,
+    isActive: true,
     brand: document.getElementById('apf-brand').value.trim(),
     sku: document.getElementById('apf-sku').value.trim(),
     description: document.getElementById('apf-desc').value.trim(),
