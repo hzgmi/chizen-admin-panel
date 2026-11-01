@@ -1212,17 +1212,216 @@ async function showProductsList(){
   try {
     var snap = await db.collection('products').get();
     var products = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
-    var html = products.length ? products.map(function(p){
-      var status = p.status === 'live' ? '🟢 منشور' : (p.status === 'pending_review' ? '🟡 مراجعة' : (p.status === 'rejected' ? '🔴 مرفوض' : '⚪ مسودة'));
-      return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(155,77,255,0.1)">'
-        + '<img src="' + (p.img||'') + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px;background:#333" onerror="this.style.opacity=0.3">'
-        + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.name||'') + '</div>'
-        + '<div style="font-size:10px;color:#a78bfa">' + normName(p.brand) + ' · ' + (p.category||'') + ' · ' + (Number(p.price)||0).toFixed(0) + ' ر</div>'
-        + '<div style="font-size:10px;color:#a78bfa;margin-top:2px">' + status + '</div></div></div>';
+    var pending = products.filter(function(p){ return p.status === 'pending_review'; }).length;
+    var header = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px"><div><div style="font-size:13px;color:#a78bfa;font-weight:800">' + products.length + ' منتج</div>' + (pending > 0 ? '<div style="font-size:11px;color:#fbbf24;margin-top:2px">⏳ ' + pending + ' بانتظار المراجعة</div>' : '') + '</div><button onclick="__adminAddProduct()" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;padding:10px 16px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">➕ إضافة منتج</button></div>';
+    var html_list = products.length ? products.map(function(p){
+      var si = p.status === 'live' ? {i:'✅', l:'منشور', c:'#22c55e'} : p.status === 'pending_review' ? {i:'⏳', l:'مراجعة', c:'#f59e0b'} : p.status === 'rejected' ? {i:'❌', l:'مرفوض', c:'#ef4444'} : {i:'⚪', l:'مسودة', c:'#a78bfa'};
+      var img = p.img || (p.images && p.images[0]) || '';
+      return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(155,77,255,0.1);align-items:center">'
+        + '<img src="' + img + '" style="width:52px;height:52px;object-fit:cover;border-radius:8px;background:#333;flex-shrink:0" onerror="this.style.opacity=0.3">'
+        + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.name||'—') + '</div>'
+        + '<div style="font-size:10px;color:#a78bfa">' + esc(normName(p.brand)) + ' · ' + esc(p.category||'') + ' · ' + (Number(p.price)||0).toFixed(0) + ' ر</div>'
+        + '<div style="font-size:10px;color:' + si.c + ';margin-top:2px;font-weight:700">' + si.i + ' ' + si.l + '</div></div>'
+        + '<button onclick="__adminEditProduct(\'' + p.id + '\')" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;flex-shrink:0">✏️</button>'
+        + '<button onclick="__adminDeleteProduct(\'' + p.id + '\')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;flex-shrink:0">🗑</button>'
+        + '</div>';
     }).join('') : '<div class="vempty-txt">لا توجد منتجات</div>';
-    showModal('🛍️ المنتجات (' + products.length + ')', '<div style="max-height:60vh;overflow-y:auto">' + html + '</div>');
+    showModal('🛍️ المنتجات (' + products.length + ')', header + '<div style="max-height:60vh;overflow-y:auto">' + html_list + '</div>');
   } catch(e){ toast('❌ ' + e.message, 'error'); }
 }
+
+window.__adminAddProduct = function(){ __openProductForm(null); };
+
+window.__adminEditProduct = async function(id){
+  try {
+    var doc = await db.collection('products').doc(id).get();
+    if(!doc.exists){ toast('❌ المنتج غير موجود', 'error'); return; }
+    var p = Object.assign({id: doc.id}, doc.data());
+    __openProductForm(p);
+  } catch(e){ toast('❌ ' + e.message, 'error'); }
+};
+
+window.__adminDeleteProduct = async function(id){
+  if(!confirm('⚠️ حذف المنتج نهائياً؟')) return;
+  try {
+    await db.collection('products').doc(id).delete();
+    toast('✅ تم الحذف', 'success');
+    if(typeof closeModal === 'function') closeModal();
+    showProductsList();
+  } catch(e){ toast('❌ ' + e.message, 'error'); }
+};
+
+window.__currentProductImages = [];
+window.__currentProductId = null;
+
+function __openProductForm(p){
+  var isEdit = !!(p && p.id);
+  window.__currentProductId = isEdit ? p.id : null;
+  window.__currentProductImages = isEdit ? (p.images || (p.img ? [p.img] : [])) : [];
+  var cats = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',shoes_bags:'أحذية وحقائب',beauty:'جمال وعطور',kids_sports:'أطفال ورياضة',home:'منزل وأثاث',supermarket:'سوبرماركت',sports:'رياضة',kids:'أطفال',tools:'أدوات'};
+  
+  var html = '<div style="text-align:right;max-height:75vh;overflow-y:auto;padding:2px;font-size:13px">';
+  html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px;font-size:12px">📝 المعلومات</div>';
+  html += '<input id="apf-name" placeholder="اسم المنتج *" value="' + esc(p&&p.name||'') + '" style="width:100%;padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;margin-bottom:8px;box-sizing:border-box">';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+  html += '<input id="apf-brand" placeholder="الماركة" value="' + esc(p&&p.brand||'') + '" style="padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px">';
+  html += '<input id="apf-sku" placeholder="SKU" value="' + esc(p&&p.sku||'') + '" style="padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px">';
+  html += '</div>';
+  html += '<textarea id="apf-desc" placeholder="الوصف" style="width:100%;min-height:60px;padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;margin-bottom:12px;box-sizing:border-box;resize:vertical">' + esc(p&&p.description||'') + '</textarea>';
+  
+  html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px;font-size:12px">💰 التسعير والمخزون</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+  html += '<input id="apf-price" type="number" placeholder="السعر *" value="' + (p&&p.price||'') + '" style="padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px">';
+  html += '<input id="apf-oldprice" type="number" placeholder="السعر قبل الخصم" value="' + (p&&p.oldPrice||'') + '" style="padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px">';
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+  html += '<input id="apf-cost" type="number" placeholder="سعر التكلفة" value="' + (p&&p.cost||'') + '" style="padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px">';
+  html += '<input id="apf-stock" type="number" placeholder="المخزون" value="' + (p&&p.stock||'') + '" style="padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px">';
+  html += '</div>';
+  
+  html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px;font-size:12px">📂 القسم</div>';
+  html += '<select id="apf-category" style="width:100%;padding:11px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;margin-bottom:12px">';
+  html += '<option value="">— اختر —</option>';
+  Object.keys(cats).forEach(function(c){ html += '<option value="' + c + '"' + ((p&&p.category) === c ? ' selected' : '') + '>' + cats[c] + '</option>'; });
+  html += '</select>';
+  
+  html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px;font-size:12px">🖼️ الصور</div>';
+  html += '<div id="apf-images" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px"></div>';
+  html += '<label style="display:block;padding:12px;border:2px dashed rgba(155,77,255,0.4);border-radius:10px;text-align:center;cursor:pointer;color:#a78bfa;font-weight:800;font-size:12px;margin-bottom:12px"><input type="file" accept="image/*" multiple id="apf-file" style="display:none" onchange="__handleProductImages(this)">📸 اختر صور من الهاتف</label>';
+  
+  html += '<div style="display:flex;gap:8px">';
+  html += '<button onclick="__adminSaveProduct()" style="flex:1;padding:14px;border-radius:10px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit">💾 ' + (isEdit ? 'حفظ التعديلات' : 'إضافة المنتج') + '</button>';
+  html += '</div>';
+  
+  if (isEdit && p.status === 'pending_review') {
+    html += '<div style="display:flex;gap:8px;margin-top:8px">';
+    html += '<button onclick="__adminApproveProduct()" style="flex:1;padding:12px;border-radius:10px;background:rgba(34,197,94,0.2);color:#22c55e;border:1px solid rgba(34,197,94,0.4);font-weight:900;font-size:13px;cursor:pointer;font-family:inherit">✅ اعتماد ونشر</button>';
+    html += '<button onclick="__adminRejectProduct()" style="flex:1;padding:12px;border-radius:10px;background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid rgba(239,68,68,0.4);font-weight:900;font-size:13px;cursor:pointer;font-family:inherit">❌ رفض</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  showModal(isEdit ? '✏️ تعديل المنتج' : '➕ إضافة منتج', html);
+  __renderProductImages();
+}
+
+function __renderProductImages(){
+  var el = document.getElementById('apf-images');
+  if(!el) return;
+  el.innerHTML = window.__currentProductImages.map(function(url, i){
+    return '<div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:rgba(0,0,0,0.3);border:1px solid rgba(155,77,255,0.2)"><img src="' + url + '" style="width:100%;height:100%;object-fit:cover"><button onclick="__removeProductImage(' + i + ')" style="position:absolute;top:4px;right:4px;background:rgba(239,68,68,0.9);color:#fff;border:none;width:22px;height:22px;border-radius:50%;font-size:12px;cursor:pointer;font-family:inherit">✕</button></div>';
+  }).join('');
+}
+
+window.__removeProductImage = function(i){
+  window.__currentProductImages.splice(i, 1);
+  __renderProductImages();
+};
+
+window.__handleProductImages = async function(input){
+  var files = input.files;
+  if(!files || !files.length) return;
+  toast('⏳ جاري معالجة الصور...', 'info');
+  for(var i = 0; i < files.length; i++){
+    try {
+      var dataUrl = await __resizeImage(files[i]);
+      window.__currentProductImages.push(dataUrl);
+      __renderProductImages();
+    } catch(e){ toast('❌ ' + e.message, 'error'); }
+  }
+};
+
+function __resizeImage(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var canvas = document.createElement('canvas');
+        var MAX = 800;
+        var w = img.width, h = img.height;
+        if(w > h){ if(w > MAX){ h *= MAX/w; w = MAX; } } else { if(h > MAX){ w *= MAX/h; h = MAX; } }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.onerror = function(){ reject(new Error('فشل تحميل الصورة')); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ reject(new Error('فشل قراءة الملف')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+window.__adminSaveProduct = async function(){
+  var name = document.getElementById('apf-name').value.trim();
+  var price = Number(document.getElementById('apf-price').value);
+  if(!name || price <= 0){ toast('❌ أدخل الاسم والسعر', 'error'); return; }
+  if(!window.__currentProductImages.length){ toast('❌ أضف صورة واحدة على الأقل', 'error'); return; }
+  var cat = document.getElementById('apf-category').value;
+  var data = {
+    name: name,
+    brand: document.getElementById('apf-brand').value.trim(),
+    sku: document.getElementById('apf-sku').value.trim(),
+    description: document.getElementById('apf-desc').value.trim(),
+    price: price,
+    oldPrice: Number(document.getElementById('apf-oldprice').value) || 0,
+    cost: Number(document.getElementById('apf-cost').value) || 0,
+    stock: Number(document.getElementById('apf-stock').value) || 0,
+    category: cat,
+    categories: cat ? [cat] : [],
+    images: window.__currentProductImages,
+    img: window.__currentProductImages[0],
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: state.user.uid
+  };
+  try {
+    if(window.__currentProductId){
+      await db.collection('products').doc(window.__currentProductId).update(data);
+      toast('✅ تم حفظ التعديلات', 'success');
+    } else {
+      data.status = 'live';
+      data.active = true;
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      data.createdBy = state.user.uid;
+      await db.collection('products').add(data);
+      toast('✅ تمت إضافة المنتج', 'success');
+    }
+    if(typeof closeModal === 'function') closeModal();
+    showProductsList();
+  } catch(e){ toast('❌ ' + e.message, 'error'); }
+};
+
+window.__adminApproveProduct = async function(){
+  if(!window.__currentProductId) return;
+  try {
+    await db.collection('products').doc(window.__currentProductId).update({
+      status: 'live', active: true,
+      reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      reviewedBy: state.user.uid
+    });
+    toast('✅ تم الاعتماد والنشر', 'success');
+    if(typeof closeModal === 'function') closeModal();
+    showProductsList();
+  } catch(e){ toast('❌ ' + e.message, 'error'); }
+};
+
+window.__adminRejectProduct = async function(){
+  if(!window.__currentProductId) return;
+  var reason = prompt('سبب الرفض:');
+  if(!reason || !reason.trim()) return;
+  try {
+    await db.collection('products').doc(window.__currentProductId).update({
+      status: 'rejected', active: false,
+      rejectionReason: reason.trim(),
+      reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      reviewedBy: state.user.uid
+    });
+    toast('تم الرفض', 'error');
+    if(typeof closeModal === 'function') closeModal();
+    showProductsList();
+  } catch(e){ toast('❌ ' + e.message, 'error'); }
+};
+
 
 async function showListingsList(){
   try {
