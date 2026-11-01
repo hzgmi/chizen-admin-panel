@@ -207,8 +207,9 @@ function logout(){
 
 auth.onAuthStateChanged(async function(user){
   if (!user) {
-    showError('غير مسجل الدخول', 'يجب تسجيل الدخول أولاً للوصول إلى لوحة التحكم', '🚪 تسجيل الدخول');
-    return;
+    await new Promise(function(r){ setTimeout(r, 2000); });
+    if (!auth.currentUser) { location.href = 'admin-login.html'; return; }
+    user = auth.currentUser;
   }
   
   try {
