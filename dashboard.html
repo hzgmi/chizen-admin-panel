@@ -124,7 +124,7 @@ body{background:radial-gradient(ellipse at 50% 0%,rgba(124,58,237,0.18) 0%,trans
 <body>
 
 <div class="vloading" id="loading"><div class="vspin"></div><div class="vload-txt">جاري التحميل...</div></div>
-<div class="verror" id="error" style="display:none"><div class="verror-box"><div class="verror-icon" id="errIcon">⚠️</div><div class="verror-title" id="errTitle">خطأ</div><div class="verror-msg" id="errMsg"></div><a href="index.html" class="verror-btn" id="errBtn">العودة</a></div></div>
+<div class="verror" id="error" style="display:none"><div class="verror-box"><div class="verror-icon" id="errIcon">⚠️</div><div class="verror-title" id="errTitle">خطأ</div><div class="verror-msg" id="errMsg"></div><a href="admin-login.html" class="verror-btn" id="errBtn">العودة للدخول</a></div></div>
 
 <div id="main" style="display:none">
   <div class="vh">
@@ -201,7 +201,7 @@ function showMain(){
 
 function logout(){
   if (confirm('تسجيل الخروج؟')) {
-    auth.signOut().then(function(){ location.href = 'index.html'; });
+    auth.signOut().then(function(){ location.href = 'admin-login.html'; });
   }
 }
 
@@ -1294,8 +1294,7 @@ function showProfile(){
 function showSettings(){
   var html = '<div style="padding:10px 0">'
     + '<div style="font-size:12px;color:#a78bfa;margin-bottom:16px;line-height:1.6">الإعدادات المتقدمة متاحة في اللوحة الكلاسيكية. اضغط الزر أدناه للوصول إليها.</div>'
-    + '<button onclick="window.location.href=\'index.html?classic=1\'" style="width:100%;padding:14px;background:rgba(155,77,255,0.15);border:1px solid rgba(155,77,255,0.3);color:#a78bfa;border-radius:12px;font-family:inherit;font-weight:700;font-size:13px;margin-bottom:8px;cursor:pointer">🔧 فتح اللوحة الكلاسيكية (كل الأدوات)</button>'
-    + '<div style="font-size:11px;color:#666;margin-top:12px;text-align:center;line-height:1.5">اللوحة الكلاسيكية تحتوي على: ماركات، أقسام، بانرات، إعدادات كاملة، مندوبين، مواقع تسليم، أدوار، ودفع</div>'
+    + '<div style="padding:14px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;color:#fbbf24;font-size:12px;text-align:center;line-height:1.6">💡 استخدم التبويبات في الأعلى للوصول إلى كل الأدوات</div>'
     + '</div>';
   showModal('⚙️ إعدادات', html);
 }

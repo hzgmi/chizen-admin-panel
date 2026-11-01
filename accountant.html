@@ -107,7 +107,7 @@ body{background:radial-gradient(ellipse at 50% 0%,rgba(245,158,11,0.15) 0%,trans
     <div style="font-size:64px;margin-bottom:16px">⚠️</div>
     <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:12px" id="err-title">خطأ</div>
     <div style="font-size:13px;color:#b8c0d8;margin-bottom:20px" id="err-msg"></div>
-    <a href="index.html" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;display:inline-block">العودة</a>
+    <a href="accountant-login.html" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;display:inline-block">العودة للدخول</a>
   </div>
 </div>
 
@@ -1490,7 +1490,7 @@ window.saveBankAction = async function(bankId, action){
 };
 
 document.getElementById('btn-logout').onclick = function(){
-  if(confirm('تسجيل الخروج؟')) auth.signOut().then(function(){ location.href='index.html'; });
+  if(confirm('تسجيل الخروج؟')) auth.signOut().then(function(){ location.href='accountant-login.html'; });
 };
 </script>
 <script src="accountant-receipts.js"></script>
