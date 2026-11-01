@@ -1,153 +1,187 @@
 // ═══════════════════════════════════════════════════
-//  إدارة مواقع التسليم — ملف مستقل لضمان global scope
+//  إدارة مواقع التسليم — بنية config/pickup_areas
+//  { aden: [...], yemen: [...], updatedAt }
 // ═══════════════════════════════════════════════════
 (function(){
   'use strict';
-  
+
   if (typeof window.db === 'undefined' || typeof window.firebase === 'undefined') {
-    // ننتظر حتى تجهز Firebase
     setTimeout(arguments.callee, 300);
     return;
   }
-  
+
   var db = window.db;
   var toast = window.toast || function(m){ alert(m); };
   var showModal = window.showModal || function(t,c){ alert(t + '\n' + c); };
-  var closeModal = window.closeModal || function(){ var ov=document.querySelector('.vmodal-ov,.acc-modal-ov'); if(ov) ov.remove(); };
+  var closeModal = window.closeModal || function(){ var ov=document.querySelector('.vmodal-ov,.acc-modal-ov,.vmodal'); if(ov) ov.remove(); };
   var esc = window.esc || function(s){ return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); };
-  
+
+  var TABS = [
+    { key: 'aden',  label: '🌊 عدن' },
+    { key: 'yemen', label: '🏛️ اليمن' }
+  ];
+
   window.showPickupLocationsManager = async function(){
     try {
-      var doc = await db.collection('config').doc('pickup_locations').get();
+      var doc = await db.collection('config').doc('pickup_areas').get();
       var data = doc.exists ? doc.data() : {};
-      var list = data.list || [];
-  
+      var aden = Array.isArray(data.aden) ? data.aden : [];
+      var yemen = Array.isArray(data.yemen) ? data.yemen : [];
+
       var html = '';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px">';
-      html += '<div style="font-size:13px;color:#a78bfa;font-weight:800">' + list.length + ' نقطة استلام</div>';
-      html += '<button onclick="window.__addPickupLocation()" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;padding:10px 16px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">➕ إضافة</button>';
+      html += '<div style="font-size:12px;color:#a78bfa;margin-bottom:10px;text-align:center;line-height:1.5">إدارة مناطق الاستلام والنقاط التي يراها العميل في تطبيقه</div>';
+      
+      html += '<div style="display:flex;gap:6px;margin-bottom:14px">';
+      html += '<button id="pkm-tab-aden" onclick="window.__pickupSwitchTab(\'aden\')" style="flex:1;padding:10px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid #a855f7;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff">🌊 عدن (' + aden.length + ')</button>';
+      html += '<button id="pkm-tab-yemen" onclick="window.__pickupSwitchTab(\'yemen\')" style="flex:1;padding:10px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🏛️ اليمن (' + yemen.length + ')</button>';
       html += '</div>';
-      html += '<div style="max-height:65vh;overflow-y:auto">';
-  
-      if (!list.length) {
-        html += '<div style="text-align:center;padding:40px 20px;color:#a78bfa">';
-        html += '<div style="font-size:48px;margin-bottom:12px;opacity:.5">📍</div>';
-        html += '<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:6px">لا توجد مواقع بعد</div>';
-        html += '<div style="font-size:12px;opacity:.7">أضف أول نقطة استلام</div>';
-        html += '</div>';
-      } else {
-        list.forEach(function(loc, i){
-          var isActive = loc.active !== false;
-          var activeLabel = isActive ? '<span style="color:#22c55e;font-size:10px;font-weight:800">● نشط</span>' : '<span style="color:#6b7280;font-size:10px;font-weight:800">○ معطل</span>';
-          html += '<div style="padding:12px;background:rgba(155,77,255,0.05);border:1px solid rgba(155,77,255,0.2);border-radius:12px;margin-bottom:10px">';
-          html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">';
-          html += '<div style="flex:1;min-width:0">';
-          html += '<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:3px">' + esc(loc.name||'—') + '</div>';
-          html += '<div style="font-size:11px;color:#a78bfa">' + esc(loc.city||'—') + (loc.address ? ' · ' + esc(loc.address) : '') + '</div>';
-          if (loc.phone) html += '<div style="font-size:11px;color:#a78bfa;margin-top:2px">📱 ' + esc(loc.phone) + '</div>';
-          html += '</div>';
-          html += '<div style="text-align:left;flex-shrink:0">' + activeLabel + '</div>';
-          html += '</div>';
-          html += '<div style="display:flex;gap:6px">';
-          html += '<button onclick="window.__editPickupLocation(' + i + ')" style="flex:1;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:8px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">✏️</button>';
-          html += '<button onclick="window.__togglePickupLocation(' + i + ')" style="flex:1;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);padding:8px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">' + (isActive ? '👁' : '👁') + '</button>';
-          html += '<button onclick="window.__deletePickupLocation(' + i + ')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">🗑</button>';
-          html += '</div></div>';
-        });
-      }
+
+      html += '<div id="pkm-aden-panel" style="display:block">';
+      html += __renderTab(aden, 'aden');
       html += '</div>';
-      showModal('📍 مواقع التسليم (' + list.length + ')', html);
+
+      html += '<div id="pkm-yemen-panel" style="display:none">';
+      html += __renderTab(yemen, 'yemen');
+      html += '</div>';
+
+      window.__pickupData = { aden: aden, yemen: yemen };
+      showModal('📍 مواقع التسليم', html);
     } catch(e){ toast('❌ ' + e.message, 'error'); }
   };
-  
-  window.__addPickupLocation = function(){ window.__openPickupForm(null, -1); };
-  
-  window.__editPickupLocation = async function(index){
-    try {
-      var doc = await db.collection('config').doc('pickup_locations').get();
-      var data = doc.exists ? doc.data() : {};
-      var list = data.list || [];
-      if (!list[index]) { toast('❌ غير موجود', 'error'); return; }
-      window.__openPickupForm(list[index], index);
-    } catch(e){ toast('❌ ' + e.message, 'error'); }
+
+  function __renderTab(list, region){
+    var h = '';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    h += '<div style="font-size:13px;color:#a78bfa;font-weight:800">' + list.length + ' منطقة</div>';
+    h += '<button onclick="window.__pickupAddArea(\'' + region + '\')" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;padding:9px 14px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">➕ منطقة</button>';
+    h += '</div>';
+    h += '<div style="max-height:55vh;overflow-y:auto">';
+    if (!list.length) {
+      h += '<div style="text-align:center;padding:30px 20px;color:#a78bfa;font-size:13px">لا توجد مناطق بعد</div>';
+    } else {
+      list.forEach(function(area, i){
+        var points = area.points || [];
+        h += '<div style="background:rgba(155,77,255,0.05);border:1px solid rgba(155,77,255,0.2);border-radius:12px;padding:12px;margin-bottom:10px">';
+        h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">';
+        h += '<div style="flex:1;min-width:0">';
+        h += '<div style="font-size:13px;font-weight:800;color:#fff">' + (area.icon||'📍') + ' ' + esc(area.name||'—') + '</div>';
+        h += '<div style="font-size:11px;color:#a78bfa;margin-top:2px">📍 ' + esc(area.city||'—') + ' · ' + points.length + ' نقطة</div>';
+        h += '</div></div>';
+        
+        if (points.length) {
+          h += '<div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:8px;margin-bottom:8px">';
+          points.forEach(function(pt, pi){
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(155,77,255,0.08);gap:6px">';
+            h += '<div style="flex:1;min-width:0;font-size:11px;color:#e5e7eb">' + (pt.icon||'📦') + ' ' + esc(pt.name||'—') + '</div>';
+            h += '<button onclick="window.__pickupDelPoint(\'' + region + '\',' + i + ',' + pi + ')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:3px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">✕</button>';
+            h += '</div>';
+          });
+          h += '</div>';
+        }
+        
+        h += '<div style="display:flex;gap:6px">';
+        h += '<button onclick="window.__pickupEditArea(\'' + region + '\',' + i + ')" style="flex:1;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:8px;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit">✏️ تعديل</button>';
+        h += '<button onclick="window.__pickupAddPoint(\'' + region + '\',' + i + ')" style="flex:1;background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3);padding:8px;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit">➕ نقطة</button>';
+        h += '<button onclick="window.__pickupDelArea(\'' + region + '\',' + i + ')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">🗑</button>';
+        h += '</div></div>';
+      });
+    }
+    h += '</div>';
+    return h;
+  }
+
+  window.__pickupSwitchTab = function(tab){
+    var aden = document.getElementById('pkm-aden-panel');
+    var yemen = document.getElementById('pkm-yemen-panel');
+    var btA = document.getElementById('pkm-tab-aden');
+    var btY = document.getElementById('pkm-tab-yemen');
+    if (!aden || !yemen) return;
+    if (tab === 'aden') {
+      aden.style.display = 'block';
+      yemen.style.display = 'none';
+      btA.style.background = 'linear-gradient(135deg,#a855f7,#7c3aed)';
+      btA.style.color = '#fff'; btA.style.borderColor = '#a855f7';
+      btY.style.background = 'rgba(0,0,0,0.3)';
+      btY.style.color = '#a78bfa'; btY.style.borderColor = 'rgba(155,77,255,0.3)';
+    } else {
+      aden.style.display = 'none';
+      yemen.style.display = 'block';
+      btY.style.background = 'linear-gradient(135deg,#a855f7,#7c3aed)';
+      btY.style.color = '#fff'; btY.style.borderColor = '#a855f7';
+      btA.style.background = 'rgba(0,0,0,0.3)';
+      btA.style.color = '#a78bfa'; btA.style.borderColor = 'rgba(155,77,255,0.3)';
+    }
   };
-  
-  window.__openPickupForm = function(loc, index){
-    var isEdit = loc !== null && index >= 0;
-    var l = loc || {};
-    var html = '<div style="text-align:right;max-height:70vh;overflow-y:auto;padding:2px;font-size:13px">';
-    html += '<input id="pupf-name" placeholder="اسم النقطة *" value="' + esc(l.name||'') + '" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:14px;margin-bottom:10px;box-sizing:border-box">';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
-    html += '<input id="pupf-city" placeholder="المدينة *" value="' + esc(l.city||'') + '" style="padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box">';
-    html += '<input id="pupf-phone" placeholder="هاتف النقطة" value="' + esc(l.phone||'') + '" style="padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box">';
-    html += '</div>';
-    html += '<textarea id="pupf-address" placeholder="العنوان" style="width:100%;min-height:60px;padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:14px;margin-bottom:10px;box-sizing:border-box;resize:vertical">' + esc(l.address||'') + '</textarea>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
-    html += '<input id="pupf-lat" type="number" step="0.0001" placeholder="Latitude" value="' + (l.lat||'') + '" style="padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box">';
-    html += '<input id="pupf-lng" type="number" step="0.0001" placeholder="Longitude" value="' + (l.lng||'') + '" style="padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box">';
-    html += '</div>';
-    html += '<button onclick="window.__savePickupLocation(' + index + ')" style="width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit">💾 ' + (isEdit ? 'حفظ التعديلات' : 'إضافة') + '</button>';
-    html += '<div style="font-size:11px;color:#a78bfa;margin-top:10px;text-align:center;opacity:.7">💡 الإحداثيات اختيارية</div>';
-    html += '</div>';
-    showModal(isEdit ? '✏️ تعديل نقطة' : '➕ إضافة نقطة', html);
-  };
-  
-  window.__savePickupLocation = async function(index){
-    var name = document.getElementById('pupf-name').value.trim();
-    var city = document.getElementById('pupf-city').value.trim();
-    if (!name || !city) { toast('❌ الاسم والمدينة مطلوبان', 'error'); return; }
-    var loc = {
-      name: name, city: city,
-      phone: document.getElementById('pupf-phone').value.trim(),
-      address: document.getElementById('pupf-address').value.trim(),
-      lat: parseFloat(document.getElementById('pupf-lat').value) || null,
-      lng: parseFloat(document.getElementById('pupf-lng').value) || null,
-      active: true
-    };
+
+  async function __pickupSave(region, newList){
     try {
-      var doc = await db.collection('config').doc('pickup_locations').get();
-      var data = doc.exists ? doc.data() : {};
-      var list = data.list || [];
-      if (index >= 0 && list[index]) {
-        loc.active = list[index].active !== false;
-        list[index] = Object.assign({}, list[index], loc);
-      } else {
-        list.push(loc);
-      }
-      await db.collection('config').doc('pickup_locations').set({ list: list }, { merge: true });
-      toast(index >= 0 ? '✅ تم التحديث' : '✅ تمت الإضافة', 'success');
-      closeModal();
+      var updates = {};
+      updates[region] = newList;
+      updates.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('config').doc('pickup_areas').set(updates, { merge: true });
+      window.__pickupData[region] = newList;
       window.showPickupLocationsManager();
     } catch(e){ toast('❌ ' + e.message, 'error'); }
+  }
+
+  window.__pickupAddArea = function(region){
+    var name = prompt('اسم المنطقة:');
+    if (!name || !name.trim()) return;
+    var city = prompt('المدينة:', region === 'aden' ? 'عدن' : 'صنعاء');
+    if (!city || !city.trim()) return;
+    var icon = prompt('أيقونة (🌊 🏛️ 🏢 🏪 💊 📍):', '📍') || '📍';
+    var lat = parseFloat(prompt('Latitude (اختياري):') || '0') || 0;
+    var lng = parseFloat(prompt('Longitude (اختياري):') || '0') || 0;
+    var area = { name: name.trim(), city: city.trim(), icon: icon.trim(), lat: lat, lng: lng, points: [] };
+    var newList = (window.__pickupData[region] || []).slice();
+    newList.push(area);
+    __pickupSave(region, newList);
   };
-  
-  window.__togglePickupLocation = async function(index){
-    try {
-      var doc = await db.collection('config').doc('pickup_locations').get();
-      var data = doc.exists ? doc.data() : {};
-      var list = data.list || [];
-      if (!list[index]) return;
-      list[index].active = !(list[index].active !== false);
-      await db.collection('config').doc('pickup_locations').set({ list: list }, { merge: true });
-      toast(list[index].active ? '✅ نشطة' : '👁 معطلة', list[index].active ? 'success' : 'error');
-      closeModal();
-      window.showPickupLocationsManager();
-    } catch(e){ toast('❌ ' + e.message, 'error'); }
+
+  window.__pickupEditArea = function(region, idx){
+    var list = (window.__pickupData[region] || []).slice();
+    var a = list[idx];
+    if (!a) return;
+    var name = prompt('اسم المنطقة:', a.name);
+    if (name === null) return;
+    var city = prompt('المدينة:', a.city);
+    if (city === null) return;
+    var icon = prompt('أيقونة:', a.icon || '📍') || a.icon || '📍';
+    a.name = name.trim() || a.name;
+    a.city = city.trim() || a.city;
+    a.icon = icon.trim();
+    __pickupSave(region, list);
   };
-  
-  window.__deletePickupLocation = async function(index){
-    if (!confirm('⚠️ حذف هذه النقطة نهائياً؟')) return;
-    try {
-      var doc = await db.collection('config').doc('pickup_locations').get();
-      var data = doc.exists ? doc.data() : {};
-      var list = data.list || [];
-      list.splice(index, 1);
-      await db.collection('config').doc('pickup_locations').set({ list: list }, { merge: true });
-      toast('✅ تم الحذف', 'success');
-      closeModal();
-      window.showPickupLocationsManager();
-    } catch(e){ toast('❌ ' + e.message, 'error'); }
+
+  window.__pickupDelArea = function(region, idx){
+    if (!confirm('⚠️ حذف هذه المنطقة وكل نقاطها؟')) return;
+    var list = (window.__pickupData[region] || []).slice();
+    list.splice(idx, 1);
+    __pickupSave(region, list);
   };
-  
-  console.log('[PICKUP-MANAGER] Loaded successfully');
+
+  window.__pickupAddPoint = function(region, areaIdx){
+    var list = (window.__pickupData[region] || []).slice();
+    var area = list[areaIdx];
+    if (!area) return;
+    var name = prompt('اسم النقطة:');
+    if (!name || !name.trim()) return;
+    var icon = prompt('أيقونة (🏪 🏢 🏬 📦):', '📦') || '📦';
+    var lat = parseFloat(prompt('Latitude (اختياري):') || '0') || (area.lat || 0);
+    var lng = parseFloat(prompt('Longitude (اختياري):') || '0') || (area.lng || 0);
+    area.points = area.points || [];
+    area.points.push({ name: name.trim(), icon: icon.trim(), lat: lat, lng: lng });
+    __pickupSave(region, list);
+  };
+
+  window.__pickupDelPoint = function(region, areaIdx, pointIdx){
+    if (!confirm('⚠️ حذف هذه النقطة؟')) return;
+    var list = (window.__pickupData[region] || []).slice();
+    var area = list[areaIdx];
+    if (!area || !area.points) return;
+    area.points.splice(pointIdx, 1);
+    __pickupSave(region, list);
+  };
+
+  console.log('[PICKUP-MANAGER v2] Loaded — using config/pickup_areas structure');
 })();
