@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>Check Admin</title>
+<style>body{font-family:system-ui;background:#0a0825;color:#fff;padding:20px;max-width:600px;margin:0 auto}button{width:100%;padding:14px;background:#a855f7;color:#fff;border:none;border-radius:10px;font-weight:800;cursor:pointer;margin:10px 0}#log{background:#000;color:#0f0;padding:12px;border-radius:10px;font-family:monospace;font-size:11px;white-space:pre-wrap;max-height:60vh;overflow:auto;margin-top:10px}</style></head>
+<body><h1>🔍 فحص حساب الأدمن</h1>
+<button onclick="check()">▶ فحص الآن</button>
+<pre id="log">[السجل]</pre>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+var auth = firebase.auth();
+var db = firebase.firestore();
+function L(m){var l=document.getElementById('log');l.textContent+='\n'+m;l.scrollTop=l.scrollHeight;}
+async function check(){
+  L('═══ فحص الأدمن ═══');
+  var u = auth.currentUser;
+  L('المستخدم الحالي: ' + (u ? u.email + ' (' + u.uid + ')' : '❌ لا يوجد مستخدم'));
+  if(!u){ L('سجّل دخول أولاً'); return; }
+  try {
+    var adoc = await db.collection('admins').doc(u.uid).get();
+    L('admins/' + u.uid + ' — موجود: ' + adoc.exists);
+    if(adoc.exists) L('  البيانات: ' + JSON.stringify(adoc.data()));
+  } catch(e){ L('❌ admins: ' + e.message); }
+  try {
+    var udoc = await db.collection('users').doc(u.uid).get();
+    L('users/' + u.uid + ' — موجود: ' + udoc.exists);
+    if(udoc.exists) L('  البيانات: ' + JSON.stringify(udoc.data()));
+  } catch(e){ L('❌ users: ' + e.message); }
+  L('\n═══ انتهى ═══');
+}
+auth.onAuthStateChanged(function(user){
+  if(user){ L('✅ مسجل: ' + user.email); L('اضغط الزر'); }
+  else { L('⚠️ غير مسجل'); }
+});
+</script></body></html>
