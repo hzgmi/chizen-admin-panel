@@ -236,15 +236,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 </head>
 <body>
 
-<div id="login-screen" class="login-wrap">
-  <h1>📦 CHIZEN</h1>
-  <p>لوحة إدارة القسم</p>
-  <input id="email" type="email" placeholder="البريد الإلكتروني">
-  <input id="password" type="password" placeholder="كلمة المرور">
-  <button id="login-btn" onclick="window.__doLogin()">🔐 دخول</button>
-  <div id="login-err"></div>
-</div>
-
 <div id="app" class="hidden">
   <header class="app-header">
     <div class="left">
@@ -510,30 +501,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 'use strict';
 
 // ═══ IMMEDIATE: زر الدخول يعمل فوراً ═══
-window.__doLogin = async function(){
-  var em = (document.getElementById('email')||{}).value || '';
-  var pw = (document.getElementById('password')||{}).value || '';
-  var errEl = document.getElementById('login-err');
-  var btn = document.getElementById('login-btn');
-  em = em.trim();
-  if(!em || !pw){
-    if(errEl) errEl.textContent = '❌ أدخل البريد وكلمة المرور';
-    return;
-  }
-  if(window.__cdnFail || typeof firebase === 'undefined'){
-    if(errEl) errEl.textContent = '❌ فشل تحميل Firebase — تحقق من الإنترنت وأعد تحميل الصفحة';
-    return;
-  }
-  if(btn){ btn.disabled = true; btn.textContent = 'جارٍ الدخول...'; }
-  if(errEl) errEl.textContent = '⏳ جارٍ التحقق...';
-  try {
-    await firebase.auth().signInWithEmailAndPassword(em, pw);
-    if(errEl) errEl.textContent = '✅ تم الدخول — جاري التحويل...';
-  } catch(e) {
-    if(errEl) errEl.textContent = '❌ ' + (e.code || e.message);
-    if(btn){ btn.disabled = false; btn.textContent = '🔐 دخول'; }
-  }
-};
+// login moved
 
 // ═══ Global error handler (يعرض الأخطاء على الشاشة) ═══
 window.addEventListener('error', function(e){
@@ -615,7 +583,7 @@ window.addEventListener('error', function(e){
 });
 
 auth.onAuthStateChanged(async function(u){
-  if(!u){document.getElementById('login-screen').classList.remove('hidden');document.getElementById('app').classList.add('hidden');return;}
+  if(!u){ location.href='cat-login.html'; return; }
   try{
     var udoc=await db.collection('users').doc(u.uid).get();
     var role=udoc.exists?(udoc.data().role||''):'';
@@ -1119,22 +1087,7 @@ window.downloadCatPDF=async function(oid){
 };
 
 
-window.__catLogin = async function(){
-  var em = document.getElementById('email').value.trim();
-  var pw = document.getElementById('password').value;
-  var errEl = document.getElementById('login-err');
-  var btn = document.getElementById('login-btn');
-  if(!em || !pw){ if(errEl) errEl.textContent = '❌ أدخل البريد وكلمة المرور'; return; }
-  if(btn){ btn.disabled = true; btn.textContent = 'جارٍ...'; }
-  if(errEl) errEl.textContent = '⏳ جارٍ التحقق...';
-  try {
-    await firebase.auth().signInWithEmailAndPassword(em, pw);
-    if(errEl) errEl.textContent = '✅ تم الدخول — جاري التحويل...';
-  } catch(e) {
-    if(errEl) errEl.textContent = '❌ ' + (e.code || e.message);
-    if(btn){ btn.disabled = false; btn.textContent = '🔐 دخول'; }
-  }
-};
+// login moved
 
 })();
 </script>
