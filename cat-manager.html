@@ -5,75 +5,69 @@
 <title>CHIZEN — لوحة مدير القسم</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,sans-serif;background:#0b1220;color:#e5e7eb;min-height:100vh;padding-bottom:40px;line-height:1.5}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5e7eb;min-height:100vh;padding-bottom:40px}
 .hidden{display:none!important}
 .login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .login-wrap h1{color:#a855f7;font-size:24px;margin-bottom:8px}
-.login-wrap p{color:#9ca3af;font-size:13px;margin-bottom:24px}
 .login-wrap input{width:100%;max-width:340px;padding:14px;border-radius:12px;border:1px solid #374151;background:#1f2937;color:#fff;margin:6px 0;font-size:15px;font-family:inherit}
 .login-wrap button{width:100%;max-width:340px;padding:14px;border-radius:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;font-weight:900;font-size:15px;cursor:pointer;margin-top:10px;font-family:inherit}
 #login-err{color:#ef4444;font-size:13px;margin-top:12px;text-align:center;min-height:20px}
-header{background:linear-gradient(135deg,#2e1065,#4c1d95);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.5);border-bottom:1px solid rgba(168,85,247,0.3)}
-header h1{font-size:17px;color:#fff;display:flex;align-items:center;gap:6px}
-header .user{font-size:12px;color:#c4b5fd;margin-top:2px}
-header .cat-badge{display:inline-block;background:rgba(168,85,247,0.3);padding:3px 10px;border-radius:8px;font-size:10px;font-weight:900;color:#c4b5fd;margin-top:4px}
-#logout-btn{background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
-.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:12px}
-.stat{background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(124,58,237,0.08));border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:12px 10px;text-align:center;cursor:pointer;transition:transform 0.2s;position:relative;overflow:hidden}
-.stat:active{transform:scale(0.97)}
-.stat .v{font-size:22px;font-weight:900;color:#fff}
-.stat .l{font-size:10px;color:#c4b5fd;margin-top:3px;font-weight:800}
-.tabs{display:flex;gap:6px;padding:4px 12px 8px;overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{flex-shrink:0;padding:9px 16px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid rgba(168,85,247,0.25);color:#c4b5fd;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all 0.2s}
-.tab.active{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(168,85,247,0.3)}
-main{padding:8px 12px}
-.order-card{background:linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border:1px solid rgba(168,85,247,0.25);border-radius:16px;padding:14px;margin-bottom:12px}
-.order-card.pending{border-color:rgba(245,158,11,0.5);background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(245,158,11,0.02))}
-.order-card.confirmed{border-color:rgba(16,185,129,0.4)}
-.order-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px}
-.order-id{font-weight:900;color:#a855f7;font-size:14px}
-.order-time{font-size:10px;color:#6b7280;margin-top:3px}
-.order-total{font-weight:900;color:#fcd34d;font-size:18px;white-space:nowrap;text-align:left}
-.order-total small{font-size:11px;color:#9ca3af;font-weight:600}
-.badge{display:inline-block;padding:4px 10px;border-radius:8px;font-size:10px;font-weight:900;margin-top:4px}
-.badge-pending{background:rgba(245,158,11,0.25);color:#fcd34d;border:1px solid rgba(245,158,11,0.5)}
-.badge-confirmed{background:rgba(16,185,129,0.25);color:#6ee7b7;border:1px solid rgba(16,185,129,0.5)}
-.items-section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)}
-.items-title{color:#c4b5fd;font-weight:900;font-size:12px;margin-bottom:8px}
-.item-row{display:flex;align-items:center;gap:10px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;margin-bottom:6px}
-.item-row input[type=checkbox]{width:20px;height:20px;cursor:pointer;accent-color:#10b981}
-.item-info{flex:1;min-width:0}
-.item-name{font-size:12px;color:#e5e7eb;font-weight:700}
-.item-qty{font-size:10px;color:#9ca3af;margin-top:2px}
-.item-price{font-weight:900;color:#fcd34d;font-size:12px;white-space:nowrap}
-.reject-reason{width:100%;padding:10px;border-radius:8px;border:1px solid #374151;background:#0f172a;color:#fff;font-size:12px;font-family:inherit;margin-top:8px;display:none}
-.reject-reason.show{display:block}
-.actions{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
-.act-btn{flex:1;min-width:100px;padding:13px;border-radius:10px;border:none;font-weight:900;font-size:13px;cursor:pointer;font-family:inherit;color:#fff;transition:transform 0.15s}
-.act-btn:active{transform:scale(0.97)}
-.act-confirm{background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 14px rgba(16,185,129,0.4)}
-.act-confirm:disabled{background:#374151;cursor:not-allowed;box-shadow:none;opacity:0.6}
-.act-reject{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 14px rgba(239,68,68,0.4);flex:0 0 auto;min-width:auto;padding:13px 16px}
-.act-pdf{background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 14px rgba(59,130,246,0.4)}
-.empty{text-align:center;padding:60px 20px;color:#6b7280;font-size:14px}
-.empty-icon{font-size:56px;margin-bottom:14px;opacity:0.5}
-#toast-container{position:fixed;bottom:20px;left:16px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:6px;pointer-events:none}
-.toast{padding:12px 16px;border-radius:10px;font-weight:800;font-size:13px;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.5);animation:slideUp 0.3s ease;text-align:center}
-.toast.ok{background:linear-gradient(135deg,#10b981,#059669)}
-.toast.err{background:linear-gradient(135deg,#ef4444,#dc2626)}
-.toast.info{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+header{background:rgba(10,8,37,.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(155,77,255,.2);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+header .cat-name{font-size:17px;font-weight:800;color:#fff}
+header .user{font-size:11px;color:#a78bfa;margin-top:2px}
+#logout-btn{background:rgba(155,77,255,.15);color:#a78bfa;border:1px solid rgba(155,77,255,.35);padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+main{padding:16px}
+.welcome-card{background:linear-gradient(135deg,#7c3aed,#ec4899);border-radius:22px;padding:22px 20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 12px 36px rgba(124,58,237,0.35);margin-bottom:20px}
+.welcome-card::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;background:rgba(255,255,255,0.1);border-radius:50%;filter:blur(30px)}
+.welcome-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;position:relative;z-index:1}
+.welcome-title{font-size:18px;font-weight:900}
+.welcome-sub{font-size:12px;opacity:0.85;margin-top:2px}
+.welcome-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;position:relative;z-index:1}
+.welcome-stat{background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:12px 8px;text-align:center;backdrop-filter:blur(10px)}
+.welcome-stat .v{font-size:20px;font-weight:900}
+.welcome-stat .l{font-size:10px;opacity:0.85;margin-top:2px;font-weight:700}
+.section-title{font-size:15px;font-weight:900;color:#c4b5fd;margin:20px 0 12px;display:flex;align-items:center;gap:6px}
+.actions-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.action-tile{background:rgba(155,77,255,0.06);border:1px solid rgba(155,77,255,0.2);border-radius:18px;padding:24px 14px;text-align:center;cursor:pointer;transition:transform 0.15s;position:relative}
+.action-tile:active{transform:scale(0.97)}
+.action-tile .icon{font-size:36px;margin-bottom:8px}
+.action-tile .label{font-size:14px;font-weight:800;color:#fff}
+.action-tile .badge{position:absolute;top:10px;right:10px;background:#ef4444;color:#fff;border-radius:50%;min-width:22px;height:22px;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.order-card{background:rgba(255,255,255,0.04);border:1px solid rgba(155,77,255,0.2);border-radius:14px;padding:14px;margin-bottom:12px}
+.order-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px dashed rgba(255,255,255,0.1);margin-bottom:10px}
+.order-head b{color:#a855f7;font-size:14px}
+.order-meta{font-size:11px;color:#9ca3af;margin-top:2px}
+.order-total{font-size:15px;font-weight:900;color:#fcd34d}
+.order-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.order-item:last-child{border-bottom:none}
+.order-item input[type=checkbox]{width:22px;height:22px;accent-color:#22c55e;flex-shrink:0;cursor:pointer}
+.order-item .item-info{flex:1;min-width:0}
+.order-item .item-info b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.order-item .item-info span{font-size:11px;color:#9ca3af}
+.order-item .item-price{font-size:13px;font-weight:700;color:#a855f7}
+.order-actions{display:flex;gap:8px;margin-top:10px}
+.order-actions button{flex:1;padding:12px;border-radius:10px;border:none;font-weight:900;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-ok{background:#22c55e;color:#fff}
+.btn-ok:disabled{opacity:0.35;cursor:not-allowed}
+.btn-warn{background:#ef4444;color:#fff}
+.btn-pdf{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;flex:0 0 auto;padding:12px 16px}
+.product-card{background:rgba(255,255,255,0.04);border:1px solid rgba(155,77,255,0.2);border-radius:12px;padding:12px;margin-bottom:10px;display:flex;gap:10px;align-items:center}
+.product-card img{width:56px;height:56px;object-fit:cover;border-radius:10px;background:#1f2937;flex-shrink:0}
+.product-info{flex:1;min-width:0}
+.product-info b{font-size:14px;display:block;margin-bottom:3px}
+.product-info span{font-size:12px;color:#9ca3af}
+.empty{text-align:center;padding:50px 20px;color:#6b7280;font-size:14px}
+.empty-icon{font-size:56px;margin-bottom:12px;opacity:0.5}
+#toast-container{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:6px;align-items:center}
+.toast{padding:12px 22px;border-radius:30px;font-weight:800;font-size:14px;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.5);animation:slideUp 0.3s ease;white-space:nowrap}
+.toast.ok{background:#22c55e}.toast.err{background:#ef4444}.toast.info{background:#3b82f6}.toast.warn{background:#f59e0b}
 @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
-.loading{text-align:center;padding:40px;color:#6b7280}
-.spinner{width:36px;height:36px;border:3px solid rgba(168,85,247,0.3);border-top-color:#a855f7;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
+.view{display:none}.view.active{display:block}
 </style>
 </head>
 <body>
-
-<div id="login-screen" class="login-wrap">
+<div id="login-screen" class="login-wrap hidden">
   <h1>📦 CHIZEN</h1>
-  <p>لوحة مدير القسم — للمراجعة والتجهيز</p>
   <input id="email" type="email" placeholder="البريد الإلكتروني">
   <input id="password" type="password" placeholder="كلمة المرور">
   <button id="login-btn">🔐 دخول</button>
@@ -83,30 +77,76 @@ main{padding:8px 12px}
 <div id="app" class="hidden">
   <header>
     <div>
-      <h1>📦 لوحة مدير القسم</h1>
-      <div class="user" id="user-label">—</div>
-      <div class="cat-badge" id="cat-label">—</div>
+      <div class="cat-name" id="cat-name">—</div>
+      <div class="user" id="user-name">—</div>
     </div>
     <button id="logout-btn">خروج</button>
   </header>
-
-  <section class="stats">
-    <div class="stat" data-filter="pending"><div class="v" id="st-pending">0</div><div class="l">⏳ للمراجعة</div></div>
-    <div class="stat" data-filter="confirmed"><div class="v" id="st-confirmed">0</div><div class="l">✅ مؤكدة</div></div>
-    <div class="stat" data-filter="rejected"><div class="v" id="st-rejected">0</div><div class="l">❌ مرفوضة</div></div>
-    <div class="stat" data-filter="today"><div class="v" id="st-today">0</div><div class="l">📅 اليوم</div></div>
-  </section>
-
-  <nav class="tabs" id="tabs">
-    <button class="tab active" data-filter="pending">⏳ للمراجعة</button>
-    <button class="tab" data-filter="confirmed">✅ مؤكدة</button>
-    <button class="tab" data-filter="rejected">❌ مرفوضة</button>
-    <button class="tab" data-filter="all">📊 الكل</button>
-  </nav>
-
-  <main id="orders-list">
-    <div class="loading"><div class="spinner"></div>جاري التحميل...</div>
-  </main>
+  
+  <!-- Home View -->
+  <div id="view-home" class="view active" style="padding:16px">
+    <div class="welcome-card">
+      <div class="welcome-head">
+        <div>
+          <div class="welcome-title">☀️ صباح الخير</div>
+          <div class="welcome-sub" id="greet-name">—</div>
+        </div>
+      </div>
+      <div class="welcome-stats">
+        <div class="welcome-stat"><div class="v" id="kpi-orders">0</div><div class="l">طلبات</div></div>
+        <div class="welcome-stat"><div class="v" id="kpi-products">0</div><div class="l">منتجات</div></div>
+        <div class="welcome-stat"><div class="v" id="kpi-value">0</div><div class="l">قيمة</div></div>
+      </div>
+    </div>
+    
+    <div class="section-title">⚡ إجراءات سريعة</div>
+    <div class="actions-grid">
+      <div class="action-tile" onclick="showView('pending')">
+        <div class="badge hidden" id="pending-badge">0</div>
+        <div class="icon">📦</div>
+        <div class="label">مراجعة الطلبات</div>
+      </div>
+      <div class="action-tile" onclick="showView('products')">
+        <div class="icon">🛍️</div>
+        <div class="label">منتجاتي</div>
+      </div>
+      <div class="action-tile" onclick="showView('confirmed')">
+        <div class="icon">✅</div>
+        <div class="label">المؤكدة</div>
+      </div>
+      <div class="action-tile" onclick="logout()">
+        <div class="icon">🚪</div>
+        <div class="label">خروج</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Pending View -->
+  <div id="view-pending" class="view" style="padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:16px;color:#fff">📦 قيد المراجعة</h2>
+      <button onclick="showView('home')" style="background:rgba(155,77,255,.15);border:none;color:#a78bfa;padding:8px 14px;border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer">← رجوع</button>
+    </div>
+    <div id="pending-list"></div>
+  </div>
+  
+  <!-- Confirmed View -->
+  <div id="view-confirmed" class="view" style="padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:16px;color:#fff">✅ الطلبات المؤكدة</h2>
+      <button onclick="showView('home')" style="background:rgba(155,77,255,.15);border:none;color:#a78bfa;padding:8px 14px;border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer">← رجوع</button>
+    </div>
+    <div id="confirmed-list"></div>
+  </div>
+  
+  <!-- Products View -->
+  <div id="view-products" class="view" style="padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:16px;color:#fff">🛍️ منتجاتي</h2>
+      <button onclick="showView('home')" style="background:rgba(155,77,255,.15);border:none;color:#a78bfa;padding:8px 14px;border-radius:10px;font-weight:800;font-family:inherit;cursor:pointer">← رجوع</button>
+    </div>
+    <div id="products-list"></div>
+  </div>
 </div>
 
 <div id="toast-container"></div>
@@ -119,325 +159,186 @@ main{padding:8px 12px}
 <script>
 (function(){
 'use strict';
+var db, auth;
+var state = { user: null, userData: null, cat: '', pending: [], confirmed: [], products: [], unsubPending: null, unsubConfirmed: null };
+var CAT_LABELS = {electronics:'إلكترونيات',fashion:'أزياء وموضة',clothing:'ملابس',shoes_bags:'أحذية وحقائب',beauty:'جمال وعطور',kids_sports:'أطفال ورياضة',home:'منزل وأثاث',supermarket:'سوبرماركت',sports:'رياضة',kids:'أطفال',tools:'أدوات منزلية'};
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
-function toast(msg, type){
-  type = type || 'info';
-  var c = document.getElementById('toast-container');
-  if(!c){ alert(msg); return; }
-  var t = document.createElement('div');
-  t.className = 'toast ' + type;
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(function(){ t.remove(); }, 300); }, 3500);
-}
-function fmtDate(ts){
-  if(!ts) return '—';
-  var d = ts.seconds ? new Date(ts.seconds*1000) : new Date(ts);
-  return d.toLocaleString('ar-YE', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
-}
-function catLabel(cat){
-  var labels = {electronics:'إلكترونيات',fashion:'أزياء',clothing:'ملابس',sports:'رياضة',beauty:'جمال وعطور',kids:'أطفال',tools:'أدوات منزلية',home:'منزل وأثاث',shoes_bags:'أحذية وحقائب',supermarket:'سوبرماركت'};
-  return labels[cat] || cat || '—';
-}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function catLabel(c){return CAT_LABELS[c]||c||'—';}
+function toast(m,t){t=t||'info';var c=document.getElementById('toast-container');var el=document.createElement('div');el.className='toast '+t;el.textContent=m;c.appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300);},3500);}
+function fmtDate(ts){if(!ts)return '—';var d=ts.seconds?new Date(ts.seconds*1000):new Date(ts);return d.toLocaleString('ar-YE',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
 
 if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
-var db = firebase.firestore();
-var auth = firebase.auth();
+db=firebase.firestore();auth=firebase.auth();
 
-var state = { user: null, displayName: '', cat: '', orders: [], filter: 'pending', unsub: null };
-
-var loginScreen = document.getElementById('login-screen');
-var app = document.getElementById('app');
-var emailIn = document.getElementById('email');
-var passwordIn = document.getElementById('password');
-var loginBtn = document.getElementById('login-btn');
-var loginErr = document.getElementById('login-err');
-var logoutBtn = document.getElementById('logout-btn');
-var ordersList = document.getElementById('orders-list');
-var userLabel = document.getElementById('user-label');
-var catLabelEl = document.getElementById('cat-label');
-
-document.getElementById('login-btn').onclick = async function(){
-  var em = emailIn.value.trim();
-  var pw = passwordIn.value;
-  if(!em || !pw){ loginErr.textContent = 'أدخل البريد وكلمة المرور'; return; }
-  loginBtn.disabled = true; loginBtn.textContent = 'جارٍ الدخول...';
-  loginErr.textContent = '';
-  try { await auth.signInWithEmailAndPassword(em, pw); }
-  catch(e) { loginErr.textContent = '❌ ' + (e.code || e.message); loginBtn.disabled = false; loginBtn.textContent = '🔐 دخول'; }
+document.getElementById('login-btn').onclick=async function(){
+  var em=document.getElementById('email').value.trim();var pw=document.getElementById('password').value;
+  if(!em||!pw){document.getElementById('login-err').textContent='❌ أدخل البريد وكلمة المرور';return;}
+  this.disabled=true;this.textContent='جارٍ...';document.getElementById('login-err').textContent='';
+  try{await auth.signInWithEmailAndPassword(em,pw);}catch(e){document.getElementById('login-err').textContent='❌ '+e.code;this.disabled=false;this.textContent='🔐 دخول';}
 };
-
-logoutBtn.onclick = async function(){
-  if(!confirm('تسجيل الخروج؟')) return;
-  if(state.unsub){ state.unsub(); state.unsub = null; }
-  await auth.signOut();
-  location.reload();
-};
+document.getElementById('logout-btn').onclick=logout;
+function logout(){if(!confirm('تسجيل الخروج؟'))return;if(state.unsubPending)state.unsubPending();if(state.unsubConfirmed)state.unsubConfirmed();auth.signOut().then(()=>location.href='cat-login.html');}
 
 auth.onAuthStateChanged(async function(u){
-  if(!u){
-    state.user = null;
-    loginScreen.classList.remove('hidden'); app.classList.add('hidden');
-    loginBtn.disabled = false; loginBtn.textContent = '🔐 دخول';
-    return;
-  }
-  try {
-    var udoc = await db.collection('users').doc(u.uid).get();
-    var role = udoc.exists ? (udoc.data().role || 'customer') : 'customer';
-    var assignedCat = udoc.exists ? (udoc.data().assignedCategory || '') : '';
-    var adoc = await db.collection('admins').doc(u.uid).get();
-    if(adoc.exists && adoc.data().role === 'cat_manager'){ role = 'cat_manager'; assignedCat = assignedCat || adoc.data().assignedCategory || ''; }
-    if(role !== 'cat_manager'){
-      loginErr.textContent = '⛔ هذه الصفحة لمدراء الأقسام فقط. دورك: ' + role;
-      await auth.signOut(); return;
-    }
-    if(!assignedCat){
-      loginErr.textContent = '⚠️ لم يُعيَّن قسم لهذا المستخدم';
-      await auth.signOut(); return;
-    }
-    var dn = (udoc.exists && udoc.data().name) ? udoc.data().name : u.email;
-    state.user = u; state.displayName = dn; state.cat = assignedCat;
-    userLabel.textContent = dn;
-    catLabelEl.textContent = '🏷️ قسم: ' + catLabel(assignedCat);
-    loginScreen.classList.add('hidden'); app.classList.remove('hidden');
-    startListening();
-  } catch(e){
-    loginErr.textContent = '❌ ' + e.message;
-    await auth.signOut();
-  }
+  if(!u){document.getElementById('login-screen').classList.remove('hidden');document.getElementById('app').classList.add('hidden');return;}
+  try{
+    var udoc=await db.collection('users').doc(u.uid).get();
+    var role=udoc.exists?(udoc.data().role||''):'';
+    var cat=udoc.exists?(udoc.data().assignedCategory||''):'';
+    var adoc=await db.collection('admins').doc(u.uid).get();
+    if(adoc.exists&&adoc.data().role==='cat_manager'){role='cat_manager';cat=cat||adoc.data().assignedCategory||'';}
+    if(role!=='cat_manager'||!cat){document.getElementById('login-err').textContent='⛔ لست مدير قسم أو لا يوجد قسم معين';await auth.signOut();return;}
+    state.user=u;state.userData=udoc.exists?udoc.data():{};state.cat=cat;
+    document.getElementById('cat-name').textContent=catLabel(cat);
+    document.getElementById('user-name').textContent=state.userData.name||u.email;
+    document.getElementById('greet-name').textContent=state.userData.name||'';
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    startListeners();
+    loadProducts();
+  }catch(e){document.getElementById('login-err').textContent='❌ '+e.message;await auth.signOut();}
 });
 
-function startListening(){
-  if(state.unsub) state.unsub();
-  state.unsub = db.collection('orders')
-    .where('workflowStatus', '==', 'awaiting_categories')
-    .onSnapshot(function(snap){
-      var orders = [];
-      snap.forEach(function(d){
-        var o = d.data(); o.id = d.id;
-        var c = o.categories && o.categories[state.cat];
-        if(c && c.status === 'pending') orders.push(o);
-      });
-      state.orders = orders;
-      render();
-    }, function(err){
-      console.warn('[snap pending]', err.message);
-      ordersList.innerHTML = '<div class="empty"><div class="empty-icon">❌</div>' + esc(err.message) + '</div>';
-    });
-
-  db.collection('orders')
-    .where('fulfillmentStage', 'in', ['preparing','ready_for_pickup','picked_up','on_the_way','delivered','completed'])
-    .onSnapshot(function(snap){
-      var confirmed = [];
-      snap.forEach(function(d){
-        var o = d.data(); o.id = d.id;
-        var c = o.categories && o.categories[state.cat];
-        if(c && c.status === 'confirmed') confirmed.push(o);
-      });
-      state.confirmed = confirmed;
-      render();
-    }, function(e){ console.warn('[snap confirmed]', e.message); });
+function startListeners(){
+  if(state.unsubPending)state.unsubPending();
+  if(state.unsubConfirmed)state.unsubConfirmed();
+  state.unsubPending=db.collection('orders').where('workflowStatus','==','awaiting_categories').onSnapshot(snap=>{
+    var arr=[];
+    snap.forEach(d=>{var o=d.data();o.id=d.id;var c=o.categories&&o.categories[state.cat];if(c&&c.status==='pending')arr.push(o);});
+    state.pending=arr;
+    updateKPIs();renderPending();
+  },err=>console.warn('pending snap:',err.message));
+  
+  state.unsubConfirmed=db.collection('orders').where('fulfillmentStage','in',['preparing','ready_for_pickup','picked_up','on_the_way','delivered','completed']).onSnapshot(snap=>{
+    var arr=[];
+    snap.forEach(d=>{var o=d.data();o.id=d.id;var c=o.categories&&o.categories[state.cat];if(c&&c.status==='confirmed')arr.push(o);});
+    state.confirmed=arr;
+    renderConfirmed();
+  },err=>console.warn('confirmed snap:',err.message));
 }
 
-function render(){
-  var pending = state.orders || [];
-  var confirmed = state.confirmed || [];
-  var ts = new Date(); ts.setHours(0,0,0,0);
-  var todayCount = 0;
-  confirmed.forEach(function(o){
-    var at = o.categories && o.categories[state.cat] && o.categories[state.cat].confirmedAt;
-    if(at && at.seconds && at.seconds*1000 >= ts.getTime()) todayCount++;
-  });
+async function loadProducts(){
+  try{
+    var snap=await db.collection('products').where('category','==',state.cat).get();
+    state.products=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+    document.getElementById('kpi-products').textContent=state.products.length;
+    renderProducts();
+  }catch(e){console.warn('loadProducts:',e.message);}
+}
 
-  document.getElementById('st-pending').textContent = pending.length;
-  document.getElementById('st-confirmed').textContent = confirmed.length;
-  document.getElementById('st-rejected').textContent = 0;
-  document.getElementById('st-today').textContent = todayCount;
+function updateKPIs(){
+  document.getElementById('kpi-orders').textContent=state.pending.length;
+  var badge=document.getElementById('pending-badge');
+  if(state.pending.length>0){badge.textContent=state.pending.length;badge.classList.remove('hidden');}else badge.classList.add('hidden');
+  var total=0;state.pending.forEach(o=>{var c=o.categories&&o.categories[state.cat];if(c)total+=(Number(c.subtotal)||0);});
+  document.getElementById('kpi-value').textContent=total.toFixed(0);
+}
 
-  var list;
-  if(state.filter === 'pending') list = pending;
-  else if(state.filter === 'confirmed') list = confirmed;
-  else if(state.filter === 'rejected') list = [];
-  else list = pending.concat(confirmed);
+window.showView=function(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+};
 
-  if(list.length === 0){
-    var msg = state.filter === 'pending' ? 'لا توجد طلبات للمراجعة'
-            : state.filter === 'confirmed' ? 'لا توجد طلبات مؤكدة'
-            : 'لا توجد طلبات';
-    ordersList.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>' + msg + '</div>';
-    return;
-  }
-
-  ordersList.innerHTML = list.map(function(o){
-    var c = (o.categories && o.categories[state.cat]) || {};
-    var items = c.items || [];
-    var isConfirmed = c.status === 'confirmed';
-    var canConfirm = !isConfirmed && items.every(function(i){ return i._catStatus !== false; });
-
-    var itemsHtml = items.map(function(it, idx){
-      var checked = it._catStatus !== false;
-      return '<label class="item-row">' +
-        '<input type="checkbox" ' + (checked?'checked':'') + ' ' + (isConfirmed?'disabled':'') + ' data-order="'+o.id+'" data-idx="'+idx+'">' +
-        '<div class="item-info"><div class="item-name">' + esc(it.name || '—') + '</div><div class="item-qty">الكمية: ' + (it.qty||1) + '</div></div>' +
-        '<div class="item-price">' + (Number(it.price)||0) + ' ر</div>' +
-      '</label>';
-    }).join('');
-
-    var actionsHtml = isConfirmed
-      ? '<button class="act-btn act-pdf" onclick="window.__catDownloadPDF(\''+o.id+'\')">📤 كشف استلام PDF</button>'
-      : '<button class="act-btn act-confirm" onclick="window.__catConfirm(\''+o.id+'\')">✓ تأكيد التوفر</button>' +
-        '<button class="act-btn act-reject" onclick="window.__catReject(\''+o.id+'\')">✗</button>';
-
-    var badgeHtml = isConfirmed 
-      ? '<span class="badge badge-confirmed">✅ مؤكد</span>'
-      : '<span class="badge badge-pending">⏳ للمراجعة</span>';
-
-    return '<div class="order-card ' + (isConfirmed?'confirmed':'pending') + '">' +
-      '<div class="order-head">' +
-        '<div style="flex:1;min-width:0">' +
-          '<div class="order-id">#' + esc(o.id.slice(-6).toUpperCase()) + '</div>' +
-          '<div class="order-time">🕐 ' + fmtDate(o.createdAt) + '</div>' +
-        '</div>' +
-        '<div style="text-align:left">' +
-          '<div class="order-total">' + (Number(o.total)||0).toFixed(0) + ' <small>ر.ي</small></div>' +
-          '<div>' + badgeHtml + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="items-section">' +
-        '<div class="items-title">🛒 المنتجات (' + items.length + ')</div>' +
-        itemsHtml +
-      '</div>' +
-      '<div class="actions">' + actionsHtml + '</div>' +
-    '</div>';
+function renderPending(){
+  var el=document.getElementById('pending-list');
+  if(!state.pending.length){el.innerHTML='<div class="empty"><div class="empty-icon">✨</div>لا توجد طلبات بانتظار المراجعة</div>';return;}
+  el.innerHTML=state.pending.map(o=>{
+    var c=o.categories[state.cat];
+    var items=c.items||[];
+    var allChecked=items.every(i=>i._catStatus!==false);
+    var itemsHtml=items.map((it,idx)=>'<label class="order-item"><input type="checkbox" data-oid="'+o.id+'" data-idx="'+idx+'" '+(it._catStatus!==false?'checked':'')+'><div class="item-info"><b>'+esc(it.name||'—')+'</b><span>الكمية: '+(it.qty||1)+'</span></div><div class="item-price">'+(Number(it.price)||0)+' ر</div></label>').join('');
+    return '<div class="order-card"><div class="order-head"><div><b>#'+esc(o.id.slice(-6).toUpperCase())+'</b><div class="order-meta">'+esc(o.name||o.customerName||'عميل')+' · '+fmtDate(o.createdAt)+'</div></div><div class="order-total">'+(Number(o.total)||0).toFixed(0)+' ر</div></div>'+itemsHtml+'<div class="order-actions"><button class="btn-ok" '+(allChecked?'':'disabled')+' data-confirm="'+o.id+'">✓ تأكيد التوفر</button><button class="btn-warn" data-reject="'+o.id+'">✗ رفض</button></div></div>';
   }).join('');
+  bindPendingActions();
+}
 
-  ordersList.querySelectorAll('input[type=checkbox]').forEach(function(cb){
-    cb.onchange = function(){
-      var oid = cb.dataset.order;
-      var idx = parseInt(cb.dataset.idx, 10);
-      var o = (state.orders||[]).find(function(x){ return x.id === oid; });
-      if(!o) return;
-      var c = o.categories[state.cat];
-      if(c.items[idx]) c.items[idx]._catStatus = cb.checked;
-      var card = cb.closest('.order-card');
-      var okBtn = card.querySelector('.act-confirm');
-      if(okBtn) okBtn.disabled = !c.items.every(function(i){ return i._catStatus !== false; });
+function renderConfirmed(){
+  var el=document.getElementById('confirmed-list');
+  if(!state.confirmed.length){el.innerHTML='<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات مؤكدة بعد</div>';return;}
+  el.innerHTML=state.confirmed.map(o=>{
+    var c=o.categories[state.cat]||{};
+    var items=c.items||[];
+    var itemsHtml=items.map(it=>'<div class="order-item"><div class="item-info"><b>'+esc(it.name||'—')+'</b><span>الكمية: '+(it.qty||1)+'</span></div><div class="item-price">'+(Number(it.price)||0)+' ر</div></div>').join('');
+    return '<div class="order-card"><div class="order-head"><div><b>#'+esc(o.id.slice(-6).toUpperCase())+'</b><div class="order-meta">'+esc(o.name||o.customerName||'عميل')+' · '+fmtDate(o.createdAt)+'</div></div><div class="order-total">'+(Number(o.total)||0).toFixed(0)+' ر</div></div>'+itemsHtml+'<div class="order-actions"><button class="btn-pdf" data-pdf="'+o.id+'">📄 كشف استلام PDF</button></div></div>';
+  }).join('');
+  el.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>downloadCatPDF(b.dataset.pdf));
+}
+
+function bindPendingActions(){
+  var el=document.getElementById('pending-list');
+  el.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.onchange=function(){
+      var oid=cb.dataset.oid;var idx=parseInt(cb.dataset.idx,10);
+      var o=state.pending.find(x=>x.id===oid);if(!o)return;
+      var items=o.categories[state.cat].items;
+      items[idx]._catStatus=cb.checked;
+      var btn=cb.closest('.order-card').querySelector('.btn-ok');
+      if(btn)btn.disabled=!items.every(i=>i._catStatus!==false);
     };
   });
+  el.querySelectorAll('[data-confirm]').forEach(b=>b.onclick=()=>confirmOrder(b.dataset.confirm));
+  el.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>rejectOrder(b.dataset.reject));
 }
 
-window.__catConfirm = async function(orderId){
-  var o = (state.orders||[]).find(function(x){ return x.id === orderId; });
-  if(!o){ toast('❌ الطلب غير موجود', 'err'); return; }
-  if(!confirm('تأكيد توفر جميع المنتجات في هذا الطلب؟')) return;
-  try {
-    var c = o.categories[state.cat];
-    var catObj = JSON.parse(JSON.stringify(c));
-    catObj.items = (catObj.items||[]).map(function(i){ return Object.assign({}, i, {_catStatus: i._catStatus !== false}); });
-    catObj.status = 'confirmed';
-    catObj.confirmedBy = state.user.uid;
-    catObj.confirmedByName = state.displayName;
-    catObj.confirmedAt = firebase.firestore.FieldValue.serverTimestamp();
-
-    var ref = db.collection('orders').doc(orderId);
-    var doc = await ref.get();
-    if(!doc.exists){ toast('❌ الطلب غير موجود', 'err'); return; }
-    var data = doc.data();
-    var merged = Object.assign({}, data.categories || {});
-    merged[state.cat] = catObj;
-    var updates = {};
-    updates['categories.' + state.cat] = catObj;
-    var allResolved = Object.keys(merged).every(function(k){ var s = merged[k] && merged[k].status; return s === 'confirmed' || s === 'rejected'; });
-    var anyRejected = Object.keys(merged).some(function(k){ return merged[k] && merged[k].status === 'rejected'; });
-    if(allResolved){
-      updates.workflowStatus = anyRejected ? 'payment_rejected' : 'ready_to_send';
-      updates.fulfillmentStage = anyRejected ? 'awaiting_customer_decision' : 'preparing';
-    }
+async function confirmOrder(oid){
+  var o=state.pending.find(x=>x.id===oid);if(!o)return;
+  if(!confirm('تأكيد توفر جميع منتجات هذا الطلب؟'))return;
+  try{
+    var catObj=JSON.parse(JSON.stringify(o.categories[state.cat]));
+    catObj.items=(catObj.items||[]).map(i=>Object.assign({},i,{_catStatus:i._catStatus!==false}));
+    catObj.status='confirmed';catObj.confirmedBy=state.user.uid;catObj.confirmedByName=state.userData.name||state.user.email;catObj.confirmedAt=firebase.firestore.FieldValue.serverTimestamp();
+    var ref=db.collection('orders').doc(oid);var doc=await ref.get();if(!doc.exists)throw new Error('الطلب غير موجود');
+    var data=doc.data();var merged=Object.assign({},data.categories||{});merged[state.cat]=catObj;
+    var updates={};updates['categories.'+state.cat]=catObj;
+    var allResolved=Object.keys(merged).every(k=>{var s=merged[k]&&merged[k].status;return s==='confirmed'||s==='rejected';});
+    var anyRejected=Object.keys(merged).some(k=>merged[k]&&merged[k].status==='rejected');
+    if(allResolved){updates.workflowStatus=anyRejected?'payment_rejected':'ready_to_send';updates.fulfillmentStage=anyRejected?'awaiting_customer_decision':'preparing';}
     await ref.update(updates);
+    try{await db.collection('notifications').add({userId:o.customerId||o.userId||'',title:'✅ تم تأكيد توفر منتجاتك',body:'طلبك #'+oid.slice(-6)+' من قسم '+catLabel(state.cat)+' جاهز',type:'order',event:'cat_confirmed',icon:'✅',read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
+    toast('✅ تم التأكيد','ok');
+  }catch(e){toast('❌ '+e.message,'err');}
+}
 
-    try {
-      await db.collection('notifications').add({
-        userId: o.customerId || o.userId || '',
-        title: '✅ تم تأكيد توفر منتجاتك',
-        body: 'طلبك #' + orderId.slice(-6) + ' من قسم ' + catLabel(state.cat) + ' جاهز',
-        type: 'order', event: 'cat_confirmed', icon: '✅', read: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } catch(e){}
+async function rejectOrder(oid){
+  var o=state.pending.find(x=>x.id===oid);if(!o)return;
+  var reason=prompt('اذكر سبب الرفض:');if(!reason||!reason.trim())return;
+  try{
+    var catObj=JSON.parse(JSON.stringify(o.categories[state.cat]));
+    catObj.status='rejected';catObj.rejectReason=reason.trim();catObj.rejectedBy=state.user.uid;catObj.rejectedByName=state.userData.name||state.user.email;catObj.rejectedAt=firebase.firestore.FieldValue.serverTimestamp();
+    var updates={};updates['categories.'+state.cat]=catObj;updates.workflowStatus='payment_rejected';updates.fulfillmentStage='awaiting_customer_decision';
+    await db.collection('orders').doc(oid).update(updates);
+    try{await db.collection('notifications').add({userId:o.customerId||o.userId||'',title:'⚠️ تحديث بخصوص طلبك',body:'قسم '+catLabel(state.cat)+': '+reason.trim(),type:'warning',event:'cat_rejected',icon:'⚠️',read:false,important:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
+    toast('❌ تم الرفض','warn');
+  }catch(e){toast('❌ '+e.message,'err');}
+}
 
-    toast('✅ تم التأكيد بنجاح', 'ok');
-  } catch(e){
-    toast('❌ ' + e.message, 'err');
-    console.error(e);
-  }
-};
+function renderProducts(){
+  var el=document.getElementById('products-list');
+  if(!state.products.length){el.innerHTML='<div class="empty"><div class="empty-icon">📦</div>لا توجد منتجات في قسمك بعد</div>';return;}
+  el.innerHTML=state.products.map(p=>'<div class="product-card"><img src="'+esc(p.img||p.image||'')+'" alt=""><div class="product-info"><b>'+esc(p.name||'—')+'</b><span>'+(Number(p.price)||0)+' ر · مخزون: '+(p.stock||0)+'</span></div></div>').join('');
+}
 
-window.__catReject = async function(orderId){
-  var o = (state.orders||[]).find(function(x){ return x.id === orderId; });
-  if(!o){ toast('❌ الطلب غير موجود', 'err'); return; }
-  var reason = prompt('اذكر سبب الرفض (لن يظهر للعميل بنفس النص، بل كسبب):');
-  if(!reason || !reason.trim()) return;
-  try {
-    var c = o.categories[state.cat];
-    var catObj = JSON.parse(JSON.stringify(c));
-    catObj.status = 'rejected';
-    catObj.rejectReason = reason.trim();
-    catObj.rejectedBy = state.user.uid;
-    catObj.rejectedByName = state.displayName;
-    catObj.rejectedAt = firebase.firestore.FieldValue.serverTimestamp();
-
-    var updates = {};
-    updates['categories.' + state.cat] = catObj;
-    updates.workflowStatus = 'payment_rejected';
-    updates.fulfillmentStage = 'awaiting_customer_decision';
-    await db.collection('orders').doc(orderId).update(updates);
-
-    try {
-      await db.collection('notifications').add({
-        userId: o.customerId || o.userId || '',
-        title: '⚠️ تحديث بخصوص طلبك',
-        body: 'قسم ' + catLabel(state.cat) + ': ' + reason.trim(),
-        type: 'warning', event: 'cat_rejected', icon: '⚠️', read: false, important: true,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } catch(e){}
-
-    toast('❌ تم الرفض', 'warn');
-  } catch(e){
-    toast('❌ ' + e.message, 'err');
-  }
-};
-
-window.__catDownloadPDF = async function(orderId){
-  var o = (state.confirmed||[]).find(function(x){ return x.id === orderId; });
-  if(!o){ toast('❌ الطلب غير موجود', 'err'); return; }
-  if(typeof html2pdf === 'undefined'){
-    toast('جاري تحميل مكتبة PDF...', 'info');
-    var s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    s.onload = function(){ window.__catDownloadPDF(orderId); };
-    document.head.appendChild(s);
-    return;
-  }
-  var c = o.categories[state.cat] || {};
-  var items = c.items || [];
-  var dateStr = new Date().toLocaleString('ar');
-  var htmlStr = '<div style="padding:20px;font-family:Arial,Tahoma,sans-serif;direction:rtl;max-width:800px;color:#333;background:#fff">' +
+async function downloadCatPDF(oid){
+  var o=state.confirmed.find(x=>x.id===oid);if(!o)return;
+  if(typeof html2pdf==='undefined'){toast('جاري تحميل مكتبة PDF...','info');setTimeout(()=>downloadCatPDF(oid),1500);return;}
+  var c=o.categories[state.cat]||{};var items=c.items||[];
+  var dateStr=new Date().toLocaleString('ar');
+  var totalDept=items.reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
+  var htmlStr='<div style="padding:20px;font-family:Arial,Tahoma,sans-serif;direction:rtl;max-width:800px;color:#333;background:#fff">' +
     '<div style="text-align:center;border-bottom:3px solid #a855f7;padding-bottom:15px;margin-bottom:20px">' +
       '<h1 style="color:#a855f7;margin:0;font-size:36px;letter-spacing:2px">CHIZEN</h1>' +
-      '<h2 style="margin:10px 0;color:#333;font-size:20px">كشف استلام - قسم ' + esc(catLabel(state.cat)) + '</h2>' +
-      '<p style="color:#666;font-size:14px">رقم الطلب: #' + orderId.slice(-6).toUpperCase() + '</p>' +
+      '<h2 style="margin:10px 0;color:#333;font-size:20px">كشف استلام - قسم '+esc(catLabel(state.cat))+'</h2>' +
+      '<p style="color:#666;font-size:14px">رقم: #'+oid.slice(-6).toUpperCase()+'</p>' +
     '</div>' +
     '<table style="width:100%;margin-bottom:20px;border-collapse:collapse;font-size:14px">' +
-      '<tr><td style="padding:8px;color:#666;background:#f9fafb;width:35%;font-weight:600">👤 العميل:</td><td style="padding:8px;font-weight:bold">' + esc(o.name || o.customerName || '—') + '</td></tr>' +
-      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📱 الهاتف:</td><td style="padding:8px">' + esc(o.phone || o.customerPhone || '—') + '</td></tr>' +
-      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📍 التسليم:</td><td style="padding:8px">' + esc(o.deliveryAddress || o.address || o.pickup || '—') + '</td></tr>' +
-      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">🏷️ القسم:</td><td style="padding:8px">' + esc(catLabel(state.cat)) + '</td></tr>' +
-      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">🚚 المندوب:</td><td style="padding:8px">' + esc(o.deliveryMgrName || '(لم يُعيَّن بعد)') + '</td></tr>' +
-      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📅 التاريخ:</td><td style="padding:8px">' + dateStr + '</td></tr>' +
+      '<tr><td style="padding:8px;color:#666;background:#f9fafb;width:35%;font-weight:600">👤 العميل:</td><td style="padding:8px;font-weight:bold">'+esc(o.name||o.customerName||'—')+'</td></tr>' +
+      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📱 الهاتف:</td><td style="padding:8px">'+esc(o.phone||o.customerPhone||'—')+'</td></tr>' +
+      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📍 العنوان:</td><td style="padding:8px">'+esc(o.deliveryAddress||o.address||o.pickup||'—')+'</td></tr>' +
+      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">🏷️ القسم:</td><td style="padding:8px">'+esc(catLabel(state.cat))+'</td></tr>' +
+      '<tr><td style="padding:8px;color:#666;background:#f9fafb;font-weight:600">📅 التاريخ:</td><td style="padding:8px">'+dateStr+'</td></tr>' +
     '</table>' +
-    '<h3 style="color:#a855f7;border-top:2px solid #e5e7eb;padding-top:15px">🛒 المنتجات (' + items.length + ')</h3>' +
+    '<h3 style="color:#a855f7;border-top:2px solid #e5e7eb;padding-top:15px">🛒 المنتجات ('+items.length+')</h3>' +
     '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
       '<thead><tr style="background:#a855f7;color:#fff">' +
         '<th style="padding:10px;text-align:right;border:1px solid #7c3aed">المنتج</th>' +
@@ -445,47 +346,18 @@ window.__catDownloadPDF = async function(orderId){
         '<th style="padding:10px;text-align:center;border:1px solid #7c3aed">السعر</th>' +
         '<th style="padding:10px;text-align:center;border:1px solid #7c3aed">المجموع</th>' +
       '</tr></thead><tbody>' +
-      items.map(function(it){ return '<tr>' +
-        '<td style="padding:8px;border:1px solid #ddd">' + esc(it.name || '—') + '</td>' +
-        '<td style="padding:8px;border:1px solid #ddd;text-align:center">' + (it.qty || 1) + '</td>' +
-        '<td style="padding:8px;border:1px solid #ddd;text-align:center">' + (it.price || 0) + '</td>' +
-        '<td style="padding:8px;border:1px solid #ddd;text-align:center">' + ((it.price||0)*(it.qty||1)) + '</td>' +
-      '</tr>'; }).join('') +
+      items.map(it=>'<tr><td style="padding:8px;border:1px solid #ddd">'+esc(it.name||'—')+'</td><td style="padding:8px;border:1px solid #ddd;text-align:center">'+(it.qty||1)+'</td><td style="padding:8px;border:1px solid #ddd;text-align:center">'+(it.price||0)+'</td><td style="padding:8px;border:1px solid #ddd;text-align:center">'+((Number(it.price)||0)*(Number(it.qty)||1))+'</td></tr>').join('') +
     '</tbody></table>' +
     '<div style="margin-top:20px;padding:15px;background:#f3e8ff;border-radius:10px;text-align:left;font-size:18px;font-weight:bold;border:2px solid #a855f7">' +
-      'الإجمالي لهذا القسم: ' + ((c.subtotal||items.reduce(function(s,i){return s+(i.price||0)*(i.qty||1);},0))).toFixed(0) + ' ر.ي' +
+      'إجمالي هذا القسم: '+totalDept.toFixed(0)+' ر.ي' +
     '</div>' +
     '<div style="text-align:center;margin-top:40px;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:20px">' +
       '<p>CHIZEN — كشف استلام للمندوب</p>' +
-      '<p style="font-size:10px">طُبع: ' + dateStr + '</p>' +
+      '<p style="font-size:10px">طُبع: '+dateStr+'</p>' +
     '</div></div>';
-  var el = document.createElement('div');
-  el.innerHTML = htmlStr;
-  html2pdf().from(el).set({
-    margin: 10, filename: 'CHIZEN-CAT-' + orderId.slice(-6).toUpperCase() + '.pdf',
-    image: {type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true},
-    jsPDF:{unit:'mm',format:'a4',orientation:'p'}
-  }).save().then(function(){ toast('✅ تم تحميل PDF', 'ok'); }).catch(function(e){ toast('❌ ' + e.message, 'err'); });
-};
-
-document.querySelectorAll('.tab').forEach(function(tab){
-  tab.onclick = function(){
-    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
-    tab.classList.add('active');
-    state.filter = tab.dataset.filter;
-    render();
-  };
-});
-document.querySelectorAll('.stat').forEach(function(s){
-  s.onclick = function(){
-    var f = s.dataset.filter;
-    if(!f) return;
-    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.filter === f); });
-    state.filter = f;
-    render();
-  };
-});
-
+  var el=document.createElement('div');el.innerHTML=htmlStr;
+  html2pdf().from(el).set({margin:10,filename:'CHIZEN-CAT-'+oid.slice(-6).toUpperCase()+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'p'}}).save().then(()=>toast('✅ تم تحميل PDF','ok')).catch(e=>toast('❌ '+e.message,'err'));
+}
 })();
 </script>
 </body>
