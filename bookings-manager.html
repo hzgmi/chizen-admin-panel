@@ -43,6 +43,8 @@ main{padding:8px 16px}
 .bk-card.confirmed{border-color:rgba(34,197,94,.4)}
 .bk-card.completed{border-color:rgba(59,130,246,.4);opacity:.9}
 .bk-card.cancelled{border-color:rgba(239,68,68,.4);opacity:.7}
+.bk-card.price_quoted{border-color:rgba(245,158,11,.5);background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(245,158,11,.02))}
+.bk-card.price_approved{border-color:rgba(34,197,94,.5);background:linear-gradient(135deg,rgba(34,197,94,.04),rgba(34,197,94,.02))}
 .bk-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding-bottom:10px;border-bottom:1px dashed rgba(255,255,255,.08);margin-bottom:10px}
 .bk-cust{font-size:13px;font-weight:800;color:#fff}
 .bk-phone{font-size:11px;color:#93c5fd;margin-top:2px}
@@ -52,6 +54,8 @@ main{padding:8px 16px}
 .st-confirmed{background:rgba(34,197,94,.25);color:#6ee7b7}
 .st-completed{background:rgba(59,130,246,.25);color:#93c5fd}
 .st-cancelled{background:rgba(239,68,68,.25);color:#fca5a5}
+.st-price_quoted{background:rgba(245,158,11,.25);color:#fcd34d}
+.st-price_approved{background:rgba(34,197,94,.25);color:#6ee7b7}
 .bk-info{display:grid;gap:5px;margin-bottom:10px}
 .bk-row{display:flex;justify-content:space-between;gap:8px;font-size:12px}
 .bk-row .l{color:#93c5fd;flex-shrink:0}
@@ -136,10 +140,10 @@ main{padding:8px 16px}
   </div>
 
   <!-- TAB VIEWS -->
-  <div id="v-bus" class="view"><div class="tabs"><button class="tab active" data-filter="all">📊 الكل</button><button class="tab" data-filter="pending">⏳ معلقة</button><button class="tab" data-filter="confirmed">✅ مؤكدة</button><button class="tab" data-filter="completed">🏁 مكتملة</button></div><div class="search"><input placeholder="🔍 بحث بالاسم أو الهاتف" oninput="renderTab('bus')"></div><main id="list-bus"></main></div>
-  <div id="v-flight" class="view"><div class="tabs"><button class="tab active" data-filter="all">📊 الكل</button><button class="tab" data-filter="pending">⏳ معلقة</button><button class="tab" data-filter="confirmed">✅ مؤكدة</button><button class="tab" data-filter="completed">🏁 مكتملة</button></div><div class="search"><input placeholder="🔍 بحث" oninput="renderTab('flight')"></div><main id="list-flight"></main></div>
-  <div id="v-hajj" class="view"><div class="tabs"><button class="tab active" data-filter="all">📊 الكل</button><button class="tab" data-filter="pending">⏳ معلقة</button><button class="tab" data-filter="confirmed">✅ مؤكدة</button><button class="tab" data-filter="completed">🏁 مكتملة</button></div><div class="search"><input placeholder="🔍 بحث" oninput="renderTab('hajj')"></div><main id="list-hajj"></main></div>
-  <div id="v-umrah" class="view"><div class="tabs"><button class="tab active" data-filter="all">📊 الكل</button><button class="tab" data-filter="pending">⏳ معلقة</button><button class="tab" data-filter="confirmed">✅ مؤكدة</button><button class="tab" data-filter="completed">🏁 مكتملة</button></div><div class="search"><input placeholder="🔍 بحث" oninput="renderTab('umrah')"></div><main id="list-umrah"></main></div>
+  <div id="v-bus" class="view"><div class="tabs"><button class="tab active" data-filter="all">📊 الكل</button><button class="tab" data-filter="pending">⏳ معلقة</button><button class="tab" data-filter="price_quoted">📤 عرض سعر</button><button class="tab" data-filter="price_approved">✅ موافقة</button><button class="tab" data-filter="confirmed">✅ مؤكدة</button><button class="tab" data-filter="completed">🏁 مكتملة</button></div><div class="search"><input placeholder="🔍 بحث بالاسم أو الهاتف" oninput="renderTab('bus')"></div><main id="list-bus"></main></div>
+  <div id="v-flight" class="view"><div class="tabs"><button class="tab active" data-filter="all">📊 الكل</button><button class="tab" data-filter="pending">⏳ معلقة</button><button class="tab" data-filter="price_quoted">📤 عرض سعر</button><button class="tab" data-filter="price_approved">✅ موافقة</button><button class="tab" data-filter="confirmed">✅ مؤكدة</button><button class="tab" data-filter="completed">🏁 مكتملة</button></div><div class="search"><input placeholder="🔍 بحث" oninput="renderTab('flight')"></div><main id="list-flight"></main></div>
+  <div id="v-hajj" class="view"><div class="tabs"><button class="tab active" data-filter="all">📊 الكل</button><button class="tab" data-filter="pending">⏳ معلقة</button><button class="tab" data-filter="price_quoted">📤 عرض سعر</button><button class="tab" data-filter="price_approved">✅ موافقة</button><button class="tab" data-filter="confirmed">✅ مؤكدة</button><button class="tab" data-filter="completed">🏁 مكتملة</button></div><div class="search"><input placeholder="🔍 بحث" oninput="renderTab('hajj')"></div><main id="list-hajj"></main></div>
+  <div id="v-umrah" class="view"><div class="tabs"><button class="tab active" data-filter="all">📊 الكل</button><button class="tab" data-filter="pending">⏳ معلقة</button><button class="tab" data-filter="price_quoted">📤 عرض سعر</button><button class="tab" data-filter="price_approved">✅ موافقة</button><button class="tab" data-filter="confirmed">✅ مؤكدة</button><button class="tab" data-filter="completed">🏁 مكتملة</button></div><div class="search"><input placeholder="🔍 بحث" oninput="renderTab('umrah')"></div><main id="list-umrah"></main></div>
 
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="goTab('home')"><span class="ic">🏠</span><span>الرئيسية</span></button>
@@ -276,6 +280,7 @@ function renderTab(type){
       var act = btn.dataset.act;
       var id = btn.dataset.id;
       if(act === 'confirm') changeStatus(id, 'confirmed');
+      else if(act === 'quote') changeStatus(id, 'quote');
       else if(act === 'complete') changeStatus(id, 'completed');
       else if(act === 'cancel') changeStatus(id, 'cancelled');
       else if(act === 'edit') openEditForm(id);
@@ -297,7 +302,7 @@ function renderBookingCard(b){
   var d = b.data || {};
   var typeInfo = TYPES[b.type] || {label:b.type, icon:'📄'};
   var phone = b.phone || b.userPhone || d.phone || '';
-  var stLbl = {pending:'⏳ معلقة', confirmed:'✅ مؤكدة', completed:'🏁 مكتملة', cancelled:'❌ ملغاة'}[b.status] || b.status;
+  var stLbl = {pending:'⏳ معلقة', price_quoted:'📤 عرض سعر', price_approved:'✅ وافق العميل', confirmed:'✅ مؤكدة', completed:'🏁 مكتملة', cancelled:'❌ ملغاة'}[b.status] || b.status;
   var est = Number(b.estimatedPrice) || 0;
   var fin = Number(b.finalPrice) || 0;
   var hasDelivery = b.freeDelivery || d.freeDelivery;
@@ -324,11 +329,13 @@ function renderBookingCard(b){
     if(d.roomType) details += row('نوع الغرفة', d.roomType);
     if(d.duration) details += row('المدة', d.duration + ' أيام');
   }
+  if(b.idNumber) details += row('🆔 وثيقة', b.idNumber);
   if(d.notes) details += row('ملاحظات', d.notes);
   
   var html = '<div class="bk-card '+b.status+'">';
   html += '<div class="bk-head"><div style="min-width:0;flex:1">';
   html += '<div class="bk-cust">' + typeInfo.icon + ' ' + esc(b.userName || 'عميل') + '</div>';
+  if(b.idFullName && b.idFullName !== b.userName) html += '<div style="font-size:11px;color:#fbbf24;margin-top:2px">📋 ' + esc(b.idFullName) + '</div>';
   if(phone) html += '<div class="bk-phone">📱 ' + esc(phone) + '</div>';
   html += '<div class="bk-time">🕐 ' + fmtDate(b.createdAt) + '</div>';
   html += '</div><div class="bk-status st-' + b.status + '">' + stLbl + '</div></div>';
@@ -346,10 +353,16 @@ function renderBookingCard(b){
     html += '<div class="bk-delivery">🚚 توصيل مجاني' + (deliveryAddr ? ' — ' + esc(deliveryAddr) : '') + '</div>';
   }
   
+  if(b.idPhoto) html += '<div style="margin-bottom:10px"><button onclick="toggleIdPhoto(\'' + b.id + '\')" style="background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:11px;width:100%;font-weight:800">📸 عرض صورة الوثيقة</button><div id="idph-' + b.id + '" style="display:none;margin-top:8px"><img src="' + b.idPhoto + '" style="width:100%;max-height:300px;object-fit:contain;border-radius:10px;border:1px solid #3b82f6;background:#000"></div></div>';
   html += '<div class="bk-actions">';
   if(phone) html += '<a href="https://wa.me/' + phone.replace(/\D/g,'') + '" target="_blank" class="bk-btn btn-wa">💬</a>';
   html += '<button class="bk-btn btn-edit" data-act="edit" data-id="' + b.id + '">✏️ تعديل</button>';
-  if(b.status === 'pending') html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '">✅ تأكيد</button>';
+  if(b.status === 'pending'){
+    if(b.estimatedPrice > 0) html += '<button class="bk-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706)" data-act="quote" data-id="' + b.id + '">📤 عرض سعر</button>';
+    html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '">✅ تأكيد</button>';
+  }
+  if(b.status === 'price_quoted') html += '<div style="flex:1;min-width:120px;padding:9px 12px;background:rgba(245,158,11,.15);border-radius:9px;color:#fbbf24;font-size:11px;font-weight:800;text-align:center">⏳ بانتظار موافقة العميل</div>';
+  if(b.status === 'price_approved') html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '">✅ تأكيد نهائي</button>';
   if(b.status === 'confirmed') html += '<button class="bk-btn btn-complete" data-act="complete" data-id="' + b.id + '">🏁 إكمال</button>';
   html += '<button class="bk-btn btn-del" data-act="delete" data-id="' + b.id + '">🗑</button>';
   html += '</div></div>';
@@ -359,15 +372,76 @@ function renderBookingCard(b){
 function row(l, v){ return '<div class="bk-row"><span class="l">' + l + ':</span><span class="v">' + esc(v) + '</span></div>'; }
 
 async function changeStatus(id, status){
-  var labels = {confirmed:'تأكيد', completed:'إكمال', cancelled:'إلغاء'};
+  var labels = {quote:'إرسال عرض السعر', confirmed:'تأكيد', completed:'إكمال', cancelled:'إلغاء'};
   if(!confirm(labels[status] + ' هذا الحجز؟')) return;
   try {
-    var upd = {status: status, updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
-    if(status === 'confirmed') upd.confirmedAt = firebase.firestore.FieldValue.serverTimestamp();
-    if(status === 'completed') upd.completedAt = firebase.firestore.FieldValue.serverTimestamp();
-    if(status === 'cancelled') upd.cancelledAt = firebase.firestore.FieldValue.serverTimestamp();
-    await db.collection('bookings').doc(id).update(upd);
-    toast('✅ تم ' + labels[status], 'ok');
+    var bk = state.bookings.find(function(x){ return x.id === id; });
+    if(!bk) return;
+    var upd = {updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
+    
+    if(status === 'quote'){
+      if(!bk.estimatedPrice){
+        var ep = prompt('السعر التقريبي (ر.ي):', '0');
+        if(ep === null) return;
+        upd.estimatedPrice = Number(ep) || 0;
+      }
+      upd.status = 'price_quoted';
+      upd.quotedAt = firebase.firestore.FieldValue.serverTimestamp();
+      upd.quotedBy = state.user.uid;
+      await db.collection('bookings').doc(id).update(upd);
+      try {
+        await db.collection('notifications').add({
+          userId: bk.userId,
+          title: '💰 عرض سعر لحجزك',
+          body: 'السعر التقريبي: ' + (upd.estimatedPrice || bk.estimatedPrice) + ' ر.ي — افتح تطبيقك للموافقة',
+          type: 'booking', event: 'booking_quote', icon: '💰',
+          read: false, bookingId: id,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e){ console.warn('notif:', e.message); }
+      toast('✅ تم إرسال عرض السعر للعميل', 'ok');
+      return;
+    }
+    
+    if(status === 'confirmed'){
+      if(!bk.finalPrice){
+        var fp = prompt('السعر النهائي (ر.ي):', bk.estimatedPrice || '0');
+        if(fp === null) return;
+        upd.finalPrice = Number(fp) || 0;
+      }
+      upd.status = 'confirmed';
+      upd.confirmedAt = firebase.firestore.FieldValue.serverTimestamp();
+      upd.confirmedBy = state.user.uid;
+      await db.collection('bookings').doc(id).update(upd);
+      try {
+        await db.collection('notifications').add({
+          userId: bk.userId,
+          title: '✅ تم تأكيد حجزك',
+          body: 'السعر النهائي: ' + (upd.finalPrice || bk.finalPrice) + ' ر.ي',
+          type: 'booking', event: 'booking_confirmed', icon: '✅',
+          read: false, bookingId: id,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e){ console.warn('notif:', e.message); }
+      toast('✅ تم التأكيد', 'ok');
+      return;
+    }
+    
+    if(status === 'completed'){
+      upd.status = 'completed';
+      upd.completedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('bookings').doc(id).update(upd);
+      toast('✅ تم الإكمال', 'ok');
+      return;
+    }
+    
+    if(status === 'cancelled'){
+      upd.status = 'cancelled';
+      upd.cancelledAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('bookings').doc(id).update(upd);
+      toast('✅ تم الإلغاء', 'ok');
+      return;
+    }
   } catch(e){ toast('❌ ' + e.message, 'err'); }
 }
 
@@ -376,6 +450,54 @@ async function deleteBooking(id){
   try { await db.collection('bookings').doc(id).delete(); toast('✅ تم الحذف', 'ok'); }
   catch(e){ toast('❌ ' + e.message, 'err'); }
 }
+
+
+window.__currentIdPhoto = null;
+window.handleIdUpload = async function(input){
+  var file = input.files && input.files[0];
+  if(!file) return;
+  try {
+    var dataUrl = await __resizeIdImage(file);
+    window.__currentIdPhoto = dataUrl;
+    renderIdPreview();
+    toast('✅ تم رفع الصورة', 'ok');
+  } catch(e){ toast('❌ ' + e.message, 'err'); }
+};
+function __resizeIdImage(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var canvas = document.createElement('canvas');
+        var MAX = 1200;
+        var w = img.width, h = img.height;
+        if(w > h){ if(w > MAX){ h *= MAX/w; w = MAX; } } else { if(h > MAX){ w *= MAX/h; h = MAX; } }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function(){ reject(new Error('فشل تحميل الصورة')); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ reject(new Error('فشل قراءة الملف')); };
+    reader.readAsDataURL(file);
+  });
+}
+function renderIdPreview(){
+  var el = document.getElementById('f-id-preview');
+  if(!el) return;
+  if(window.__currentIdPhoto){
+    el.innerHTML = '<div style="position:relative;display:inline-block;width:100%"><img src="' + window.__currentIdPhoto + '" style="width:100%;max-height:250px;object-fit:contain;border-radius:10px;border:1px solid #3b82f6;background:#000"><button type="button" onclick="removeIdPhoto()" style="position:absolute;top:8px;left:8px;background:rgba(239,68,68,.9);color:#fff;border:none;padding:6px 10px;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;font-size:11px">🗑 إزالة</button></div>';
+  } else {
+    el.innerHTML = '<div style="text-align:center;padding:14px;color:#6b7280;font-size:11px;background:rgba(0,0,0,.2);border-radius:10px">لم يتم رفع صورة بعد</div>';
+  }
+}
+window.removeIdPhoto = function(){ window.__currentIdPhoto = null; renderIdPreview(); };
+window.toggleIdPhoto = function(id){
+  var el = document.getElementById('idph-' + id);
+  if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+};
 
 window.openAddForm = function(){ state.editingId = null; showFormModal(state.tab !== 'home' ? state.tab : 'bus', null); };
 window.openEditForm = function(id){
@@ -407,6 +529,9 @@ function showFormModal(type, existing){
   
   html += '<div class="form-field"><label>اسم العميل *</label><input id="f-name" value="' + esc(b.userName || '') + '" placeholder="اسم العميل"></div>';
   html += '<div class="form-field"><label>رقم الهاتف *</label><input id="f-phone" type="tel" value="' + esc(b.phone || d.phone || '') + '" placeholder="77xxxxxxx"></div>';
+  html += '<div class="form-field"><label>🆔 رقم الجواز/البطاقة</label><input id="f-id-number" value="' + esc(b.idNumber || '') + '" placeholder="رقم الوثيقة"></div>';
+  html += '<div class="form-field"><label>✍️ الاسم الكامل (كما في الوثيقة)</label><input id="f-id-name" value="' + esc(b.idFullName || '') + '" placeholder="الاسم كما في الجواز"></div>';
+  html += '<div class="form-field"><label>📸 صورة الوثيقة (جواز/بطاقة)</label><input type="file" accept="image/*" onchange="handleIdUpload(this)" style="padding:10px;background:rgba(0,0,0,.3);border:1px solid rgba(59,130,246,.3);border-radius:10px;color:#fff;width:100%;box-sizing:border-box;font-family:inherit;font-size:12px"><div id="f-id-preview" style="margin-top:8px"></div></div>';
   
   if(type === 'bus' || type === 'flight'){
     html += '<div class="form-row">';
@@ -447,6 +572,8 @@ function showFormModal(type, existing){
   html += '<button class="btn-save" onclick="saveBooking(\'' + type + '\')">💾 حفظ</button>';
   
   document.getElementById('form-body').innerHTML = html;
+  window.__currentIdPhoto = b.idPhoto || null;
+  renderIdPreview();
   document.getElementById('form-modal').classList.remove('hidden');
 }
 
@@ -487,8 +614,13 @@ window.saveBooking = async function(type){
   var delAddr = document.getElementById('f-delivery-addr');
   var est = Number(document.getElementById('f-estprice').value) || 0;
   var fin = Number(document.getElementById('f-finprice').value) || 0;
+  var idNumEl = document.getElementById('f-id-number');
+  var idNameEl = document.getElementById('f-id-name');
   
   var booking = {
+    idNumber: idNumEl ? idNumEl.value.trim() : '',
+    idFullName: idNameEl ? idNameEl.value.trim() : '',
+    idPhoto: window.__currentIdPhoto || '',
     type: type,
     userName: name,
     phone: phone,
