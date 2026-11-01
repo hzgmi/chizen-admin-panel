@@ -1266,7 +1266,7 @@ document.addEventListener('click', async function(e){
   if (tool === 'payments') return showPaymentsManager();
   if (tool === 'reports') return showReports();
   if (tool === 'profile') return showProfile();
-  if (tool === 'settings') return showSettings();
+  if (tool === 'settings') return window.__showSettingsFull ? window.__showSettingsFull() : showSettings();
 });
 
 async function showProductsList(){
@@ -3206,5 +3206,6 @@ window.__deletePayment = async function(idx){
 window.showPaymentsManager = showPaymentsManager;
 </script>
 <script src="pickup-manager.js"></script>
+<script src="settings-manager.js"></script>
 </body>
 </html>
