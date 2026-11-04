@@ -3,3 +3,8 @@ node_modules/
 .DS_Store
 *.bak_v*
 worker.js
+
+# Cleanup (2026-11-04)
+_archive/
+_check_*.html
+www/
