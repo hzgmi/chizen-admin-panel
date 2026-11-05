@@ -380,12 +380,17 @@ async function changeStatus(id, status){
     var upd = {updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
     
     if(status === 'quote'){
-      if(!bk.estimatedPrice){
-        var ep = prompt('السعر التقريبي (ر.ي):', '0');
-        if(ep === null) return;
-        upd.estimatedPrice = Number(ep) || 0;
-      }
+      var qAmount = prompt('أدخل السعر النهائي للعميل (ر.س):', bk.estimatedPrice || '0');
+      if(qAmount === null) return;
+      qAmount = Number(qAmount) || 0;
+      if(qAmount <= 0) { toast('❌ السعر يجب أن يكون أكبر من 0', 'err'); return; }
+
+      upd.estimatedPrice = qAmount;
       upd.status = 'price_quoted';
+      upd['priceQuote.status'] = 'quoted';
+      upd['priceQuote.amount'] = qAmount;
+      upd['priceQuote.quotedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+      upd['priceQuote.quotedBy'] = state.user.uid;
       upd.quotedAt = firebase.firestore.FieldValue.serverTimestamp();
       upd.quotedBy = state.user.uid;
       await db.collection('bookings').doc(id).update(upd);
