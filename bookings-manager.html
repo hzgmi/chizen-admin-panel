@@ -118,6 +118,7 @@ main{padding:8px 16px}
       <div class="avatar" id="u-avatar">?</div>
       <div style="min-width:0"><div class="h-name" id="u-name">—</div><div class="h-role">مدير الحجوزات</div></div>
     </div>
+    <button onclick="openPricesModal()" style="background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3);width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer;flex-shrink:0;margin-left:4px" title="إدارة الأسعار">⚙️</button>
     <button id="logout-btn" onclick="doLogout()">🚪</button>
   </header>
 
@@ -396,6 +397,117 @@ function renderBookingCard(b){
 }
 
 function row(l, v){ return '<div class="bk-row"><span class="l">' + l + ':</span><span class="v">' + esc(v) + '</span></div>'; }
+
+async function openPricesModal(){
+  try {
+    var doc = await db.collection('config').doc('prices').get();
+    var data = doc.exists ? doc.data() : {};
+    var flights = data.flights || {};
+    var buses = data.buses || {};
+    var hotels = data.hotels || {};
+
+    // إذا كانت فارغة، نملأها بالقيم الافتراضية من الكود
+    if(Object.keys(flights).length === 0){
+      flights = {'عدن-صنعاء':55000,'صنعاء-عدن':55000,'عدن-القاهرة':220000,'القاهرة-عدن':220000,'عدن-جدة':180000,'جدة-عدن':180000,'عدن-عمان':195000,'عمان-عدن':195000,'عدن-دبي':165000,'دبي-عدن':165000,'عدن-اسطنبول':285000,'اسطنبول-عدن':285000,'صنعاء-القاهرة':195000,'القاهرة-صنعاء':195000};
+    }
+    if(Object.keys(buses).length === 0){
+      buses = {'عدن-صنعاء':9500,'صنعاء-عدن':9500,'عدن-تعز':6500,'تعز-عدن':6500,'عدن-إب':7000,'إب-عدن':7000,'عدن-المكلا':12000,'المكلا-عدن':12000,'عدن-سيئون':11000,'سيئون-عدن':11000,'عدن-الحديدة':13500,'الحديدة-عدن':13500};
+    }
+    if(Object.keys(hotels).length === 0){
+      hotels = {'مكة':600,'المدينة':500,'جدة':450,'القاهرة':400,'دبي':550,'اسطنبول':500,'صنعاء':250,'عدن':220,'تعز':200};
+    }
+
+    var modal = document.createElement('div');
+    modal.id = 'prices-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.8);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;direction:rtl;';
+    modal.onclick = function(e){ if(e.target === modal) modal.remove(); };
+
+    var content = '<div style="background:#0f172a;border-radius:16px;padding:20px;max-width:600px;width:100%;border:1px solid #334155;margin-top:20px;">';
+    content += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+    content += '<div style="font-size:18px;font-weight:900;color:#fff;">⚙️ إدارة الأسعار التقريبية</div>';
+    content += '<button onclick="document.getElementById(\'prices-modal\').remove()" style="background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3);width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer;">✕</button>';
+    content += '</div>';
+
+    content += '<div style="display:flex;gap:8px;margin-bottom:16px;">';
+    content += '<button onclick="switchPricesTab(\'flights\')" id="ptab-flights" class="price-tab active" style="flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#fff;font-weight:800;cursor:pointer;">✈️ طيران</button>';
+    content += '<button onclick="switchPricesTab(\'buses\')" id="ptab-buses" class="price-tab" style="flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-weight:800;cursor:pointer;">🚌 باص</button>';
+    content += '<button onclick="switchPricesTab(\'hotels\')" id="ptab-hotels" class="price-tab" style="flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-weight:800;cursor:pointer;">🏨 فندق</button>';
+    content += '</div>';
+
+    content += '<div id="price-tab-content"></div>';
+    content += '<button onclick="savePrices()" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;margin-top:16px;">💾 حفظ جميع الأسعار</button>';
+    content += '</div>';
+
+    modal.innerHTML = content;
+    document.body.appendChild(modal);
+
+    // تخزين البيانات عالمياً
+    window.__pricesData = { flights: flights, buses: buses, hotels: hotels };
+    window.__pricesActiveTab = 'flights';
+
+    switchPricesTab('flights');
+  } catch(e) {
+    console.error('[openPricesModal]', e);
+    toast('❌ ' + e.message, 'err');
+  }
+}
+
+function switchPricesTab(tab){
+  window.__pricesActiveTab = tab;
+  document.querySelectorAll('.price-tab').forEach(function(b){
+    b.style.background = '#1e293b';
+    b.style.color = '#94a3b8';
+  });
+  var activeBtn = document.getElementById('ptab-' + tab);
+  if(activeBtn){ activeBtn.style.background = '#3b82f6'; activeBtn.style.color = '#fff'; }
+
+  var data = window.__pricesData[tab];
+  var html = '<div style="max-height:400px;overflow-y:auto;">';
+  var keys = Object.keys(data);
+  keys.forEach(function(k){
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;background:#1e293b;padding:10px;border-radius:10px;">';
+    html += '<div style="flex:1;color:#fff;font-size:13px;font-weight:700;">' + k + '</div>';
+    html += '<input type="number" data-key="' + k + '" data-tab="' + tab + '" value="' + data[k] + '" style="width:120px;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#10b981;font-weight:900;text-align:center;font-size:13px;">';
+    html += '<div style="color:#94a3b8;font-size:11px;">ر.س</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  document.getElementById('price-tab-content').innerHTML = html;
+}
+
+async function savePrices(){
+  try {
+    var inputs = document.querySelectorAll('#price-tab-content input[data-key]');
+    inputs.forEach(function(inp){
+      var tab = inp.getAttribute('data-tab');
+      var key = inp.getAttribute('data-key');
+      window.__pricesData[tab][key] = Number(inp.value) || 0;
+    });
+
+    // تحويل إلى Firestore mapValue
+    function toMap(obj){
+      var fields = {};
+      Object.keys(obj).forEach(function(k){
+        fields[k] = { integerValue: String(obj[k]) };
+      });
+      return { mapValue: { fields: fields } };
+    }
+
+    await db.collection('config').doc('prices').set({
+      flights: toMap(window.__pricesData.flights),
+      buses: toMap(window.__pricesData.buses),
+      hotels: toMap(window.__pricesData.hotels),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: state.user ? state.user.uid : ''
+    }, { merge: true });
+
+    toast('✅ تم حفظ جميع الأسعار', 'ok');
+    document.getElementById('prices-modal').remove();
+  } catch(e) {
+    console.error('[savePrices]', e);
+    toast('❌ ' + e.message, 'err');
+  }
+}
 
 async function sendToAirline(id){
   var bk = state.bookings.find(function(x){ return x.id === id; });
