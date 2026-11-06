@@ -371,6 +371,47 @@ function renderBookingCard(b){
 
 function row(l, v){ return '<div class="bk-row"><span class="l">' + l + ':</span><span class="v">' + esc(v) + '</span></div>'; }
 
+async function sendQuote(id){
+  var bk = state.bookings.find(function(x){ return x.id === id; });
+  if(!bk){ toast('❌ حجز غير موجود', 'err'); return; }
+
+  var qAmount = prompt('أدخل السعر النهائي للعميل (ر.س):', bk.estimatedPrice || '0');
+  if(qAmount === null) return; // إلغاء
+  qAmount = Number(qAmount) || 0;
+  if(qAmount <= 0){ toast('❌ السعر يجب أن يكون أكبر من 0', 'err'); return; }
+
+  if(!confirm('إرسال عرض سعر ' + qAmount + ' ر.س للعميل؟')) return;
+
+  try {
+    var upd = {
+      estimatedPrice: qAmount,
+      status: 'price_quoted',
+      'priceQuote.status': 'quoted',
+      'priceQuote.amount': qAmount,
+      'priceQuote.quotedAt': firebase.firestore.FieldValue.serverTimestamp(),
+      'priceQuote.quotedBy': state.user.uid,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await db.collection('bookings').doc(id).update(upd);
+
+    try {
+      await db.collection('notifications').add({
+        userId: bk.userId,
+        title: '💰 عرض سعر لحجزك',
+        body: 'السعر: ' + qAmount + ' ر.س — افتح تطبيقك للموافقة',
+        type: 'booking', event: 'booking_quote', icon: '💰',
+        read: false, bookingId: id,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e){ console.warn('notif:', e.message); }
+
+    toast('✅ تم إرسال عرض السعر (' + qAmount + ' ر.س)', 'ok');
+  } catch(e){
+    console.error('[sendQuote]', e);
+    toast('❌ ' + e.message, 'err');
+  }
+}
+
 async function changeStatus(id, status){
   var labels = {quote:'إرسال عرض السعر', confirmed:'تأكيد', completed:'إكمال', cancelled:'إلغاء'};
   if(!confirm(labels[status] + ' هذا الحجز؟')) return;
@@ -379,34 +420,7 @@ async function changeStatus(id, status){
     if(!bk) return;
     var upd = {updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
     
-    if(status === 'quote'){
-      var qAmount = prompt('أدخل السعر النهائي للعميل (ر.س):', bk.estimatedPrice || '0');
-      if(qAmount === null) return;
-      qAmount = Number(qAmount) || 0;
-      if(qAmount <= 0) { toast('❌ السعر يجب أن يكون أكبر من 0', 'err'); return; }
-
-      upd.estimatedPrice = qAmount;
-      upd.status = 'price_quoted';
-      upd['priceQuote.status'] = 'quoted';
-      upd['priceQuote.amount'] = qAmount;
-      upd['priceQuote.quotedAt'] = firebase.firestore.FieldValue.serverTimestamp();
-      upd['priceQuote.quotedBy'] = state.user.uid;
-      upd.quotedAt = firebase.firestore.FieldValue.serverTimestamp();
-      upd.quotedBy = state.user.uid;
-      await db.collection('bookings').doc(id).update(upd);
-      try {
-        await db.collection('notifications').add({
-          userId: bk.userId,
-          title: '💰 عرض سعر لحجزك',
-          body: 'السعر التقريبي: ' + (upd.estimatedPrice || bk.estimatedPrice) + ' ر.ي — افتح تطبيقك للموافقة',
-          type: 'booking', event: 'booking_quote', icon: '💰',
-          read: false, bookingId: id,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch(e){ console.warn('notif:', e.message); }
-      toast('✅ تم إرسال عرض السعر للعميل', 'ok');
-      return;
-    }
+    // quote removed from changeStatus — see standalone sendQuote()
     
     if(status === 'confirmed'){
       if(!bk.finalPrice){
