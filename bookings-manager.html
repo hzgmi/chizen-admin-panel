@@ -415,7 +415,7 @@ async function openPricesModal(){
       buses = {'عدن-صنعاء':9500,'صنعاء-عدن':9500,'عدن-تعز':6500,'تعز-عدن':6500,'عدن-إب':7000,'إب-عدن':7000,'عدن-المكلا':12000,'المكلا-عدن':12000,'عدن-سيئون':11000,'سيئون-عدن':11000,'عدن-الحديدة':13500,'الحديدة-عدن':13500};
     }
     if(Object.keys(hotels).length === 0){
-      hotels = {'مكة':600,'المدينة':500,'جدة':450,'القاهرة':400,'دبي':550,'اسطنبول':500,'صنعاء':250,'عدن':220,'تعز':200};
+      hotels = {'عمرة اقتصادية':150000,'عمرة VIP':300000,'عمرة رمضان':250000,'حج اقتصادي':500000,'حج VIP':850000,'حج فاخر':1200000};
     }
 
     var modal = document.createElement('div');
@@ -432,7 +432,7 @@ async function openPricesModal(){
     content += '<div style="display:flex;gap:8px;margin-bottom:16px;">';
     content += '<button onclick="switchPricesTab(\'flights\')" id="ptab-flights" class="price-tab active" style="flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#fff;font-weight:800;cursor:pointer;">✈️ طيران</button>';
     content += '<button onclick="switchPricesTab(\'buses\')" id="ptab-buses" class="price-tab" style="flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-weight:800;cursor:pointer;">🚌 باص</button>';
-    content += '<button onclick="switchPricesTab(\'hotels\')" id="ptab-hotels" class="price-tab" style="flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-weight:800;cursor:pointer;">🏨 فندق</button>';
+    content += '<button onclick="switchPricesTab(\'hotels\')" id="ptab-hotels" class="price-tab" style="flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-weight:800;cursor:pointer;">🕋 حج وعمرة</button>';
     content += '</div>';
 
     content += '<div id="price-tab-content"></div>';
