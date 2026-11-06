@@ -341,21 +341,37 @@ function renderBookingCard(b){
   if(phone) html += '<div class="bk-phone">📱 ' + esc(phone) + '</div>';
   html += '<div class="bk-time">🕐 ' + fmtDate(b.createdAt) + '</div>';
   html += '</div><div class="bk-status st-' + b.status + '">' + stLbl + '</div></div>';
-  
-  html += '<div class="bk-info">' + details + '</div>';
-  
+
+  var d = b.data || {};
+  var dataRows = [];
+  if(d.from || d.to) dataRows.push('📍 ' + esc(d.from || '?') + ' → ' + esc(d.to || '?'));
+  if(d.date) dataRows.push('📅 ' + esc(d.date));
+  if(d.passengers || d.children || d.infants) dataRows.push('👥 بالغ: ' + (d.passengers||'0') + '، أطفال: ' + (d.children||'0') + '، رضع: ' + (d.infants||'0'));
+  if(d.nationality) dataRows.push('🌍 ' + esc(d.nationality));
+  if(d.passport) dataRows.push('🛂 جواز: ' + esc(d.passport));
+  if(d.dob) dataRows.push('🎂 ' + esc(d.dob));
+  if(d.airline) dataRows.push('✈️ شركة: ' + esc(d.airline));
+  if(d.class) dataRows.push('💺 ' + esc(d.class));
+  if(d.phone) dataRows.push('📞 ' + esc(d.phone));
+  if(dataRows.length) html += '<div style="background:rgba(59,130,246,.08);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#cbd5e1;line-height:1.7">' + dataRows.join('<br>') + '</div>';
+
   if(est > 0 || fin > 0){
     html += '<div class="bk-prices">';
     html += '<div class="bk-price-item"><div class="lbl">💰 تقريبي</div><div class="val">' + est + ' ر</div></div>';
     html += '<div class="bk-price-item"><div class="lbl">✅ نهائي</div><div class="val final">' + fin + ' ر</div></div>';
     html += '</div>';
   }
-  
-  if(hasDelivery){
-    html += '<div class="bk-delivery">🚚 توصيل مجاني' + (deliveryAddr ? ' — ' + esc(deliveryAddr) : '') + '</div>';
+
+  if(b.depositProof || b.paymentProof || b.receipt) {
+    var proofUrl = b.depositProof || b.paymentProof || b.receipt;
+    html += '<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:10px;margin-bottom:10px;">';
+    html += '<div style="font-size:12px;color:#10b981;font-weight:900;margin-bottom:8px;">📎 سند الإيداع:</div>';
+    html += '<img src="' + esc(proofUrl) + '" style="width:100%;max-height:250px;object-fit:contain;border-radius:8px;background:#000;margin-bottom:8px;">';
+    html += '<a href="' + esc(proofUrl) + '" target="_blank" style="display:block;text-align:center;padding:8px;background:rgba(16,185,129,.2);color:#10b981;border-radius:8px;text-decoration:none;font-size:12px;font-weight:900;">🔍 عرض بحجم كامل</a>';
+    html += '</div>';
+  } else {
+    html += '<div style="background:rgba(107,114,128,.1);border:1px dashed rgba(107,114,128,.3);border-radius:10px;padding:10px;margin-bottom:10px;text-align:center;font-size:11px;color:#9ca3af;">📎 لا يوجد سند إيداع بعد</div>';
   }
-  
-  if(b.idPhoto) html += '<div style="margin-bottom:10px"><button onclick="toggleIdPhoto(\'' + b.id + '\')" style="background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:11px;width:100%;font-weight:800">📸 عرض صورة الوثيقة</button><div id="idph-' + b.id + '" style="display:none;margin-top:8px"><img src="' + b.idPhoto + '" style="width:100%;max-height:300px;object-fit:contain;border-radius:10px;border:1px solid #3b82f6;background:#000"></div></div>';
   html += '<div class="bk-actions">';
   if(phone) html += '<a href="https://wa.me/' + phone.replace(/\D/g,'') + '" target="_blank" class="bk-btn btn-wa">💬</a>';
   html += '<button class="bk-btn btn-edit" data-act="edit" data-id="' + b.id + '">✏️ تعديل</button>';
