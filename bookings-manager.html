@@ -485,19 +485,10 @@ async function savePrices(){
       window.__pricesData[tab][key] = Number(inp.value) || 0;
     });
 
-    // تحويل إلى Firestore mapValue
-    function toMap(obj){
-      var fields = {};
-      Object.keys(obj).forEach(function(k){
-        fields[k] = { integerValue: String(obj[k]) };
-      });
-      return { mapValue: { fields: fields } };
-    }
-
     await db.collection('config').doc('prices').set({
-      flights: toMap(window.__pricesData.flights),
-      buses: toMap(window.__pricesData.buses),
-      hotels: toMap(window.__pricesData.hotels),
+      flights: window.__pricesData.flights,
+      buses: window.__pricesData.buses,
+      hotels: window.__pricesData.hotels,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedBy: state.user ? state.user.uid : ''
     }, { merge: true });
