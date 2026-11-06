@@ -373,21 +373,58 @@ function renderBookingCard(b){
     html += '<div style="background:rgba(107,114,128,.1);border:1px dashed rgba(107,114,128,.3);border-radius:10px;padding:10px;margin-bottom:10px;text-align:center;font-size:11px;color:#9ca3af;">📎 لا يوجد سند إيداع بعد</div>';
   }
   html += '<div class="bk-actions">';
-  if(phone) html += '<a href="https://wa.me/' + phone.replace(/\D/g,'') + '" target="_blank" class="bk-btn btn-wa">💬</a>';
-  html += '<button class="bk-btn btn-edit" data-act="edit" data-id="' + b.id + '">✏️ تعديل</button>';
+  // الصف الأول: التواصل والإجراءات الأساسية
+  if(phone) html += '<a href="https://wa.me/' + phone.replace(/\D/g,'') + '" target="_blank" class="bk-btn btn-wa" style="flex:1">💬 عميل</a>';
+  html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff" data-act="wa-airline" data-id="' + b.id + '">✈️ شركة</button>';
+  html += '<button class="bk-btn btn-edit" data-act="edit" data-id="' + b.id + '" style="flex:1">✏️ تعديل</button>';
+  html += '</div>';
+
+  // الصف الثاني: حالات الحجز
+  html += '<div class="bk-actions" style="margin-top:6px">';
   if(b.status === 'pending'){
-    if(b.estimatedPrice > 0) html += '<button class="bk-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706)" data-act="quote" data-id="' + b.id + '">📤 عرض سعر</button>';
-    html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '">✅ تأكيد</button>';
+    if(b.estimatedPrice > 0) html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff" data-act="quote" data-id="' + b.id + '">📤 عرض سعر</button>';
+    html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '" style="flex:1">✅ تأكيد</button>';
   }
   if(b.status === 'price_quoted') html += '<div style="flex:1;min-width:120px;padding:9px 12px;background:rgba(245,158,11,.15);border-radius:9px;color:#fbbf24;font-size:11px;font-weight:800;text-align:center">⏳ بانتظار موافقة العميل</div>';
-  if(b.status === 'price_approved') html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '">✅ تأكيد نهائي</button>';
-  if(b.status === 'confirmed') html += '<button class="bk-btn btn-complete" data-act="complete" data-id="' + b.id + '">🏁 إكمال</button>';
-  html += '<button class="bk-btn btn-del" data-act="delete" data-id="' + b.id + '">🗑</button>';
+  if(b.status === 'price_approved') html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '" style="flex:1">✅ تأكيد نهائي</button>';
+  if(b.status === 'confirmed') html += '<button class="bk-btn btn-complete" data-act="complete" data-id="' + b.id + '" style="flex:1">🏁 إكمال</button>';
+  html += '<button class="bk-btn btn-del" data-act="delete" data-id="' + b.id + '" style="flex:0 0 auto">🗑</button>';
   html += '</div></div>';
   return html;
 }
 
 function row(l, v){ return '<div class="bk-row"><span class="l">' + l + ':</span><span class="v">' + esc(v) + '</span></div>'; }
+
+async function sendToAirline(id){
+  var bk = state.bookings.find(function(x){ return x.id === id; });
+  if(!bk){ toast('❌ حجز غير موجود', 'err'); return; }
+
+  var phone = prompt('أدخل رقم واتساب شركة الطيران (مع رمز الدولة، مثال: 967771234567):', '');
+  if(phone === null) return;
+  phone = phone.replace(/\D/g, '');
+  if(phone.length < 10){ toast('❌ رقم غير صالح', 'err'); return; }
+
+  var d = bk.data || {};
+  var msg = 'مرحباً، حجز جديد في CHIZEN:\n';
+  msg += '👤 الاسم: ' + (d.name || bk.userName || '?') + '\n';
+  msg += '🆔 رقم الحجز: #' + bk.id.substring(0, 8) + '\n';
+  msg += '📞 الهاتف: ' + (d.phone || bk.userPhone || '?') + '\n';
+  if(d.nationality) msg += '🌍 الجنسية: ' + d.nationality + '\n';
+  if(d.passport) msg += '🛂 الجواز: ' + d.passport + '\n';
+  if(d.dob) msg += '🎂 الميلاد: ' + d.dob + '\n';
+  if(d.from || d.to) msg += '✈️ الرحلة: ' + (d.from || '?') + ' → ' + (d.to || '?') + '\n';
+  if(d.date) msg += '📅 التاريخ: ' + d.date + '\n';
+  if(d.returnDate) msg += '🔙 العودة: ' + d.returnDate + '\n';
+  msg += '👥 المسافرون: بالغ ' + (d.passengers||'0') + '، أطفال ' + (d.children||'0') + '، رضع ' + (d.infants||'0') + '\n';
+  if(d.class) msg += '💺 الدرجة: ' + d.class + '\n';
+  if(d.airline) msg += '✈️ الشركة: ' + d.airline + '\n';
+  if(d.notes) msg += '📝 ملاحظات: ' + d.notes + '\n';
+  msg += '\nيرجى تأكيد الحجز وإرسال التذكرة. شكراً.';
+
+  var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+  toast('✅ تم فتح واتساب الشركة', 'ok');
+}
 
 async function sendQuote(id){
   var bk = state.bookings.find(function(x){ return x.id === id; });
