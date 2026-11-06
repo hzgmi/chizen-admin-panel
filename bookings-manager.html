@@ -627,10 +627,12 @@ async function sendQuote(id){
     var upd = {
       estimatedPrice: qAmount,
       status: 'price_quoted',
-      'priceQuote.status': 'quoted',
-      'priceQuote.amount': qAmount,
-      'priceQuote.quotedAt': firebase.firestore.FieldValue.serverTimestamp(),
-      'priceQuote.quotedBy': state.user.uid,
+      priceQuote: {
+        status: 'quoted',
+        amount: qAmount,
+        quotedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        quotedBy: state.user.uid
+      },
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     await db.collection('bookings').doc(id).update(upd);
