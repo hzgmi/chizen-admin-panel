@@ -105,6 +105,8 @@ main{padding:8px 16px}
 .spinner{width:36px;height:36px;border:3px solid rgba(59,130,246,.2);border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite;margin:40px auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 <div style="position:fixed;top:5px;left:5px;z-index:99999;background:#10b981;color:#fff;padding:4px 10px;border-radius:12px;font-size:10px;font-weight:900;box-shadow:0 2px 8px rgba(16,185,129,0.4);">✅ نسخة 2.0 (sendQuote)</div>
@@ -424,6 +426,73 @@ async function sendToAirline(id){
   var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
   window.open(url, '_blank');
   toast('✅ تم فتح واتساب الشركة', 'ok');
+}
+
+async function uploadTicket(id){
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*,application/pdf';
+  input.onchange = async function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    try {
+      toast('⏳ جاري معالجة التذكرة...', 'ok');
+      var url = '';
+      if(file.type === 'application/pdf'){
+        // رفع PDF مباشرة (Base64)
+        url = await new Promise(function(res, rej){
+          var reader = new FileReader();
+          reader.onload = function(){ res(reader.result); };
+          reader.onerror = rej;
+          reader.readAsDataURL(file);
+        });
+      } else {
+        // تحويل الصورة إلى PDF
+        var img = await new Promise(function(res, rej){
+          var r = new FileReader();
+          r.onload = function(){ var i = new Image(); i.onload = function(){ res(i); }; i.onerror = rej; i.src = r.result; };
+          r.onerror = rej;
+          r.readAsDataURL(file);
+        });
+        var { jsPDF } = window.jspdf;
+        var pdf = new jsPDF({ orientation: img.width > img.height ? 'landscape' : 'portrait', unit: 'px', format: [img.width, img.height] });
+        pdf.addImage(img, 'JPEG', 0, 0, img.width, img.height);
+        url = pdf.output('datauristring');
+      }
+      await db.collection('bookings').doc(id).update({
+        ticketUrl: url,
+        ticketUploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      toast('✅ تم حفظ التذكرة', 'ok');
+      render();
+    } catch(err){
+      console.error('[uploadTicket]', err);
+      toast('❌ ' + err.message, 'err');
+    }
+  };
+  input.click();
+}
+
+async function sendTicketWhatsApp(id){
+  var bk = state.bookings.find(function(x){ return x.id === id; });
+  if(!bk || !bk.ticketUrl){ toast('❌ لا توجد تذكرة', 'err'); return; }
+
+  // 1) تنزيل PDF
+  var a = document.createElement('a');
+  a.href = bk.ticketUrl;
+  a.download = 'CHIZEN-Ticket-' + id.substring(0, 8) + '.pdf';
+  a.click();
+
+  // 2) فتح واتساب مع رسالة
+  var phone = (bk.userPhone || (bk.data && bk.data.phone) || '').replace(/\D/g,'');
+  if(phone.length < 9){ toast('❌ رقم العميل غير صالح', 'err'); return; }
+  var msg = 'مرحباً ' + (bk.userName || 'عميلنا العزيز') + '،\n';
+  msg += '🎫 تذكرتك جاهزة الآن!\n';
+  msg += '🆔 رقم الحجز: #' + id.substring(0, 8) + '\n';
+  msg += '📎 تم تنزيل التذكرة على جهازك — يرجى إرفاقها في هذه المحادثة.\n\n';
+  msg += 'شكراً لاختيارك CHIZEN ✈️';
+  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+  toast('📥 تم تنزيل التذكرة وفتح واتساب', 'ok');
 }
 
 async function sendQuote(id){
