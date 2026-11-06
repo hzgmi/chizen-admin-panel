@@ -435,6 +435,8 @@ async function openPricesModal(){
     content += '<button onclick="switchPricesTab(\'hotels\')" id="ptab-hotels" class="price-tab" style="flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-weight:800;cursor:pointer;">🕋 حج وعمرة</button>';
     content += '</div>';
 
+    content += '<button onclick="addPriceEntry()" style="width:100%;padding:10px;background:rgba(16,185,129,.15);color:#10b981;border:1.5px dashed rgba(16,185,129,.4);border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;margin-bottom:12px;">➕ إضافة وجهة جديدة</button>';
+
     content += '<div id="price-tab-content"></div>';
     content += '<button onclick="savePrices()" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;margin-top:16px;">💾 حفظ جميع الأسعار</button>';
     content += '</div>';
@@ -451,6 +453,28 @@ async function openPricesModal(){
     console.error('[openPricesModal]', e);
     toast('❌ ' + e.message, 'err');
   }
+}
+
+function addPriceEntry(){
+  var tab = window.__pricesActiveTab || 'flights';
+  var label = { flights: 'وجهة الطيران', buses: 'وجهة الباص', hotels: 'باقة الحج/العمرة' }[tab] || 'وجهة';
+
+  var name = prompt('أدخل اسم ' + label + ' (مثال: عدن-مسقط):', '');
+  if(name === null || !name.trim()) return;
+  name = name.trim();
+
+  if(window.__pricesData[tab][name]){
+    if(!confirm('هذه الوجهة موجودة بالفعل. هل تريد تحديث سعرها؟')) return;
+  }
+
+  var price = prompt('أدخل السعر (ر.س):', '0');
+  if(price === null) return;
+  price = Number(price) || 0;
+  if(price <= 0){ toast('❌ السعر يجب أن يكون أكبر من 0', 'err'); return; }
+
+  window.__pricesData[tab][name] = price;
+  switchPricesTab(tab);
+  toast('✅ تمت الإضافة — لا تنسَ الحفظ', 'ok');
 }
 
 function switchPricesTab(tab){
@@ -504,6 +528,7 @@ async function savePrices(){
 window.openPricesModal = openPricesModal;
 window.savePrices = savePrices;
 window.switchPricesTab = switchPricesTab;
+window.addPriceEntry = addPriceEntry;
 
 async function sendToAirline(id){
   var bk = state.bookings.find(function(x){ return x.id === id; });
