@@ -282,7 +282,7 @@ function renderTab(type){
       var act = btn.dataset.act;
       var id = btn.dataset.id;
       if(act === 'confirm') changeStatus(id, 'confirmed');
-      else if(act === 'quote') changeStatus(id, 'quote');
+      else if(act === 'quote') sendQuote(id);
       else if(act === 'complete') changeStatus(id, 'completed');
       else if(act === 'cancel') changeStatus(id, 'cancelled');
       else if(act === 'edit') openEditForm(id);
