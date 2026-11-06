@@ -510,6 +510,10 @@ async function savePrices(){
   }
 }
 
+window.openPricesModal = openPricesModal;
+window.savePrices = savePrices;
+window.switchPricesTab = switchPricesTab;
+
 async function sendToAirline(id){
   var bk = state.bookings.find(function(x){ return x.id === id; });
   if(!bk){ toast('❌ حجز غير موجود', 'err'); return; }
