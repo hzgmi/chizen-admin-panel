@@ -801,44 +801,61 @@ function populateSupplierSelect(selected){
 }
 
 window.openProductForm = async function(pid){
-  state.editingProductId = pid || null;
-  var p = pid ? state.products.find(function(x){ return x.id === pid; }) : null;
-  state.editingProductStatus = p ? (p.status || 'pending_review') : null;
-  state.editingProductActive = p ? (p.isActive !== false && p.active !== false) : true;
-  document.getElementById('pf-title').textContent = p ? 'تعديل المنتج' : 'إضافة منتج';
-  document.getElementById('pf-name').value = p ? (p.name||'') : '';
-  document.getElementById('pf-brand').value = p ? (p.brand||'') : '';
-  document.getElementById('pf-sku').value = p ? (p.sku||'') : '';
-  document.getElementById('pf-desc').value = p ? (p.description||'') : '';
-  document.getElementById('pf-price').value = p ? (p.price||'') : '';
-  document.getElementById('pf-oldprice').value = p ? (p.oldPrice||'') : '';
-  document.getElementById('pf-cost').value = p ? (p.cost||'') : '';
-  document.getElementById('pf-stock').value = p ? (p.stock||'') : '';
-  document.getElementById('pf-threshold').value = p ? (p.lowStockThreshold || window.__getLowStockThreshold()) : window.__getLowStockThreshold();
-  state.formImages = p && Array.isArray(p.images) ? p.images.slice() : (p && p.img ? [p.img] : []);
-  state.formSizes = p && Array.isArray(p.sizes) ? p.sizes.slice() : [];
-  state.formSizeStock = p && p.sizeStock ? Object.assign({}, p.sizeStock) : {};
-  state.formColors = p && Array.isArray(p.colors) ? p.colors.map(function(c){ return Object.assign({}, c); }) : [];
-  renderFormImages();
-  renderFormSizes();
-  renderFormColors();
-  // Suppliers
-  if(!state.suppliers.length) await loadSuppliers();
-  populateSupplierSelect(p ? p.supplierPhone : null);
-  // Show/hide edit actions
-  var editBox = document.getElementById('pf-edit-actions');
-  var toggleBtn = document.getElementById('pf-toggle-btn');
-  if(p){
-    editBox.style.display = 'block';
-    toggleBtn.textContent = state.editingProductActive ? '👁 إخفاء' : '👁 إظهار';
-    toggleBtn.style.background = state.editingProductActive ? 'rgba(245,158,11,.15)' : 'rgba(34,197,94,.15)';
-    toggleBtn.style.color = state.editingProductActive ? '#fbbf24' : '#4ade80';
-    toggleBtn.style.borderColor = state.editingProductActive ? 'rgba(245,158,11,.4)' : 'rgba(34,197,94,.4)';
-  } else {
-    editBox.style.display = 'none';
+  try {
+    state.editingProductId = pid || null;
+    var p = pid ? state.products.find(function(x){ return x.id === pid; }) : null;
+    state.editingProductStatus = p ? (p.status || 'pending_review') : null;
+    state.editingProductActive = p ? (p.isActive !== false && p.active !== false) : true;
+    document.getElementById('pf-title').textContent = p ? 'تعديل المنتج' : 'إضافة منتج';
+    document.getElementById('pf-name').value = p ? (p.name||'') : '';
+    document.getElementById('pf-brand').value = p ? (p.brand||'') : '';
+    document.getElementById('pf-sku').value = p ? (p.sku||'') : '';
+    document.getElementById('pf-desc').value = p ? (p.description||'') : '';
+    document.getElementById('pf-price').value = p ? (p.price||'') : '';
+    document.getElementById('pf-oldprice').value = p ? (p.oldPrice||'') : '';
+    document.getElementById('pf-cost').value = p ? (p.cost||'') : '';
+    document.getElementById('pf-stock').value = p ? (p.stock||'') : '';
+    document.getElementById('pf-threshold').value = p ? (p.lowStockThreshold || window.__getLowStockThreshold()) : window.__getLowStockThreshold();
+    state.formImages = p && Array.isArray(p.images) ? p.images.slice() : (p && p.img ? [p.img] : []);
+    state.formSizes = p && Array.isArray(p.sizes) ? p.sizes.slice() : [];
+    state.formSizeStock = p && p.sizeStock ? Object.assign({}, p.sizeStock) : {};
+    state.formColors = p && Array.isArray(p.colors) ? p.colors.map(function(c){ return Object.assign({}, c); }) : [];
+    renderFormImages();
+    renderFormSizes();
+    renderFormColors();
+    
+    // 🔴 فتح النموذج أولاً (قبل أي await) لضمان الظهور الفوري
+    document.getElementById('product-form').classList.remove('hidden');
+    document.getElementById('product-form').scrollTop = 0;
+    
+    // تحميل الموردين (اختياري - لا يوقف الدالة إذا فشل)
+    try {
+      if(!state.suppliers || !state.suppliers.length) await loadSuppliers();
+      populateSupplierSelect(p ? p.supplierPhone : null);
+    } catch(e) {
+      console.warn('[openProductForm] suppliers load failed:', e);
+    }
+    
+    // إظهار/إخفاء أزرار التعديل
+    var editBox = document.getElementById('pf-edit-actions');
+    var toggleBtn = document.getElementById('pf-toggle-btn');
+    if(editBox && toggleBtn){
+      if(p){
+        editBox.style.display = 'block';
+        toggleBtn.textContent = state.editingProductActive ? '👁 إخفاء' : '👁 إظهار';
+        toggleBtn.style.background = state.editingProductActive ? 'rgba(245,158,11,.15)' : 'rgba(34,197,94,.15)';
+        toggleBtn.style.color = state.editingProductActive ? '#fbbf24' : '#4ade80';
+        toggleBtn.style.borderColor = state.editingProductActive ? 'rgba(245,158,11,.4)' : 'rgba(34,197,94,.4)';
+      } else {
+        editBox.style.display = 'none';
+      }
+    }
+  } catch(err) {
+    console.error('[openProductForm] error:', err);
+    // فتح النموذج حتى لو حدث خطأ
+    var form = document.getElementById('product-form');
+    if(form) form.classList.remove('hidden');
   }
-  document.getElementById('product-form').classList.remove('hidden');
-  document.getElementById('product-form').scrollTop = 0;
 };
 
 window.closeProductForm = function(){ document.getElementById('product-form').classList.add('hidden'); };
