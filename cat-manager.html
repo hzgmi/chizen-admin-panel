@@ -1318,11 +1318,33 @@ if(document.readyState === 'loading'){
 })();
 </script>
 
+
+
 <script>
 (function(){
   'use strict';
   
-  // ─── 1) بناء قسم الصور (زر رفع + معاينة) ───
+  // ─── دالة تحديد نوع القسم ───
+  function getCategoryType() {
+    var cat = (window.state && window.state.cat) || '';
+    cat = String(cat).toLowerCase();
+    if (cat.indexOf('shoe') !== -1 || cat.indexOf('حذاء') !== -1 || cat.indexOf('أحذية') !== -1 || cat.indexOf('footwear') !== -1) return 'shoes';
+    if (cat.indexOf('perfume') !== -1 || cat.indexOf('عطر') !== -1 || cat.indexOf('عطور') !== -1 || cat.indexOf('fragrance') !== -1) return 'perfume';
+    if (cat.indexOf('electronic') !== -1 || cat.indexOf('إلكترون') !== -1 || cat.indexOf('جهاز') !== -1) return 'electronics';
+    if (cat.indexOf('accessor') !== -1 || cat.indexOf('إكسسوار') !== -1) return 'accessories';
+    if (cat.indexOf('kid') !== -1 || cat.indexOf('طفل') !== -1 || cat.indexOf('أطفال') !== -1) return 'kids';
+    return 'fashion'; // افتراضي (ملابس)
+  }
+  
+  // ─── المقاسات لكل نوع ───
+  function getSizesForType(type) {
+    if (type === 'shoes') return ['36','37','38','39','40','41','42','43','44','45'];
+    if (type === 'kids') return ['2-3Y','4-5Y','6-7Y','8-9Y','10-11Y'];
+    if (type === 'perfume' || type === 'electronics' || type === 'accessories') return [];
+    return ['XS','S','M','L','XL','XXL','3XL'];
+  }
+  
+  // ─── بناء قسم الصور ───
   function buildImageSection() {
     var container = document.getElementById('pf-images');
     if (!container || container._imgReady) return;
@@ -1344,103 +1366,71 @@ if(document.readyState === 'loading'){
     wrapper.appendChild(addBtn);
     container.appendChild(wrapper);
     
-    // ربط حقل الرفع
-    var input = document.getElementById('pf-images-input');
-    if (input && !input._imgBound) {
-      input._imgBound = true;
-      input.onchange = function(e) {
-        var files = Array.from(e.target.files || []);
-        if (!files.length) return;
-        
-        files.forEach(function(file) {
-          if (!file.type.startsWith('image/')) return;
-          var reader = new FileReader();
-          reader.onload = function(ev) {
-            // ضغط الصورة (اختياري) - نضيفها كـ base64 مؤقتاً
-            var img = new Image();
-            img.onload = function() {
-              var canvas = document.createElement('canvas');
-              var maxSize = 800;
-              var w = img.width, h = img.height;
-              if (w > maxSize || h > maxSize) {
-                if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-                else { w = Math.round(w * maxSize / h); h = maxSize; }
-              }
-              canvas.width = w; canvas.height = h;
-              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-              var compressed = canvas.toDataURL('image/jpeg', 0.8);
-              
-              // إضافة للـ state
-              if (!window.state) window.state = {};
-              if (!window.state.formImages) window.state.formImages = [];
-              window.state.formImages.push(compressed);
-              
-              // إعادة رسم المعاينة
-              renderPreview();
-            };
-            img.src = ev.target.result;
-          };
-          reader.readAsDataURL(file);
-        });
-        input.value = '';
-      };
-    }
-    
     function renderPreview() {
-      // إزالة المعاينات القديمة
-      var oldPreview = container.querySelector('.chz-img-preview');
-      if (oldPreview) oldPreview.remove();
-      
+      var old = container.querySelector('.chz-img-preview');
+      if (old) old.remove();
       var imgs = (window.state && window.state.formImages) || [];
       if (!imgs.length) return;
-      
       var preview = document.createElement('div');
       preview.className = 'chz-img-preview';
       preview.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;';
-      
       imgs.forEach(function(src, idx) {
         var item = document.createElement('div');
         item.style.cssText = 'position:relative;width:70px;height:70px;border-radius:10px;overflow:hidden;border:1px solid rgba(197,160,89,0.3);';
         item.innerHTML = '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;">' +
           '<button type="button" style="position:absolute;top:2px;left:2px;background:rgba(239,68,68,0.9);color:#fff;border:none;width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer;">✕</button>';
         item.querySelector('button').onclick = function(e) {
-          e.preventDefault();
-          e.stopPropagation();
+          e.preventDefault(); e.stopPropagation();
           window.state.formImages.splice(idx, 1);
           renderPreview();
         };
         preview.appendChild(item);
       });
-      
       container.appendChild(preview);
     }
     
-    // استدعاء أولي
+    if (!window._imgRenderPreview) {
+      window._imgRenderPreview = renderPreview;
+    }
     renderPreview();
   }
   
-  // ─── 2) بناء قسم المقاسات ───
+  // ─── بناء قسم المقاسات (ذكي) ───
   function buildSizesSection() {
     var chipsContainer = document.getElementById('pf-sizes-chips');
     var stockContainer = document.getElementById('pf-sizes-stock');
-    if (!chipsContainer || !stockContainer || chipsContainer._sizesReady) return;
-    chipsContainer._sizesReady = true;
+    if (!chipsContainer || !stockContainer) return;
     
-    var SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    var type = getCategoryType();
+    var sizes = getSizesForType(type);
+    
+    // إذا لم تكن هناك مقاسات (عطور/إلكترونيات)، نخفي القسم
+    var section = chipsContainer.closest('.form-section');
+    if (!sizes.length) {
+      if (section) section.style.display = 'none';
+      return;
+    }
+    
+    if (section) section.style.display = 'block';
+    
+    // تحديث العنوان حسب النوع
+    var title = section ? section.querySelector('.form-section-title') : null;
+    if (title) {
+      if (type === 'shoes') title.textContent = '👟 مقاسات الأحذية';
+      else if (type === 'kids') title.textContent = '🧒 مقاسات الأطفال';
+      else title.textContent = '📏 المقاسات المتوفرة';
+    }
+    
     chipsContainer.innerHTML = '';
     
-    SIZES.forEach(function(size) {
+    sizes.forEach(function(size) {
       var chip = document.createElement('button');
       chip.type = 'button';
       chip.textContent = size;
       chip.style.cssText = 'padding:10px 16px;border:1.5px solid rgba(197,160,89,0.4);border-radius:10px;background:transparent;color:#F2E3C6;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.15s;';
       chip.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        if (!window.state) window.state = {};
+        e.preventDefault(); e.stopPropagation();
         if (!window.state.formSizes) window.state.formSizes = [];
-        
         var idx = window.state.formSizes.indexOf(size);
         if (idx === -1) {
           window.state.formSizes.push(size);
@@ -1452,32 +1442,38 @@ if(document.readyState === 'loading'){
           chip.style.background = 'transparent';
           chip.style.color = '#F2E3C6';
           chip.style.borderColor = 'rgba(197,160,89,0.4)';
-          // إزالة حقل الكمية
-          var stockField = document.getElementById('stock-for-' + size);
-          if (stockField) stockField.remove();
         }
-        
         updateStockFields();
       };
       chipsContainer.appendChild(chip);
     });
     
+    // إعادة تمييز المقاسات المحفوظة سابقاً
+    var existing = (window.state && window.state.formSizes) || [];
+    if (existing.length) {
+      chipsContainer.querySelectorAll('button').forEach(function(chip) {
+        if (existing.indexOf(chip.textContent) !== -1) {
+          chip.style.background = 'rgba(197,160,89,0.2)';
+          chip.style.color = '#C5A059';
+          chip.style.borderColor = '#C5A059';
+        }
+      });
+    }
+    
     function updateStockFields() {
       stockContainer.innerHTML = '';
       var sizes = (window.state && window.state.formSizes) || [];
       if (!sizes.length) return;
-      
       var title = document.createElement('div');
       title.textContent = 'الكمية لكل مقاس:';
       title.style.cssText = 'font-size:12px;color:#C5A059;font-weight:800;margin-bottom:8px;';
       stockContainer.appendChild(title);
-      
       sizes.forEach(function(size) {
         var row = document.createElement('div');
-        row.id = 'stock-for-' + size;
         row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
-        row.innerHTML = '<span style="min-width:40px;font-weight:800;color:#F2E3C6;font-size:13px;">' + size + '</span>' +
-          '<input type="number" placeholder="0" data-size="' + size + '" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(197,160,89,0.3);background:#0f172a;color:#F2E3C6;font-family:inherit;font-size:13px;">';
+        var existingVal = (window.state.formSizeStock && window.state.formSizeStock[size]) || 0;
+        row.innerHTML = '<span style="min-width:50px;font-weight:800;color:#F2E3C6;font-size:13px;">' + size + '</span>' +
+          '<input type="number" placeholder="0" value="' + (existingVal || '') + '" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(197,160,89,0.3);background:#0f172a;color:#F2E3C6;font-family:inherit;font-size:13px;">';
         row.querySelector('input').oninput = function() {
           if (!window.state.formSizeStock) window.state.formSizeStock = {};
           window.state.formSizeStock[size] = Number(this.value) || 0;
@@ -1485,29 +1481,29 @@ if(document.readyState === 'loading'){
         stockContainer.appendChild(row);
       });
     }
+    
+    updateStockFields();
   }
   
-  // ─── 3) تشغيل عند فتح النموذج ───
   function init() {
     buildImageSection();
     buildSizesSection();
   }
   
-  setInterval(init, 1000);
+  setInterval(init, 1500);
   document.addEventListener('DOMContentLoaded', init);
   setTimeout(init, 500);
   
-  // ربط بفتح النموذج
   var origOpen = window.openProductForm;
   window.openProductForm = async function(pid) {
     if (origOpen) await origOpen.call(this, pid);
     setTimeout(function() {
       buildImageSection();
       buildSizesSection();
-    }, 100);
+    }, 150);
   };
   
-  console.log('[Product Form: Image & Sizes] ready');
+  console.log('[Smart Sizes] ready — adapts to category type');
 })();
 </script>
 </body>
