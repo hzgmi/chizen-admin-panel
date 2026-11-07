@@ -240,14 +240,45 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
     <div class="form-section">
       <div class="form-section-title">💰 التسعير والمخزون</div>
       <div class="form-row">
-        <div class="form-field"><label>السعر (ر.ي) *</label><input id="pf-price" type="number" inputmode="numeric" placeholder="0"></div>
-        <div class="form-field"><label>السعر قبل الخصم</label><input id="pf-oldprice" type="number" inputmode="numeric" placeholder="0"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-field"><label>سعر التكلفة</label><input id="pf-cost" type="number" inputmode="numeric" placeholder="0"></div>
         <div class="form-field"><label>المخزون</label><input id="pf-stock" type="number" inputmode="numeric" placeholder="0"></div>
+        <div class="form-field"><label>حد التنبيه (مخزون منخفض)</label><input id="pf-threshold" type="number" value="5" inputmode="numeric"></div>
       </div>
-      <div class="form-field"><label>حد التنبيه (مخزون منخفض)</label><input id="pf-threshold" type="number" value="5" inputmode="numeric"></div>
+
+      <!-- قسم العملات وسعر الصرف -->
+      <div style="background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2);border-radius:12px;padding:12px;margin-top:12px;">
+        <div style="font-size:13px;font-weight:800;color:#3b82f6;margin-bottom:10px;">💱 العملات وسعر الصرف اليومي</div>
+        
+        <div class="form-row">
+          <div class="form-field">
+            <label>عملة الإدخال</label>
+            <select id="pf-currency" style="width:100%; padding:10px; border-radius:8px; border:1px solid rgba(0,0,0,0.1);">
+              <option value="YER">🇾🇪 ريال يمني (YER)</option>
+              <option value="SAR">🇸🇦 ريال سعودي (SAR)</option>
+              <option value="USD">🇺🇸 دولار أمريكي (USD)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>سعر صرف السعودي (باليمني) *</label>
+            <input id="pf-rate-sar" type="number" placeholder="350" oninput="window._calcCurrency();">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-field">
+            <label>سعر صرف الدولار (باليمني) *</label>
+            <input id="pf-rate-usd" type="number" placeholder="1300" oninput="window._calcCurrency();">
+          </div>
+          <div class="form-field">
+            <label>السعر (بالعملة المختارة) *</label>
+            <input id="pf-price" type="number" inputmode="numeric" placeholder="0" oninput="window._calcCurrency();">
+          </div>
+        </div>
+        
+        <div style="margin-top:10px; background:#1A2340; padding:10px; border-radius:8px;">
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:4px;">💰 السعر المحول:</div>
+          <div id="pf-price-display" style="font-size:13px;font-weight:900;color:#F2E3C6;"></div>
+        </div>
+      </div>
       
       <!-- ✅ حقل هامش الربح (تلقائي) -->
       <div class="form-field" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:12px;margin-top:8px;">
@@ -1354,86 +1385,94 @@ if(document.readyState === 'loading'){
 
 
 
+
+
+<style>
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+</style>
+
 <script>
 (function(){
   'use strict';
 
-  // ═══════════════════════════════════════
-  // 1) قسم الصور الاحترافي (شبكة 2x2 + معاينة كبيرة)
-  // ═══════════════════════════════════════
+  // ═══ 1) العملات وسعر الصرف ═══
+  window._calcCurrency = function() {
+    var price = parseFloat((document.getElementById('pf-price')||{}).value) || 0;
+    var currency = (document.getElementById('pf-currency')||{}).value || 'YER';
+    var rateSAR = parseFloat((document.getElementById('pf-rate-sar')||{}).value) || 350;
+    var rateUSD = parseFloat((document.getElementById('pf-rate-usd')||{}).value) || 1300;
+    var display = document.getElementById('pf-price-display');
+    if (!display) return;
+    
+    var priceYER = price;
+    if (currency === 'SAR') priceYER = price * rateSAR;
+    else if (currency === 'USD') priceYER = price * rateUSD;
+    
+    var priceSAR = rateSAR > 0 ? Math.round(priceYER / rateSAR) : 0;
+    var priceUSD = rateUSD > 0 ? Math.round(priceYER / rateUSD) : 0;
+    
+    display.innerHTML = 
+      '🇾🇪 <b>' + Math.round(priceYER).toLocaleString() + '</b> ر.ي<br>' +
+      '🇸🇦 <b>' + priceSAR.toLocaleString() + '</b> ر.س<br>' +
+      '🇺🇸 <b>' + priceUSD.toLocaleString() + '</b> $';
+  };
+  
+  // ═══ 2) الصور (شبكة 3x3) ═══
   function buildImageSection() {
     var container = document.getElementById('pf-images');
     if (!container || container._imgReady) return;
     container._imgReady = true;
     container.innerHTML = '';
 
-    // شريط الإضافة + العداد
     var addBar = document.createElement('div');
     addBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;';
-
     var addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.innerHTML = '📸 رفع صور (حتى 5)';
     addBtn.style.cssText = 'padding:14px 20px;border:2px dashed rgba(197,160,89,0.5);border-radius:12px;background:rgba(197,160,89,0.05);color:#C5A059;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;flex:1;';
-    addBtn.onclick = function(e) {
-      e.preventDefault(); e.stopPropagation();
-      var input = document.getElementById('pf-images-input');
-      if (input) input.click();
-    };
+    addBtn.onclick = function(e) { e.preventDefault(); var input = document.getElementById('pf-images-input'); if (input) input.click(); };
     addBar.appendChild(addBtn);
-
     var counter = document.createElement('div');
     counter.style.cssText = 'font-size:13px;color:#C5A059;font-weight:900;padding:10px 16px;background:rgba(197,160,89,0.1);border-radius:12px;';
     addBar.appendChild(counter);
     container.appendChild(addBar);
 
-    // شبكة الصور (2x2)
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;margin-top:12px;';
     container.appendChild(grid);
 
     function render() {
       var imgs = (window.state && window.state.formImages) || [];
+      if (window.state) window.state.formImages = imgs;
       counter.textContent = imgs.length + ' / 5';
-
-      if (!imgs.length) {
-        grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:#6b7280;background:rgba(0,0,0,0.02);border-radius:16px;font-size:13px;">لا توجد صور بعد — اضغط "رفع صور"</div>';
-        return;
-      }
-
+      if (!imgs.length) { grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:#6b7280;background:rgba(0,0,0,0.02);border-radius:16px;font-size:13px;">لا توجد صور بعد</div>'; return; }
       var html = '';
       imgs.forEach(function(src, idx) {
         var isMain = idx === 0;
-        html += '<div style="position:relative;padding-top:100%;border-radius:16px;overflow:hidden;border:2px solid ' + (isMain ? '#C5A059' : 'rgba(197,160,89,0.2)') + ';box-shadow:' + (isMain ? '0 4px 20px rgba(197,160,89,0.3)' : 'none') + ';">';
+        html += '<div style="position:relative;padding-top:100%;border-radius:10px;overflow:hidden;border:2px solid ' + (isMain ? '#C5A059' : 'rgba(197,160,89,0.2)') + ';background:#0f172a;">';
         html += '<img src="' + src + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">';
-        if (isMain) {
-          html += '<div style="position:absolute;top:8px;right:8px;background:#C5A059;color:#1A2340;font-size:11px;font-weight:900;padding:4px 10px;border-radius:10px;">⭐ رئيسية</div>';
-        }
-        html += '<div style="position:absolute;bottom:8px;left:8px;right:8px;display:flex;gap:6px;">';
-        if (idx > 0) {
-          html += '<button type="button" data-action="setmain" data-idx="' + idx + '" style="flex:1;background:rgba(197,160,89,0.95);color:#1A2340;border:none;border-radius:8px;font-size:14px;font-weight:900;padding:8px;cursor:pointer;">⭐</button>';
-        }
-        html += '<button type="button" data-action="del" data-idx="' + idx + '" style="flex:1;background:rgba(239,68,68,0.95);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:900;padding:8px;cursor:pointer;">🗑</button>';
+        if (isMain) html += '<div style="position:absolute;top:4px;right:4px;background:#C5A059;color:#1A2340;font-size:9px;font-weight:900;padding:2px 6px;border-radius:6px;">⭐</div>';
+        html += '<div style="position:absolute;bottom:4px;left:4px;right:4px;display:flex;gap:4px;">';
+        if (idx > 0) html += '<button type="button" data-action="setmain" data-idx="' + idx + '" style="flex:1;background:rgba(197,160,89,0.9);color:#1A2340;border:none;border-radius:4px;font-size:11px;font-weight:900;padding:4px;cursor:pointer;">⭐</button>';
+        html += '<button type="button" data-action="del" data-idx="' + idx + '" style="flex:1;background:rgba(239,68,68,0.9);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:900;padding:4px;cursor:pointer;">✕</button>';
         html += '</div></div>';
       });
       grid.innerHTML = html;
-
       grid.querySelectorAll('button[data-action]').forEach(function(btn) {
         btn.onclick = function(e) {
           e.preventDefault(); e.stopPropagation();
           var idx = parseInt(btn.getAttribute('data-idx'));
           var action = btn.getAttribute('data-action');
-          if (action === 'del') {
-            window.state.formImages.splice(idx, 1);
-          } else if (action === 'setmain') {
-            var main = window.state.formImages.splice(idx, 1)[0];
-            window.state.formImages.unshift(main);
-          }
+          var imgs = (window.state && window.state.formImages) || [];
+          if (action === 'del') imgs.splice(idx, 1);
+          else if (action === 'setmain') { var main = imgs.splice(idx, 1)[0]; imgs.unshift(main); }
           render();
         };
       });
     }
-
     if (!window._imgRender) window._imgRender = render;
     render();
   }
@@ -1447,7 +1486,6 @@ if(document.readyState === 'loading'){
       if (!files.length) return;
       if (!window.state) window.state = {};
       if (!window.state.formImages) window.state.formImages = [];
-
       files.forEach(function(file) {
         if (!file.type.startsWith('image/')) return;
         if (window.state.formImages.length >= 5) return;
@@ -1456,15 +1494,12 @@ if(document.readyState === 'loading'){
           var img = new Image();
           img.onload = function() {
             var canvas = document.createElement('canvas');
-            var maxSize = 1000;
+            var maxSize = 600;
             var w = img.width, h = img.height;
-            if (w > maxSize || h > maxSize) {
-              if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-              else { w = Math.round(w * maxSize / h); h = maxSize; }
-            }
+            if (w > maxSize || h > maxSize) { if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; } else { w = Math.round(w * maxSize / h); h = maxSize; } }
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            window.state.formImages.push(canvas.toDataURL('image/jpeg', 0.85));
+            window.state.formImages.push(canvas.toDataURL('image/jpeg', 0.8));
             if (window._imgRender) window._imgRender();
           };
           img.src = ev.target.result;
@@ -1475,23 +1510,21 @@ if(document.readyState === 'loading'){
     };
   }
 
-  // ═══════════════════════════════════════
-  // 2) الماركات المنسدلة (Bottom Sheet)
-  // ═══════════════════════════════════════
+  // ═══ 3) الماركات ═══
   var BRANDS = {
-    fashion: ['Nike', 'Adidas', 'Zara', 'H&M', 'Gucci', 'Prada', 'Chanel', 'Dior', 'Louis Vuitton', 'Levi\'s', 'Uniqlo', 'Bershka', 'Mango', 'Tommy Hilfiger', 'Calvin Klein'],
-    shoes: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance', 'Asics', 'Skechers', 'Converse', 'Vans', 'Timberland', 'Clarks', 'ECCO', 'Crocs'],
-    perfume: ['Chanel', 'Dior', 'Gucci', 'Versace', 'Armani', 'Hugo Boss', 'Calvin Klein', 'Lacoste', 'Paco Rabanne', 'Yves Saint Laurent', 'Tom Ford', 'Bvlgari'],
-    electronics: ['Apple', 'Samsung', 'Sony', 'Huawei', 'Xiaomi', 'LG', 'Dell', 'HP', 'Lenovo', 'Canon', 'Nikon', 'JBL', 'Bose'],
-    accessories: ['Ray-Ban', 'Oakley', 'Fossil', 'Casio', 'Daniel Wellington', 'Michael Kors', 'Coach', 'Swatch'],
-    kids: ['Mothercare', 'H&M Kids', 'Zara Kids', 'Gap Kids', 'Nike Kids', 'Adidas Kids', 'Disney', 'Carter\'s']
+    fashion: ['Nike', 'Adidas', 'Zara', 'H&M', 'Gucci', 'Prada', 'Chanel', 'Dior', 'Louis Vuitton', "Levi's", 'Uniqlo', 'Bershka', 'Mango'],
+    shoes: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance', 'Asics', 'Skechers', 'Converse', 'Vans', 'Timberland'],
+    perfume: ['Chanel', 'Dior', 'Gucci', 'Versace', 'Armani', 'Hugo Boss', 'Calvin Klein', 'Lacoste', 'Tom Ford', 'Bvlgari'],
+    electronics: ['Apple', 'Samsung', 'Sony', 'Huawei', 'Xiaomi', 'LG', 'Dell', 'HP', 'Lenovo', 'JBL'],
+    accessories: ['Ray-Ban', 'Oakley', 'Fossil', 'Casio', 'Daniel Wellington', 'Michael Kors', 'Coach'],
+    kids: ['Mothercare', 'H&M Kids', 'Zara Kids', 'Gap Kids', 'Nike Kids', 'Adidas Kids']
   };
 
   function getCatType() {
     var cat = (window.state && window.state.cat) || '';
     cat = String(cat).toLowerCase();
-    if (cat.indexOf('shoe') !== -1 || cat.indexOf('حذاء') !== -1 || cat.indexOf('أحذية') !== -1) return 'shoes';
-    if (cat.indexOf('perfume') !== -1 || cat.indexOf('عطر') !== -1 || cat.indexOf('عطور') !== -1) return 'perfume';
+    if (cat.indexOf('shoe') !== -1 || cat.indexOf('حذاء') !== -1) return 'shoes';
+    if (cat.indexOf('perfume') !== -1 || cat.indexOf('عطر') !== -1) return 'perfume';
     if (cat.indexOf('electronic') !== -1 || cat.indexOf('إلكترون') !== -1) return 'electronics';
     if (cat.indexOf('accessor') !== -1 || cat.indexOf('إكسسوار') !== -1) return 'accessories';
     if (cat.indexOf('kid') !== -1 || cat.indexOf('طفل') !== -1) return 'kids';
@@ -1502,29 +1535,22 @@ if(document.readyState === 'loading'){
     var type = getCatType();
     var brands = BRANDS[type] || BRANDS.fashion;
     var curVal = input.value || '';
-
     var modal = document.createElement('div');
     modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);direction:rtl;';
-
     var sheet = document.createElement('div');
-    sheet.style.cssText = 'background:#1A2340;width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:20px;border-top:1px solid rgba(197,160,89,0.3);animation:slideUp 0.3s ease;';
-
+    sheet.style.cssText = 'background:#1A2340;width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:20px;border-top:1px solid rgba(197,160,89,0.3);';
     var title = document.createElement('div');
     title.textContent = 'اختر الماركة';
-    title.style.cssText = 'text-align:center;color:#C5A059;font-weight:900;font-size:16px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.1);';
+    title.style.cssText = 'text-align:center;color:#C5A059;font-weight:900;font-size:16px;margin-bottom:16px;';
     sheet.appendChild(title);
-
     var searchBox = document.createElement('input');
     searchBox.type = 'text';
-    searchBox.placeholder = 'ابحث عن ماركة...';
-    searchBox.value = '';
+    searchBox.placeholder = 'ابحث...';
     searchBox.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(197,160,89,0.3);background:#0f172a;color:#fff;font-size:14px;font-family:inherit;margin-bottom:12px;box-sizing:border-box;';
     sheet.appendChild(searchBox);
-
     var list = document.createElement('div');
     list.style.cssText = 'max-height:40vh;overflow-y:auto;';
     sheet.appendChild(list);
-
     function renderList(q) {
       var q2 = (q || '').toLowerCase();
       var filtered = q2 ? brands.filter(function(b){return b.toLowerCase().indexOf(q2) !== -1;}) : brands;
@@ -1532,25 +1558,19 @@ if(document.readyState === 'loading'){
       filtered.forEach(function(brand) {
         var item = document.createElement('div');
         var isAct = brand === curVal;
-        item.style.cssText = 'padding:14px 16px;border-radius:10px;margin-bottom:4px;cursor:pointer;font-weight:700;color:' + (isAct ? '#C5A059' : '#F2E3C6') + ';background:' + (isAct ? 'rgba(197,160,89,0.15)' : 'transparent') + ';display:flex;justify-content:space-between;';
-        item.innerHTML = '<span>' + brand + '</span>' + (isAct ? '<span>✓</span>' : '');
-        item.onclick = function() {
-          input.value = brand;
-          input.dispatchEvent(new Event('change', {bubbles:true}));
-          modal.remove();
-        };
+        item.style.cssText = 'padding:14px 16px;border-radius:10px;margin-bottom:4px;cursor:pointer;font-weight:700;color:' + (isAct ? '#C5A059' : '#F2E3C6') + ';background:' + (isAct ? 'rgba(197,160,89,0.15)' : 'transparent') + ';';
+        item.textContent = brand;
+        item.onclick = function() { input.value = brand; input.dispatchEvent(new Event('change', {bubbles:true})); modal.remove(); };
         list.appendChild(item);
       });
     }
     searchBox.oninput = function() { renderList(this.value); };
     renderList('');
-
     var cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'إلغاء';
     cancelBtn.style.cssText = 'width:100%;padding:14px;margin-top:10px;background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.05);color:#9ca3af;font-weight:800;font-size:14px;cursor:pointer;';
     cancelBtn.onclick = function() { modal.remove(); };
     sheet.appendChild(cancelBtn);
-
     modal.appendChild(sheet);
     modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
     document.body.appendChild(modal);
@@ -1564,20 +1584,14 @@ if(document.readyState === 'loading'){
     brandInput.setAttribute('readonly', 'readonly');
     brandInput.style.cursor = 'pointer';
     brandInput.placeholder = 'اضغط لاختيار الماركة';
-    brandInput.addEventListener('click', function(e) {
-      e.preventDefault(); e.stopPropagation();
-      openBrandSheet(brandInput);
-    });
+    brandInput.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); openBrandSheet(brandInput); });
   }
 
-  // ═══════════════════════════════════════
-  // 3) المقاسات الذكية
-  // ═══════════════════════════════════════
+  // ═══ 4) المقاسات ═══
   function buildSizesSection() {
     var chipsContainer = document.getElementById('pf-sizes-chips');
     var stockContainer = document.getElementById('pf-sizes-stock');
     if (!chipsContainer || !stockContainer) return;
-
     var type = getCatType();
     var sizes = [];
     if (type === 'shoes') sizes = ['36','37','38','39','40','41','42','43','44','45'];
@@ -1586,10 +1600,7 @@ if(document.readyState === 'loading'){
     else sizes = ['XS','S','M','L','XL','XXL','3XL'];
 
     var section = chipsContainer.closest('.form-section');
-    if (!sizes.length) {
-      if (section) section.style.display = 'none';
-      return;
-    }
+    if (!sizes.length) { if (section) section.style.display = 'none'; return; }
     if (section) section.style.display = 'block';
 
     var title = section ? section.querySelector('.form-section-title') : null;
@@ -1643,6 +1654,7 @@ if(document.readyState === 'loading'){
     buildImageSection();
     buildSizesSection();
     attachBrand();
+    window._calcCurrency();
   }
 
   setInterval(init, 1500);
@@ -1655,15 +1667,12 @@ if(document.readyState === 'loading'){
     setTimeout(init, 150);
   };
 
-  console.log('[Pro Product Form v3] ready — images + brands + sizes');
+  console.log('[Full Pro Form] ready — currency + images + brands + sizes');
 })();
 </script>
 
 <style>
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
+@keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
 </body>
 </html>
