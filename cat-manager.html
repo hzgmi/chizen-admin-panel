@@ -246,7 +246,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
 
       <!-- قسم العملات وسعر الصرف -->
       <div style="background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2);border-radius:12px;padding:12px;margin-top:12px;">
-        <div style="font-size:13px;font-weight:800;color:#3b82f6;margin-bottom:10px;">💱 العملات وسعر الصرف اليومي</div>
+        <div style="font-size:13px;font-weight:800;color:#3b82f6;margin-bottom:10px;">💱 العملات وسعر الصرف (شمال/جنوب)</div>
         
         <div class="form-row">
           <div class="form-field">
@@ -258,25 +258,44 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
             </select>
           </div>
           <div class="form-field">
-            <label>سعر صرف السعودي (باليمني) *</label>
-            <input id="pf-rate-sar" type="number" placeholder="350" oninput="window._calcCurrency();">
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-field">
-            <label>سعر صرف الدولار (باليمني) *</label>
-            <input id="pf-rate-usd" type="number" placeholder="1300" oninput="window._calcCurrency();">
-          </div>
-          <div class="form-field">
             <label>السعر (بالعملة المختارة) *</label>
             <input id="pf-price" type="number" inputmode="numeric" placeholder="0" oninput="window._calcCurrency();">
           </div>
         </div>
         
+        <!-- صرف الجنوب -->
+        <div style="background:rgba(16,185,129,0.08); padding:10px; border-radius:8px; margin-top:10px;">
+          <div style="font-size:12px;font-weight:800;color:#10b981;margin-bottom:8px;">🌍 صرف الجنوب (عدن - حضرموت ...)</div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>سعر السعودي (جنوب)</label>
+              <input id="pf-rate-sar-south" type="number" placeholder="350" oninput="window._calcCurrency();">
+            </div>
+            <div class="form-field">
+              <label>سعر الدولار (جنوب)</label>
+              <input id="pf-rate-usd-south" type="number" placeholder="1300" oninput="window._calcCurrency();">
+            </div>
+          </div>
+        </div>
+        
+        <!-- صرف الشمال -->
+        <div style="background:rgba(245,158,11,0.08); padding:10px; border-radius:8px; margin-top:10px;">
+          <div style="font-size:12px;font-weight:800;color:#f59e0b;margin-bottom:8px;">🌍 صرف الشمال (صنعاء - تعز ...)</div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>سعر السعودي (شمال)</label>
+              <input id="pf-rate-sar-north" type="number" placeholder="500" oninput="window._calcCurrency();">
+            </div>
+            <div class="form-field">
+              <label>سعر الدولار (شمال)</label>
+              <input id="pf-rate-usd-north" type="number" placeholder="2000" oninput="window._calcCurrency();">
+            </div>
+          </div>
+        </div>
+        
         <div style="margin-top:10px; background:#1A2340; padding:10px; border-radius:8px;">
-          <div style="font-size:11px;color:#9ca3af;margin-bottom:4px;">💰 السعر المحول:</div>
-          <div id="pf-price-display" style="font-size:13px;font-weight:900;color:#F2E3C6;"></div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:6px;">💰 السعر المحول تلقائياً:</div>
+          <div id="pf-price-display" style="font-size:12px;font-weight:900;color:#F2E3C6;line-height:1.8;"></div>
         </div>
       </div>
       
@@ -1402,22 +1421,27 @@ if(document.readyState === 'loading'){
   window._calcCurrency = function() {
     var price = parseFloat((document.getElementById('pf-price')||{}).value) || 0;
     var currency = (document.getElementById('pf-currency')||{}).value || 'YER';
-    var rateSAR = parseFloat((document.getElementById('pf-rate-sar')||{}).value) || 350;
-    var rateUSD = parseFloat((document.getElementById('pf-rate-usd')||{}).value) || 1300;
+    
+    var rSarS = parseFloat((document.getElementById('pf-rate-sar-south')||{}).value) || 350;
+    var rUsdS = parseFloat((document.getElementById('pf-rate-usd-south')||{}).value) || 1300;
+    var rSarN = parseFloat((document.getElementById('pf-rate-sar-north')||{}).value) || 500;
+    var rUsdN = parseFloat((document.getElementById('pf-rate-usd-north')||{}).value) || 2000;
+    
     var display = document.getElementById('pf-price-display');
     if (!display) return;
     
     var priceYER = price;
-    if (currency === 'SAR') priceYER = price * rateSAR;
-    else if (currency === 'USD') priceYER = price * rateUSD;
+    if (currency === 'SAR') priceYER = price * rSarS;
+    else if (currency === 'USD') priceYER = price * rUsdS;
     
-    var priceSAR = rateSAR > 0 ? Math.round(priceYER / rateSAR) : 0;
-    var priceUSD = rateUSD > 0 ? Math.round(priceYER / rateUSD) : 0;
+    var sarS = rSarS > 0 ? Math.round(priceYER / rSarS) : 0;
+    var usdS = rUsdS > 0 ? Math.round(priceYER / rUsdS) : 0;
+    var sarN = rSarN > 0 ? Math.round(priceYER / rSarN) : 0;
+    var usdN = rUsdN > 0 ? Math.round(priceYER / rUsdN) : 0;
     
     display.innerHTML = 
-      '🇾🇪 <b>' + Math.round(priceYER).toLocaleString() + '</b> ر.ي<br>' +
-      '🇸🇦 <b>' + priceSAR.toLocaleString() + '</b> ر.س<br>' +
-      '🇺🇸 <b>' + priceUSD.toLocaleString() + '</b> $';
+      '🌍 <b style="color:#10b981">الجنوب:</b> 🇾🇪 ' + Math.round(priceYER).toLocaleString() + ' ر.ي | 🇸🇦 ' + sarS.toLocaleString() + ' ر.س | 🇺🇸 ' + usdS.toLocaleString() + '$<br>' +
+      '🌍 <b style="color:#f59e0b">الشمال:</b> 🇾🇪 ' + Math.round(priceYER).toLocaleString() + ' ر.ي | 🇸🇦 ' + sarN.toLocaleString() + ' ر.س | 🇺🇸 ' + usdN.toLocaleString() + '$';
   };
   
   // ═══ 2) الصور (شبكة 3x3) ═══
