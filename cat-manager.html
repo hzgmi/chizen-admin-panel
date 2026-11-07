@@ -244,9 +244,9 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
         <div class="form-field"><label>حد التنبيه (مخزون منخفض)</label><input id="pf-threshold" type="number" value="5" inputmode="numeric"></div>
       </div>
 
-      <!-- قسم السعر (بسيط: عملة + سعر) -->
+      <!-- قسم التسعير الشامل -->
       <div style="background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2);border-radius:12px;padding:12px;margin-top:12px;">
-        <div style="font-size:13px;font-weight:800;color:#3b82f6;margin-bottom:10px;">💰 السعر</div>
+        <div style="font-size:13px;font-weight:800;color:#3b82f6;margin-bottom:10px;">💰 التسعير والمخزون</div>
         
         <div class="form-row">
           <div class="form-field">
@@ -258,14 +258,55 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
             </select>
           </div>
           <div class="form-field">
-            <label>السعر *</label>
+            <label>السعر (البيع) *</label>
             <input id="pf-price" type="number" inputmode="numeric" placeholder="0" oninput="window._calcCurrency();">
           </div>
         </div>
         
+        <div class="form-row">
+          <div class="form-field">
+            <label>السعر قبل الخصم</label>
+            <input id="pf-oldprice" type="number" inputmode="numeric" placeholder="0">
+          </div>
+          <div class="form-field">
+            <label>سعر الجملة (للتجار)</label>
+            <input id="pf-wholesale" type="number" inputmode="numeric" placeholder="0">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-field">
+            <label>سعر التكلفة (لحساب الربح)</label>
+            <input id="pf-cost" type="number" inputmode="numeric" placeholder="0" oninput="window._calcCurrency();">
+          </div>
+          <div class="form-field">
+            <label>الحد الأدنى للطلب</label>
+            <input id="pf-minorder" type="number" inputmode="numeric" placeholder="1" value="1">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-field">
+            <label>المخزون</label>
+            <input id="pf-stock" type="number" inputmode="numeric" placeholder="0">
+          </div>
+          <div class="form-field">
+            <label>حد التنبيه (مخزون منخفض)</label>
+            <input id="pf-threshold" type="number" value="5" inputmode="numeric">
+          </div>
+        </div>
+        
+        <!-- صندوق التحويل -->
         <div style="margin-top:10px; background:#1A2340; padding:12px; border-radius:10px;">
           <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">💰 السعر المحول تلقائياً (حسب صرف الإدارة):</div>
           <div id="pf-price-display" style="font-size:13px;font-weight:900;color:#F2E3C6;line-height:2;"></div>
+        </div>
+        
+        <!-- هامش الربح -->
+        <div style="margin-top:10px; background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:12px;">
+          <label style="color:#10b981;font-size:12px;font-weight:800;">📊 هامش الربح المتوقع (تلقائي)</label>
+          <div id="pf-profit-margin" style="font-size:20px;font-weight:900;color:#10b981;text-align:center;margin-top:4px;">—</div>
+          <div id="pf-profit-hint" style="font-size:11px;color:#6b7280;text-align:center;margin-top:4px;">أدخل السعر والتكلفة لحساب الهامش</div>
         </div>
       </div>
       
