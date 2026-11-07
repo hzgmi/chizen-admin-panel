@@ -1677,123 +1677,17 @@ if(document.readyState === 'loading'){
 <style>
 @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
-function renderProducts(){
-  var total = state.products.length;
-  var live = state.products.filter(function(p){ return p.status === 'live' || p.active === true; }).length;
-  var pending = state.products.filter(function(p){ return p.status === 'pending_review'; }).length;
-  var lowStock = state.products.filter(function(p){ return Number(p.stock) > 0 && Number(p.stock) <= 3; }).length;
-  
-  var h = '<div style="padding:12px 16px;">';
-  
-  // إحصائيات سريعة
-  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">';
-  h += '<div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#3b82f6;">' + total + '</div><div style="font-size:10px;color:#6b7280;font-weight:700;">إجمالي</div></div>';
-  h += '<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#10b981;">' + live + '</div><div style="font-size:10px;color:#6b7280;font-weight:700;">منشور</div></div>';
-  h += '<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#f59e0b;">' + pending + '</div><div style="font-size:10px;color:#6b7280;font-weight:700;">مراجعة</div></div>';
-  h += '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#ef4444;">' + lowStock + '</div><div style="font-size:10px;color:#6b7280;font-weight:700;">مخزون منخفض</div></div>';
-  h += '</div>';
-  
-  // بحث + فلترة
-  h += '<div style="display:flex;gap:8px;margin-bottom:12px;">';
-  h += '<input id="products-search" placeholder="🔍 ابحث..." oninput="window.__filterProducts()" style="flex:1;padding:12px 14px;border-radius:12px;border:1.5px solid rgba(197,160,89,0.3);background:#1A2340;color:#F2E3C6;font-family:inherit;font-size:14px;">';
-  h += '</div>';
-  
-  // تبويبات فلترة
-  h += '<div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;">';
-  h += '<button onclick="window.__setFilter(\'all\')" data-filter="all" class="chz-filter-btn" style="padding:8px 14px;border-radius:10px;border:1.5px solid #C5A059;background:rgba(197,160,89,0.2);color:#C5A059;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">الكل</button>';
-  h += '<button onclick="window.__setFilter(\'live\')" data-filter="live" class="chz-filter-btn" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(197,160,89,0.3);background:transparent;color:#F2E3C6;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">✅ منشور</button>';
-  h += '<button onclick="window.__setFilter(\'pending\')" data-filter="pending" class="chz-filter-btn" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(197,160,89,0.3);background:transparent;color:#F2E3C6;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">⏳ مراجعة</button>';
-  h += '<button onclick="window.__setFilter(\'lowstock\')" data-filter="lowstock" class="chz-filter-btn" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(197,160,89,0.3);background:transparent;color:#F2E3C6;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">⚠️ مخزون منخفض</button>';
-  h += '</div>';
-  
-  // شبكة المنتجات
-  h += '<div id="products-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;"></div>';
-  h += '</div>';
-  
-  setTimeout(function(){ window.__renderProductsGrid(''); }, 0);
-  return h;
-}
+
 
 // متغيرات الفلترة
 window.__productFilter = 'all';
 window.__productSearch = '';
 
-window.__setFilter = function(f) {
-  window.__productFilter = f;
-  document.querySelectorAll('.chz-filter-btn').forEach(function(b){
-    if (b.getAttribute('data-filter') === f) {
-      b.style.background = 'rgba(197,160,89,0.2)';
-      b.style.borderColor = '#C5A059';
-      b.style.color = '#C5A059';
-    } else {
-      b.style.background = 'transparent';
-      b.style.borderColor = 'rgba(197,160,89,0.3)';
-      b.style.color = '#F2E3C6';
-    }
-  });
-  window.__renderProductsGrid(window.__productSearch);
-};
 
-window.__filterProducts = function() {
-  var s = document.getElementById('products-search');
-  window.__productSearch = s ? s.value : '';
-  window.__renderProductsGrid(window.__productSearch);
-};
 
-window.__renderProductsGrid = function(query) {
-  var el = document.getElementById('products-grid');
-  if (!el) return;
-  
-  var arr = state.products || [];
-  
-  // فلترة البحث
-  if (query) {
-    var q = query.toLowerCase();
-    arr = arr.filter(function(p) {
-      return (p.name || '').toLowerCase().indexOf(q) !== -1 || (p.brand || '').toLowerCase().indexOf(q) !== -1;
-    });
-  }
-  
-  // فلترة الحالة
-  if (window.__productFilter === 'live') {
-    arr = arr.filter(function(p) { return p.status === 'live' || p.active === true; });
-  } else if (window.__productFilter === 'pending') {
-    arr = arr.filter(function(p) { return p.status === 'pending_review'; });
-  } else if (window.__productFilter === 'lowstock') {
-    arr = arr.filter(function(p) { return Number(p.stock) > 0 && Number(p.stock) <= 3; });
-  }
-  
-  if (!arr.length) {
-    el.innerHTML = '<div style="grid-column:1/-1;padding:60px 20px;text-align:center;color:#6b7280;"><div style="font-size:48px;margin-bottom:12px;">📦</div><div style="font-weight:800;font-size:14px;">لا توجد منتجات</div><div style="font-size:12px;margin-top:4px;">أضف منتجك الأول أو غيّر الفلتر</div></div>';
-    return;
-  }
-  
-  el.innerHTML = arr.map(function(p) {
-    var img = p.img || (p.images && p.images[0]) || '';
-    var stock = Number(p.stock) || 0;
-    var stockColor = stock <= 0 ? '#ef4444' : (stock <= 3 ? '#f59e0b' : '#10b981');
-    var isLive = p.status === 'live' || p.active === true;
-    var statusBadge = isLive ? '<span style="position:absolute;top:8px;right:8px;background:#10b981;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:6px;">✅ منشور</span>' : '<span style="position:absolute;top:8px;right:8px;background:#f59e0b;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:6px;">⏳ مراجعة</span>';
-    
-    return '<div style="background:#1A2340;border:1px solid rgba(197,160,89,0.2);border-radius:14px;overflow:hidden;position:relative;">' +
-      statusBadge +
-      '<div style="position:relative;padding-top:100%;background:#0f172a;">' +
-        (img ? '<img src="' + esc(img) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">' : '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:0.3;">📦</div>') +
-      '</div>' +
-      '<div style="padding:10px;">' +
-        (p.brand ? '<div style="font-size:10px;color:#C5A059;font-weight:800;margin-bottom:2px;">' + esc(p.brand) + '</div>' : '') +
-        '<div style="font-size:12px;color:#F2E3C6;font-weight:800;margin-bottom:6px;line-height:1.4;height:34px;overflow:hidden;">' + esc(p.name || '—') + '</div>' +
-        '<div style="font-size:16px;font-weight:900;color:#C5A059;margin-bottom:4px;">' + (Number(p.price) || 0).toFixed(0) + ' <span style="font-size:11px;">ر.ي</span></div>' +
-        '<div style="font-size:10px;color:' + stockColor + ';font-weight:800;margin-bottom:8px;">' + stock + ' متبقي</div>' +
-        '<div style="display:flex;gap:4px;">' +
-          '<button onclick="openProductForm(\'' + p.id + '\')" style="flex:1;padding:8px;background:rgba(59,130,246,0.15);color:#3b82f6;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;">✏️</button>' +
-          '<button onclick="window.__toggleProduct(\'' + p.id + '\')" style="flex:1;padding:8px;background:' + (isLive ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)') + ';color:' + (isLive ? '#f59e0b' : '#10b981') + ';border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;">' + (isLive ? '👁️' : '✅') + '</button>' +
-          '<button onclick="window.__deleteProduct(\'' + p.id + '\')" style="flex:1;padding:8px;background:rgba(239,68,68,0.15);color:#ef4444;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;">🗑</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-};
+
+
+
 
 // دوال الإجراءات السريعة
 window.__toggleProduct = async function(id) {
@@ -1822,5 +1716,132 @@ window.__deleteProduct = async function(id) {
     render();
   } catch(e) { toast('❌ ' + e.message, 'err'); }
 };
+
+<script>
+function renderProducts(){
+  var total = state.products.length;
+  var live = state.products.filter(function(p){ return p.status === 'live' || p.active === true; }).length;
+  var pending = state.products.filter(function(p){ return p.status === 'pending_review'; }).length;
+  var lowStock = state.products.filter(function(p){ return Number(p.stock) > 0 && Number(p.stock) <= 3; }).length;
+  
+  var h = '<div style="padding:12px 16px;">';
+  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">';
+  h += '<div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#3b82f6;">' + total + '</div><div style="font-size:10px;color:#6b7280;font-weight:700;">إجمالي</div></div>';
+  h += '<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#10b981;">' + live + '</div><div style="font-size:10px;color:#6b7280;font-weight:700;">منشور</div></div>';
+  h += '<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#f59e0b;">' + pending + '</div><div style="font-size:10px;color:#6b7280;font-weight:700;">مراجعة</div></div>';
+  h += '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#ef4444;">' + lowStock + '</div><div style="font-size:10px;color:#6b7280;font-weight:700;">مخزون منخفض</div></div>';
+  h += '</div>';
+  h += '<input id="products-search" placeholder="🔍 ابحث..." oninput="window.__filterProducts()" style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid rgba(197,160,89,0.3);background:#1A2340;color:#F2E3C6;font-family:inherit;font-size:14px;margin-bottom:12px;box-sizing:border-box;">';
+  h += '<div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;">';
+  h += '<button onclick="window.__setFilter(\'all\')" data-filter="all" class="chz-filter-btn" style="padding:8px 14px;border-radius:10px;border:1.5px solid #C5A059;background:rgba(197,160,89,0.2);color:#C5A059;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">الكل</button>';
+  h += '<button onclick="window.__setFilter(\'live\')" data-filter="live" class="chz-filter-btn" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(197,160,89,0.3);background:transparent;color:#F2E3C6;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">✅ منشور</button>';
+  h += '<button onclick="window.__setFilter(\'pending\')" data-filter="pending" class="chz-filter-btn" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(197,160,89,0.3);background:transparent;color:#F2E3C6;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">⏳ مراجعة</button>';
+  h += '<button onclick="window.__setFilter(\'lowstock\')" data-filter="lowstock" class="chz-filter-btn" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(197,160,89,0.3);background:transparent;color:#F2E3C6;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">⚠️ مخزون منخفض</button>';
+  h += '</div>';
+  h += '<div id="products-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;"></div>';
+  h += '</div>';
+  setTimeout(function(){ window.__renderProductsGrid(''); }, 0);
+  return h;
+}
+
+window.__productFilter = 'all';
+window.__productSearch = '';
+
+window.__setFilter = function(f) {
+  window.__productFilter = f;
+  document.querySelectorAll('.chz-filter-btn').forEach(function(b){
+    if (b.getAttribute('data-filter') === f) {
+      b.style.background = 'rgba(197,160,89,0.2)';
+      b.style.borderColor = '#C5A059';
+      b.style.color = '#C5A059';
+    } else {
+      b.style.background = 'transparent';
+      b.style.borderColor = 'rgba(197,160,89,0.3)';
+      b.style.color = '#F2E3C6';
+    }
+  });
+  window.__renderProductsGrid(window.__productSearch);
+};
+
+window.__filterProducts = function() {
+  var s = document.getElementById('products-search');
+  window.__productSearch = s ? s.value : '';
+  window.__renderProductsGrid(window.__productSearch);
+};
+
+window.__renderProductsGrid = function(query) {
+  var el = document.getElementById('products-grid');
+  if (!el) return;
+  var arr = state.products || [];
+  if (query) {
+    var q = query.toLowerCase();
+    arr = arr.filter(function(p) {
+      return (p.name || '').toLowerCase().indexOf(q) !== -1 || (p.brand || '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  if (window.__productFilter === 'live') {
+    arr = arr.filter(function(p) { return p.status === 'live' || p.active === true; });
+  } else if (window.__productFilter === 'pending') {
+    arr = arr.filter(function(p) { return p.status === 'pending_review'; });
+  } else if (window.__productFilter === 'lowstock') {
+    arr = arr.filter(function(p) { return Number(p.stock) > 0 && Number(p.stock) <= 3; });
+  }
+  if (!arr.length) {
+    el.innerHTML = '<div style="grid-column:1/-1;padding:60px 20px;text-align:center;color:#6b7280;"><div style="font-size:48px;margin-bottom:12px;">📦</div><div style="font-weight:800;font-size:14px;">لا توجد منتجات</div><div style="font-size:12px;margin-top:4px;">أضف منتجك الأول أو غيّر الفلتر</div></div>';
+    return;
+  }
+  el.innerHTML = arr.map(function(p) {
+    var img = p.img || (p.images && p.images[0]) || '';
+    var stock = Number(p.stock) || 0;
+    var stockColor = stock <= 0 ? '#ef4444' : (stock <= 3 ? '#f59e0b' : '#10b981');
+    var isLive = p.status === 'live' || p.active === true;
+    var statusBadge = isLive ? '<span style="position:absolute;top:8px;right:8px;background:#10b981;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:6px;">✅ منشور</span>' : '<span style="position:absolute;top:8px;right:8px;background:#f59e0b;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:6px;">⏳ مراجعة</span>';
+    return '<div style="background:#1A2340;border:1px solid rgba(197,160,89,0.2);border-radius:14px;overflow:hidden;position:relative;">' +
+      statusBadge +
+      '<div style="position:relative;padding-top:100%;background:#0f172a;">' +
+        (img ? '<img src="' + img + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">' : '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:0.3;">📦</div>') +
+      '</div>' +
+      '<div style="padding:10px;">' +
+        (p.brand ? '<div style="font-size:10px;color:#C5A059;font-weight:800;margin-bottom:2px;">' + p.brand + '</div>' : '') +
+        '<div style="font-size:12px;color:#F2E3C6;font-weight:800;margin-bottom:6px;line-height:1.4;height:34px;overflow:hidden;">' + (p.name || '—') + '</div>' +
+        '<div style="font-size:16px;font-weight:900;color:#C5A059;margin-bottom:4px;">' + (Number(p.price) || 0).toFixed(0) + ' <span style="font-size:11px;">ر.ي</span></div>' +
+        '<div style="font-size:10px;color:' + stockColor + ';font-weight:800;margin-bottom:8px;">' + stock + ' متبقي</div>' +
+        '<div style="display:flex;gap:4px;">' +
+          '<button onclick="openProductForm(\'' + p.id + '\')" style="flex:1;padding:8px;background:rgba(59,130,246,0.15);color:#3b82f6;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;">✏️</button>' +
+          '<button onclick="window.__toggleProduct(\'' + p.id + '\')" style="flex:1;padding:8px;background:' + (isLive ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)') + ';color:' + (isLive ? '#f59e0b' : '#10b981') + ';border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;">' + (isLive ? '👁️' : '✅') + '</button>' +
+          '<button onclick="window.__deleteProduct(\'' + p.id + '\')" style="flex:1;padding:8px;background:rgba(239,68,68,0.15);color:#ef4444;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;">🗑</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+};
+
+window.__toggleProduct = async function(id) {
+  if (!confirm('تغيير حالة المنتج؟')) return;
+  try {
+    var p = state.products.find(function(x){return x.id===id;});
+    if (!p) return;
+    var newState = !(p.active === true || p.status === 'live');
+    await db.collection('products').doc(id).update({
+      active: newState,
+      isActive: newState,
+      status: newState ? 'live' : 'pending_review'
+    });
+    toast(newState ? '✅ تم إظهار المنتج' : '👁️ تم إخفاء المنتج', 'ok');
+    await loadProducts();
+    render();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+};
+
+window.__deleteProduct = async function(id) {
+  if (!confirm('حذف المنتج نهائياً؟')) return;
+  try {
+    await db.collection('products').doc(id).delete();
+    toast('🗑️ تم حذف المنتج', 'ok');
+    await loadProducts();
+    render();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+};
+</script>
 </body>
 </html>
