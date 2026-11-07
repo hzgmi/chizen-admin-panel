@@ -197,64 +197,131 @@ body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e
 'use strict';
 var auth = firebase.auth();
 var db = firebase.firestore();
+var state = { user: null, userData: {}, cat: null, orders: [], products: [] };
 
 function catLabel(c) {
   var labels = { fashion:'أزياء وموضة', shoes:'أحذية', perfume:'عطور', electronics:'إلكترونيات', accessories:'إكسسوارات', kids:'أطفال', supermarket:'سوبر ماركت', home:'منزل وأثاث', beauty:'جمال' };
   return labels[c] || c || '—';
 }
 
-auth.onAuthStateChanged(async function(user) {
-  if (!user) { 
-    document.getElementById('catName').textContent = 'سجّل الدخول أولاً';
-    return; 
+function esc(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+function showLoading() {
+  document.getElementById('ordersContainer').innerHTML = '<div class="loading">⏳ جاري التحميل...</div>';
+}
+
+function showError(msg) {
+  document.getElementById('ordersContainer').innerHTML = '<div class="loading" style="color:#ef4444;">❌ ' + msg + '</div>';
+}
+
+async function loadUserData(user) {
+  var udoc = await db.collection('users').doc(user.uid).get();
+  state.userData = udoc.exists ? udoc.data() : {};
+  state.cat = state.userData.category || state.userData.cat || null;
+  
+  if (!state.cat) {
+    document.getElementById('catName').textContent = '⚠️ لم يتم تعيين قسم';
+    return false;
   }
   
+  document.getElementById('catName').textContent = 'قسم: ' + catLabel(state.cat);
+  return true;
+}
+
+async function loadOrders() {
   try {
-    var udoc = await db.collection('users').doc(user.uid).get();
-    var userData = udoc.exists ? udoc.data() : {};
-    var cat = userData.category || userData.cat || 'electronics';
+    var snap = await db.collection('orders').where('category','==',state.cat).limit(50).get();
+    state.orders = [];
+    snap.forEach(function(d) { var x = d.data(); x.id = d.id; state.orders.push(x); });
+    // ترتيب: الأحدث أولاً
+    state.orders.sort(function(a, b) {
+      var ta = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+      var tb = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+      return tb - ta;
+    });
+  } catch(e) { console.error('[orders]', e); }
+}
+
+async function loadProducts() {
+  try {
+    var snap = await db.collection('products').get();
+    var all = [];
+    snap.forEach(function(d) { var x = d.data(); x.id = d.id; all.push(x); });
+    var cat = (state.cat || '').toLowerCase().trim();
+    state.products = all.filter(function(p) {
+      var pc = (p.category || '').toLowerCase().trim();
+      var pcs = Array.isArray(p.categories) ? p.categories.map(function(c){ return (c||'').toLowerCase().trim(); }) : [];
+      return pc === cat || pcs.indexOf(cat) !== -1;
+    });
+  } catch(e) { console.error('[products]', e); }
+}
+
+function renderStats() {
+  var newOrders = state.orders.filter(function(o) { return o.status === 'pending'; }).length;
+  var doneOrders = state.orders.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; }).length;
+  var prepOrders = state.orders.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; }).length;
+  
+  document.getElementById('statNew').textContent = newOrders;
+  document.getElementById('statDone').textContent = doneOrders;
+  document.getElementById('statPrep').textContent = prepOrders;
+}
+
+function renderLatestOrders() {
+  var latest = state.orders.slice(0, 3);
+  var container = document.getElementById('ordersContainer');
+  
+  if (!latest.length) {
+    container.innerHTML = '<div class="empty" style="padding:30px 20px;"><i>📭</i><b>لا توجد طلبات</b><small>ستظهر الطلبات هنا</small></div>';
+    return;
+  }
+  
+  container.innerHTML = latest.map(function(o) {
+    var statusClass = o.status === 'pending' ? 'pending' : (o.status === 'completed' || o.status === 'delivered' ? 'completed' : 'confirmed');
+    var statusLabel = o.status === 'pending' ? '⏳ معلق' : (o.status === 'completed' || o.status === 'delivered' ? '🏁 مكتمل' : '✅ مؤكد');
+    var initial = (o.customerName || o.name || '؟').charAt(0);
+    var orderId = (o.id || '').substring(0, 8);
+    var total = Number(o.total) || 0;
     
-    document.getElementById('catName').textContent = 'قسم: ' + catLabel(cat);
-    
-    // إحصائيات تجريبية (سيتم ربطها لاحقاً)
-    document.getElementById('statNew').textContent = '12';
-    document.getElementById('statDone').textContent = '45';
-    document.getElementById('statPrep').textContent = '28';
-    
-    // طلبات تجريبية (سيتم ربطها لاحقاً)
-    document.getElementById('ordersContainer').innerHTML = 
-      '<div class="order-row">' +
-        '<div class="order-avatar">أ</div>' +
-        '<div class="order-info">' +
-          '<div class="name">أحمد محمد</div>' +
-          '<div class="id">#CH-1028</div>' +
-        '</div>' +
-        '<div class="order-status pending">⏳ معلق</div>' +
+    return '<div class="order-row">' +
+      '<div class="order-avatar">' + esc(initial) + '</div>' +
+      '<div class="order-info">' +
+        '<div class="name">' + esc(o.customerName || o.name || 'عميل') + '</div>' +
+        '<div class="id">#' + esc(orderId) + ' • ' + total.toFixed(0) + ' ر.ي</div>' +
       '</div>' +
-      '<div class="order-row">' +
-        '<div class="order-avatar">س</div>' +
-        '<div class="order-info">' +
-          '<div class="name">سارة علي</div>' +
-          '<div class="id">#CH-1027</div>' +
-        '</div>' +
-        '<div class="order-status confirmed">✅ مؤكد</div>' +
-      '</div>' +
-      '<div class="order-row">' +
-        '<div class="order-avatar">م</div>' +
-        '<div class="order-info">' +
-          '<div class="name">محمد صالح</div>' +
-          '<div class="id">#CH-1026</div>' +
-        '</div>' +
-        '<div class="order-status completed">🏁 مكتمل</div>' +
-      '</div>';
+      '<div class="order-status ' + statusClass + '">' + statusLabel + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+auth.onAuthStateChanged(async function(user) {
+  if (!user) {
+    document.getElementById('catName').textContent = 'سجّل الدخول أولاً';
+    document.getElementById('ordersContainer').innerHTML = '<div class="empty"><i>🔒</i><b>غير مسجل</b><small>سجّل الدخول لعرض البيانات</small></div>';
+    return;
+  }
+  
+  state.user = user;
+  showLoading();
+  
+  try {
+    var ok = await loadUserData(user);
+    if (!ok) {
+      document.getElementById('ordersContainer').innerHTML = '<div class="empty"><i>⚠️</i><b>لم يتم تعيين قسم</b><small>تواصل مع الإدارة</small></div>';
+      return;
+    }
+    
+    await Promise.all([loadOrders(), loadProducts()]);
+    
+    renderStats();
+    renderLatestOrders();
     
   } catch(e) {
     console.error(e);
-    document.getElementById('catName').textContent = 'خطأ في التحميل';
+    showError(e.message);
   }
 });
 
-console.log('[CAT-MANAGER-NEW] loaded');
+console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 </body>
 </html>
