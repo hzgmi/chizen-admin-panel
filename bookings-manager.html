@@ -287,6 +287,9 @@ function renderTab(type){
       var id = btn.dataset.id;
       if(act === 'confirm') changeStatus(id, 'confirmed');
       else if(act === 'quote') sendQuote(id);
+      else if(act === 'verify-payment') verifyPayment(id);
+      else if(act === 'reject-payment') rejectPayment(id);
+      else if(act === 'upload-ticket') uploadTicket(id);
       else if(act === 'complete') changeStatus(id, 'completed');
       else if(act === 'cancel') changeStatus(id, 'cancelled');
       else if(act === 'edit') openEditForm(id);
@@ -389,9 +392,28 @@ function renderBookingCard(b){
     if(b.estimatedPrice > 0) html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff" data-act="quote" data-id="' + b.id + '">📤 عرض سعر</button>';
     html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '" style="flex:1">✅ تأكيد</button>';
   }
-  if(b.status === 'price_quoted') html += '<div style="flex:1;min-width:120px;padding:9px 12px;background:rgba(245,158,11,.15);border-radius:9px;color:#fbbf24;font-size:11px;font-weight:800;text-align:center">⏳ بانتظار موافقة العميل</div>';
-  if(b.status === 'price_approved') html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '" style="flex:1">✅ تأكيد نهائي</button>';
-  if(b.status === 'confirmed') html += '<button class="bk-btn btn-complete" data-act="complete" data-id="' + b.id + '" style="flex:1">🏁 إكمال</button>';
+    // إعادة هيكلة الأزرار حسب المراحل السبعة
+  if(b.status === 'pending' || b.status === 'price_quoted') {
+    html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff" data-act="quote" data-id="' + b.id + '">📤 عرض/تعديل السعر</button>';
+  }
+  
+  if(b.status === 'price_approved') {
+    if (b.paymentProof) {
+      html += '<button class="bk-btn btn-confirm" data-act="verify-payment" data-id="' + b.id + '" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff">✅ تأكيد الدفع</button>';
+      html += '<button class="bk-btn btn-del" data-act="reject-payment" data-id="' + b.id + '" style="flex:1;background:#ef4444;color:#fff">❌ رفض الإيصال</button>';
+    } else {
+      html += '<div style="flex:1;padding:9px 12px;background:rgba(245,158,11,.15);border-radius:9px;color:#fbbf24;font-size:11px;font-weight:800;text-align:center">⏳ بانتظار رفع الإيصال</div>';
+    }
+  }
+
+  if(b.status === 'confirmed') {
+    if (!b.ticketUrl) {
+      html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff" data-act="upload-ticket" data-id="' + b.id + '">📎 رفع التذكرة</button>';
+    } else {
+      html += '<button class="bk-btn btn-complete" data-act="complete" data-id="' + b.id + '" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff">🏁 إكمال الحجز</button>';
+    }
+  }
+
   html += '<button class="bk-btn btn-del" data-act="delete" data-id="' + b.id + '" style="flex:0 0 auto">🗑</button>';
   html += '</div></div>';
   return html;
@@ -671,7 +693,47 @@ async function sendQuote(id){
   }
 }
 
-async function changeStatus(id, status){
+
+  async function verifyPayment(id) {
+    if(!confirm('هل تأكدت من تحويل المبلغ في الحساب البنكي؟')) return;
+    try {
+      await db.collection('bookings').doc(id).update({
+        status: 'confirmed',
+        paymentVerified: {
+          by: state.user.email || state.user.uid,
+          at: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      toast('✅ تم تأكيد الدفع بنجاح', 'ok');
+    } catch(e) { toast('❌ ' + e.message, 'err'); }
+  }
+
+  async function rejectPayment(id) {
+    var reason = prompt('سبب رفض الإيصال (سيظهر للعميل):');
+    if(!reason) return;
+    try {
+      await db.collection('bookings').doc(id).update({
+        paymentProof: null,
+        paymentRejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        paymentRejectReason: reason
+      });
+      // إرسال إشعار
+      var bk = state.bookings.find(function(x){ return x.id === id; });
+      if (bk) {
+        await db.collection('notifications').add({
+          userId: bk.userId,
+          title: '❌ تم رفض إيصال الدفع',
+          body: 'السبب: ' + reason + '. يرجى رفع إيصال صحيح.',
+          type: 'booking', read: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      toast('✅ تم رفض الإيصال وإبلاغ العميل', 'ok');
+    } catch(e) { toast('❌ ' + e.message, 'err'); }
+  }
+
+  async function changeStatus(id, status){
   var labels = {quote:'إرسال عرض السعر', confirmed:'تأكيد', completed:'إكمال', cancelled:'إلغاء'};
   if(!confirm(labels[status] + ' هذا الحجز؟')) return;
   try {
