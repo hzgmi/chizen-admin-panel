@@ -240,15 +240,23 @@ async function loadUserData(user) {
 
 async function loadOrders() {
   try {
-    var snap = await db.collection('orders').where('category','==',state.cat).limit(50).get();
+    var snap = await db.collection('orders').limit(100).get();
     state.orders = [];
-    snap.forEach(function(d) { var x = d.data(); x.id = d.id; state.orders.push(x); });
-    // ترتيب: الأحدث أولاً
+    snap.forEach(function(d) {
+      var x = d.data();
+      x.id = d.id;
+      // فلترة: طلبات تحتوي على منتجات من هذا القسم
+      var inCat = false;
+      if (x.category === state.cat) inCat = true;
+      if (x.categories && x.categories[state.cat]) inCat = true;
+      if (inCat) state.orders.push(x);
+    });
     state.orders.sort(function(a, b) {
       var ta = a.createdAt ? (a.createdAt.seconds || 0) : 0;
       var tb = b.createdAt ? (b.createdAt.seconds || 0) : 0;
       return tb - ta;
     });
+    console.log('[loadOrders] cat=' + state.cat + ' total=' + snap.size + ' matched=' + state.orders.length);
   } catch(e) { console.error('[orders]', e); }
 }
 
@@ -267,13 +275,15 @@ async function loadProducts() {
 }
 
 function renderStats() {
-  var newOrders = state.orders.filter(function(o) { return o.status === 'pending'; }).length;
+  var newOrders = state.orders.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; }).length;
   var doneOrders = state.orders.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; }).length;
-  var prepOrders = state.orders.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; }).length;
+  var prepOrders = state.orders.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing' || o.status === 'preparing'; }).length;
   
   document.getElementById('statNew').textContent = newOrders;
   document.getElementById('statDone').textContent = doneOrders;
   document.getElementById('statPrep').textContent = prepOrders;
+  
+  console.log('[stats] new=' + newOrders + ' done=' + doneOrders + ' prep=' + prepOrders);
 }
 
 function renderLatestOrders() {
@@ -281,22 +291,33 @@ function renderLatestOrders() {
   var container = document.getElementById('ordersContainer');
   
   if (!latest.length) {
-    container.innerHTML = '<div class="empty" style="padding:30px 20px;"><i>📭</i><b>لا توجد طلبات</b><small>ستظهر الطلبات هنا</small></div>';
+    container.innerHTML = '<div style="text-align:center;padding:30px 20px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:8px;">📭</div><b style="font-size:14px;color:#6b7280;">لا توجد طلبات</b><br><small style="font-size:11px;">ستظهر الطلبات هنا</small></div>';
     return;
   }
   
   container.innerHTML = latest.map(function(o) {
-    var statusClass = o.status === 'pending' ? 'pending' : (o.status === 'completed' || o.status === 'delivered' ? 'completed' : 'confirmed');
-    var statusLabel = o.status === 'pending' ? '⏳ معلق' : (o.status === 'completed' || o.status === 'delivered' ? '🏁 مكتمل' : '✅ مؤكد');
+    var statusClass = 'pending';
+    var statusLabel = '⏳ معلق';
+    if (o.status === 'completed' || o.status === 'delivered') { statusClass = 'completed'; statusLabel = '🏁 مكتمل'; }
+    else if (o.status === 'confirmed' || o.status === 'processing') { statusClass = 'confirmed'; statusLabel = '✅ مؤكد'; }
+    
     var initial = (o.customerName || o.name || '؟').charAt(0);
     var orderId = (o.id || '').substring(0, 8);
     var total = Number(o.total) || 0;
+    var timeAgo = '';
+    if (o.createdAt && o.createdAt.seconds) {
+      var diff = Math.floor((Date.now()/1000) - o.createdAt.seconds);
+      if (diff < 60) timeAgo = 'الآن';
+      else if (diff < 3600) timeAgo = Math.floor(diff/60) + ' دقيقة';
+      else if (diff < 86400) timeAgo = Math.floor(diff/3600) + ' ساعة';
+      else timeAgo = Math.floor(diff/86400) + ' يوم';
+    }
     
     return '<div class="order-row">' +
       '<div class="order-avatar">' + esc(initial) + '</div>' +
       '<div class="order-info">' +
         '<div class="name">' + esc(o.customerName || o.name || 'عميل') + '</div>' +
-        '<div class="id">#' + esc(orderId) + ' • ' + total.toFixed(0) + ' ر.ي</div>' +
+        '<div class="id">#' + esc(orderId) + ' • ' + total.toFixed(0) + ' ر.ي' + (timeAgo ? ' • ' + timeAgo : '') + '</div>' +
       '</div>' +
       '<div class="order-status ' + statusClass + '">' + statusLabel + '</div>' +
     '</div>';
