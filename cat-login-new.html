@@ -214,19 +214,55 @@ async function doLogin() {
     var userCred = await auth.signInWithEmailAndPassword(email, password);
     var user = userCred.user;
     
-    // فحص ما إذا كان المستخدم مدير قسم
-    var udoc = await db.collection('users').doc(user.uid).get();
-    var userData = udoc.exists ? udoc.data() : {};
+    // البحث عن بيانات القسم في عدة أماكن
+    var cat = null;
+    var userData = {};
     
-    if (!userData.category && !userData.cat) {
-      showError('❌ هذا الحساب ليس مدير قسم');
+    // 1. users/{uid}
+    try {
+      var udoc = await db.collection('users').doc(user.uid).get();
+      if (udoc.exists) {
+        userData = udoc.data();
+        cat = userData.category || userData.cat || null;
+      }
+    } catch(e) {}
+    
+    // 2. admins/{uid}
+    if (!cat) {
+      try {
+        var adoc = await db.collection('admins').doc(user.uid).get();
+        if (adoc.exists) {
+          var adminData = adoc.data();
+          cat = adminData.category || adminData.cat || null;
+          if (!cat && adminData.role === 'cat_manager') {
+            cat = adminData.categories ? adminData.categories[0] : 'general';
+          }
+        }
+      } catch(e) {}
+    }
+    
+    // 3. البحث عن طريق البريد
+    if (!cat) {
+      try {
+        var snap = await db.collection('users').where('email','==',user.email).limit(1).get();
+        if (!snap.empty) {
+          var d = snap.docs[0].data();
+          cat = d.category || d.cat || null;
+        }
+      } catch(e) {}
+    }
+    
+    console.log('[LOGIN] user:', user.email, 'cat:', cat);
+    
+    if (!cat) {
+      showError('❌ هذا الحساب ليس مدير قسم (لا يوجد category)');
       await auth.signOut();
       btn.disabled = false;
       btn.textContent = '🔑 تسجيل الدخول';
       return;
     }
     
-    showSuccess('✅ تم تسجيل الدخول بنجاح!');
+    showSuccess('✅ تم تسجيل الدخول! القسم: ' + cat);
     
     // التوجيه إلى اللوحة الجديدة
     setTimeout(function() {
