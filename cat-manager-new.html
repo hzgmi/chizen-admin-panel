@@ -230,7 +230,7 @@ async function loadUserData(user) {
   state.cat = state.userData.category || state.userData.cat || null;
   
   if (!state.cat) {
-    document.getElementById('catName').textContent = '⚠️ لم يتم تعيين قسم';
+    var _mc = prompt('اختر رقم القسم: 1=fashion, 2=electronics, 3=perfume, 4=shoes'); var _map={'1':'fashion','2':'electronics','3':'perfume','4':'shoes'}; if(_mc && _map[_mc]) { state.cat = _map[_mc]; localStorage.setItem('chz_cat_manager_cat', state.cat); document.getElementById('catName').textContent = 'قسم: ' + catLabel(state.cat); return true; } else { document.getElementById('catName').textContent = '⚠️ لم يتم تعيين قسم'; }
     return false;
   }
   
