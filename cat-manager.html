@@ -223,7 +223,8 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
   <div class="form-header">
     <button class="close-btn" onclick="closeProductForm()">✕</button>
     <h2 id="pf-title">إضافة منتج</h2>
-    <button class="save-btn" onclick="saveProduct()">حفظ</button>
+    <input type="file" id="pf-images-input" accept="image/*" multiple style="display:none;">
+  <button class="save-btn" onclick="saveProduct()">حفظ</button>
   </div>
   <div class="form-scroll">
     <div class="form-section">
@@ -1314,6 +1315,199 @@ if(document.readyState === 'loading'){
   
   window.__calcProfit = calcProfit;
   console.log('[Profit Margin] ready');
+})();
+</script>
+
+<script>
+(function(){
+  'use strict';
+  
+  // ─── 1) بناء قسم الصور (زر رفع + معاينة) ───
+  function buildImageSection() {
+    var container = document.getElementById('pf-images');
+    if (!container || container._imgReady) return;
+    container._imgReady = true;
+    
+    var wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;';
+    
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.textContent = '📸 إضافة صورة';
+    addBtn.style.cssText = 'padding:12px 16px;border:2px dashed rgba(197,160,89,0.5);border-radius:12px;background:rgba(197,160,89,0.05);color:#C5A059;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;';
+    addBtn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var input = document.getElementById('pf-images-input');
+      if (input) input.click();
+    };
+    wrapper.appendChild(addBtn);
+    container.appendChild(wrapper);
+    
+    // ربط حقل الرفع
+    var input = document.getElementById('pf-images-input');
+    if (input && !input._imgBound) {
+      input._imgBound = true;
+      input.onchange = function(e) {
+        var files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        
+        files.forEach(function(file) {
+          if (!file.type.startsWith('image/')) return;
+          var reader = new FileReader();
+          reader.onload = function(ev) {
+            // ضغط الصورة (اختياري) - نضيفها كـ base64 مؤقتاً
+            var img = new Image();
+            img.onload = function() {
+              var canvas = document.createElement('canvas');
+              var maxSize = 800;
+              var w = img.width, h = img.height;
+              if (w > maxSize || h > maxSize) {
+                if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                else { w = Math.round(w * maxSize / h); h = maxSize; }
+              }
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              var compressed = canvas.toDataURL('image/jpeg', 0.8);
+              
+              // إضافة للـ state
+              if (!window.state) window.state = {};
+              if (!window.state.formImages) window.state.formImages = [];
+              window.state.formImages.push(compressed);
+              
+              // إعادة رسم المعاينة
+              renderPreview();
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+        input.value = '';
+      };
+    }
+    
+    function renderPreview() {
+      // إزالة المعاينات القديمة
+      var oldPreview = container.querySelector('.chz-img-preview');
+      if (oldPreview) oldPreview.remove();
+      
+      var imgs = (window.state && window.state.formImages) || [];
+      if (!imgs.length) return;
+      
+      var preview = document.createElement('div');
+      preview.className = 'chz-img-preview';
+      preview.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;';
+      
+      imgs.forEach(function(src, idx) {
+        var item = document.createElement('div');
+        item.style.cssText = 'position:relative;width:70px;height:70px;border-radius:10px;overflow:hidden;border:1px solid rgba(197,160,89,0.3);';
+        item.innerHTML = '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;">' +
+          '<button type="button" style="position:absolute;top:2px;left:2px;background:rgba(239,68,68,0.9);color:#fff;border:none;width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer;">✕</button>';
+        item.querySelector('button').onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.state.formImages.splice(idx, 1);
+          renderPreview();
+        };
+        preview.appendChild(item);
+      });
+      
+      container.appendChild(preview);
+    }
+    
+    // استدعاء أولي
+    renderPreview();
+  }
+  
+  // ─── 2) بناء قسم المقاسات ───
+  function buildSizesSection() {
+    var chipsContainer = document.getElementById('pf-sizes-chips');
+    var stockContainer = document.getElementById('pf-sizes-stock');
+    if (!chipsContainer || !stockContainer || chipsContainer._sizesReady) return;
+    chipsContainer._sizesReady = true;
+    
+    var SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    chipsContainer.innerHTML = '';
+    
+    SIZES.forEach(function(size) {
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.textContent = size;
+      chip.style.cssText = 'padding:10px 16px;border:1.5px solid rgba(197,160,89,0.4);border-radius:10px;background:transparent;color:#F2E3C6;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.15s;';
+      chip.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!window.state) window.state = {};
+        if (!window.state.formSizes) window.state.formSizes = [];
+        
+        var idx = window.state.formSizes.indexOf(size);
+        if (idx === -1) {
+          window.state.formSizes.push(size);
+          chip.style.background = 'rgba(197,160,89,0.2)';
+          chip.style.color = '#C5A059';
+          chip.style.borderColor = '#C5A059';
+        } else {
+          window.state.formSizes.splice(idx, 1);
+          chip.style.background = 'transparent';
+          chip.style.color = '#F2E3C6';
+          chip.style.borderColor = 'rgba(197,160,89,0.4)';
+          // إزالة حقل الكمية
+          var stockField = document.getElementById('stock-for-' + size);
+          if (stockField) stockField.remove();
+        }
+        
+        updateStockFields();
+      };
+      chipsContainer.appendChild(chip);
+    });
+    
+    function updateStockFields() {
+      stockContainer.innerHTML = '';
+      var sizes = (window.state && window.state.formSizes) || [];
+      if (!sizes.length) return;
+      
+      var title = document.createElement('div');
+      title.textContent = 'الكمية لكل مقاس:';
+      title.style.cssText = 'font-size:12px;color:#C5A059;font-weight:800;margin-bottom:8px;';
+      stockContainer.appendChild(title);
+      
+      sizes.forEach(function(size) {
+        var row = document.createElement('div');
+        row.id = 'stock-for-' + size;
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+        row.innerHTML = '<span style="min-width:40px;font-weight:800;color:#F2E3C6;font-size:13px;">' + size + '</span>' +
+          '<input type="number" placeholder="0" data-size="' + size + '" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(197,160,89,0.3);background:#0f172a;color:#F2E3C6;font-family:inherit;font-size:13px;">';
+        row.querySelector('input').oninput = function() {
+          if (!window.state.formSizeStock) window.state.formSizeStock = {};
+          window.state.formSizeStock[size] = Number(this.value) || 0;
+        };
+        stockContainer.appendChild(row);
+      });
+    }
+  }
+  
+  // ─── 3) تشغيل عند فتح النموذج ───
+  function init() {
+    buildImageSection();
+    buildSizesSection();
+  }
+  
+  setInterval(init, 1000);
+  document.addEventListener('DOMContentLoaded', init);
+  setTimeout(init, 500);
+  
+  // ربط بفتح النموذج
+  var origOpen = window.openProductForm;
+  window.openProductForm = async function(pid) {
+    if (origOpen) await origOpen.call(this, pid);
+    setTimeout(function() {
+      buildImageSection();
+      buildSizesSection();
+    }, 100);
+  };
+  
+  console.log('[Product Form: Image & Sizes] ready');
 })();
 </script>
 </body>
