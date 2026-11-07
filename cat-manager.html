@@ -247,6 +247,27 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
         <div class="form-field"><label>المخزون</label><input id="pf-stock" type="number" inputmode="numeric" placeholder="0"></div>
       </div>
       <div class="form-field"><label>حد التنبيه (مخزون منخفض)</label><input id="pf-threshold" type="number" value="5" inputmode="numeric"></div>
+      
+      <!-- ✅ حقل هامش الربح (تلقائي) -->
+      <div class="form-field" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:12px;margin-top:8px;">
+        <label style="color:#10b981;">📊 هامش الربح المتوقع (تلقائي)</label>
+        <div id="pf-profit-margin" style="font-size:24px;font-weight:900;color:#10b981;text-align:center;margin-top:4px;">—</div>
+        <div id="pf-profit-hint" style="font-size:11px;color:#6b7280;text-align:center;margin-top:4px;">أدخل السعر والتكلفة لحساب الهامش</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">📈 بيانات إضافية</div>
+      <div class="form-row">
+        <div class="form-field"><label>الكمية المباعة (اختياري)</label><input id="pf-sold" type="number" value="0" inputmode="numeric" placeholder="0"></div>
+        <div class="form-field"><label>الحد الأقصى للشراء</label><input id="pf-maxqty" type="number" value="0" inputmode="numeric" placeholder="0 = غير محدود"></div>
+      </div>
+      <div class="form-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="pf-featured" style="width:18px;height:18px;accent-color:#a855f7;">
+          <span>⭐ إبراز المنتج في الصفحة الرئيسية</span>
+        </label>
+      </div>
     </div>
 
     <div class="form-section">
@@ -1231,6 +1252,65 @@ if(document.readyState === 'loading'){
   init();
 }
 
+})();
+</script>
+
+<script>
+(function(){
+  'use strict';
+  // حساب هامش الربح تلقائياً عند تغيير السعر أو التكلفة
+  function calcProfit() {
+    var priceEl = document.getElementById('pf-price');
+    var costEl = document.getElementById('pf-cost');
+    var marginEl = document.getElementById('pf-profit-margin');
+    var hintEl = document.getElementById('pf-profit-hint');
+    if (!priceEl || !costEl || !marginEl) return;
+    
+    var price = parseFloat(priceEl.value) || 0;
+    var cost = parseFloat(costEl.value) || 0;
+    
+    if (price <= 0 || cost <= 0) {
+      marginEl.textContent = '—';
+      marginEl.style.color = '#6b7280';
+      if (hintEl) hintEl.textContent = 'أدخل السعر والتكلفة لحساب الهامش';
+      return;
+    }
+    
+    var profit = price - cost;
+    var margin = ((profit / price) * 100).toFixed(1);
+    
+    if (profit > 0) {
+      marginEl.textContent = profit.toLocaleString() + ' ر.ي (' + margin + '%)';
+      marginEl.style.color = margin > 30 ? '#10b981' : (margin > 15 ? '#f59e0b' : '#ef4444');
+      if (hintEl) hintEl.textContent = 'الربح: ' + profit.toLocaleString() + ' ر.ي من كل عملية بيع';
+    } else if (profit === 0) {
+      marginEl.textContent = '0 ر.ي';
+      marginEl.style.color = '#6b7280';
+      if (hintEl) hintEl.textContent = 'لا يوجد ربح';
+    } else {
+      marginEl.textContent = profit.toLocaleString() + ' ر.ي (خسارة!)';
+      marginEl.style.color = '#ef4444';
+      if (hintEl) hintEl.textContent = '⚠️ تحذير: سعر البيع أقل من التكلفة!';
+    }
+  }
+  
+  // ربط الأحداث
+  setTimeout(function() {
+    var priceEl = document.getElementById('pf-price');
+    var costEl = document.getElementById('pf-cost');
+    if (priceEl) priceEl.addEventListener('input', calcProfit);
+    if (costEl) costEl.addEventListener('input', calcProfit);
+  }, 1000);
+  
+  // إعادة الحساب عند فتح النموذج
+  var originalOpen = window.openProductForm;
+  window.openProductForm = async function(pid) {
+    if (originalOpen) await originalOpen.call(this, pid);
+    setTimeout(calcProfit, 100);
+  };
+  
+  window.__calcProfit = calcProfit;
+  console.log('[Profit Margin] ready');
 })();
 </script>
 </body>
