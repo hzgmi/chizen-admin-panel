@@ -294,6 +294,12 @@ function renderLatestOrders() {
 }
 
 auth.onAuthStateChanged(async function(user) {
+  console.log('[AUTH] user:', user ? user.uid : 'null');
+  if (!user) {
+    document.getElementById('catName').textContent = 'غير مسجل';
+    document.getElementById('ordersContainer').innerHTML = '<div style="text-align:center;padding:20px;color:#ef4444;">🔒 يرجى تسجيل الدخول أولاً</div>';
+    return;
+  }
   if (!user) {
     document.getElementById('catName').textContent = 'سجّل الدخول أولاً';
     document.getElementById('ordersContainer').innerHTML = '<div class="empty"><i>🔒</i><b>غير مسجل</b><small>سجّل الدخول لعرض البيانات</small></div>';
@@ -316,8 +322,9 @@ auth.onAuthStateChanged(async function(user) {
     renderLatestOrders();
     
   } catch(e) {
-    console.error(e);
-    showError(e.message);
+    console.error('[AUTH ERROR]', e);
+    document.getElementById('catName').textContent = 'خطأ: ' + (e.message || 'غير معروف').substring(0, 30);
+    document.getElementById('ordersContainer').innerHTML = '<div style="text-align:center;padding:20px;color:#ef4444;">❌ خطأ:<br><small>' + (e.message || 'حدث خطأ') + '</small></div>';
   }
 });
 
