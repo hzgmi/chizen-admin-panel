@@ -814,6 +814,7 @@ function renderConfirmed(){
 
 // ═══ PRODUCTS ═══
 function renderProducts(){
+  var h = '<div style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;margin:8px 16px;font-size:11px;color:#ef4444;" onclick="(async function(){var snap = await db.collection(\'products\').get(); var all = []; snap.forEach(function(d){var x=d.data();all.push({id:d.id,cat:x.category,name:x.name,status:x.status});}); alert(\'state.cat = \' + state.cat + \'\n\nعدد المنتجات في state = \' + state.products.length + \'\n\nجميع المنتجات في Firestore:\n\' + JSON.stringify(all.slice(0,10), null, 2));})()">🔍 تشخيص (اضغط)</div>';
   h += '<div class="v100-search"><input id="products-search" placeholder="🔍 ابحث في منتجاتك..." oninput="renderProductsGrid(this.value)"></div>';
   h += '<div id="products-grid" class="v100-products-grid"></div>';
   // We render the grid immediately after returning
@@ -824,41 +825,13 @@ function renderProducts(){
 window.renderProductsGrid = function(query){
   var el = document.getElementById('products-grid');
   if(!el) return;
-  
-  // 🔴 صندوق التشخيص (مؤقت)
-  var debugHtml = '<div style="grid-column:1/-1; padding:10px; background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:8px; font-size:12px; color:#fff; margin-bottom:10px; direction:rtl;">';
-  debugHtml += '<b>🔍 نتيجة الفحص:</b><br>';
-  debugHtml += 'القسم الحالي (state.cat): <b style="color:#fbbf24">' + state.cat + '</b><br>';
-  debugHtml += 'عدد المنتجات المحملة: <b style="color:#fbbf24">' + (state.products ? state.products.length : 0) + '</b><br>';
-  
-  // جلب جميع المنتجات من Firestore للفحص
-  db.collection('products').get().then(function(snap){
-     var all = [];
-     snap.forEach(function(d){ var x = d.data(); all.push(x.category || 'بدون قسم'); });
-     var cats = [...new Set(all)];
-     debugHtml += 'الأقسام الموجودة في قاعدة البيانات: <b style="color:#10b981">' + cats.join(', ') + '</b><br>';
-     debugHtml += 'إجمالي المنتجات في الموقع: <b>' + snap.size + '</b>';
-     debugHtml += '</div>';
-     el.innerHTML = debugHtml;
-  }).catch(function(e){
-     debugHtml += 'خطأ في القراءة: ' + e.message + '</div>';
-     el.innerHTML = debugHtml;
-  });
-  
-  // باقي دالة العرض الأصلية
-  var arr = state.products;
   var arr = state.products;
   if(query){
     var q = query.toLowerCase();
     arr = arr.filter(p=>(p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(q));
   }
-  if(!arr || !arr.length){
-    // لا نمسح صندوق التشخيص، فقط نضيف تحته
-    var emptyDiv = document.createElement('div');
-    emptyDiv.style.cssText = 'grid-column:1/-1; text-align:center; padding:40px; color:#6b7280;';
-    emptyDiv.innerHTML = '<div style="font-size:48px;margin-bottom:12px;">📦</div><div>لا منتجات محملة في هذه القائمة</div>';
-    // ننتظر ثانية حتى ينتهي التشخيص من القراءة
-    setTimeout(function(){ if(el.querySelector('.v100-empty') === null) el.appendChild(emptyDiv); }, 500);
+  if(!arr.length){
+    el.innerHTML = '<div class="v100-empty" style="grid-column:1/-1"><div class="v100-empty-icon">📦</div><div>لا منتجات</div><div class="v100-empty-sub">أضف منتجك الأول الآن</div></div>';
     return;
   }
   el.innerHTML = arr.map(p=>{
