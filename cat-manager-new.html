@@ -377,6 +377,12 @@ function openProductModal() {
   document.getElementById('pf-price').value = '';
   document.getElementById('pf-stock').value = '';
   _formImages = [];
+  _sizes = [];
+  document.querySelectorAll('.size-btn').forEach(function(b) {
+    b.style.background = '#fff';
+    b.style.color = '#1a1a2e';
+    b.style.borderColor = '#e5e7eb';
+  });
   renderImagePreview();
   attachImageInput();
 }
@@ -443,13 +449,16 @@ async function saveProduct() {
   btn.textContent = '⏳ جاري الحفظ...';
   
   try {
+    var currency = document.getElementById('pf-currency').value || 'YER';
     var data = {
       name: name,
       brand: document.getElementById('pf-brand').value.trim(),
       sku: document.getElementById('pf-sku').value.trim(),
       description: document.getElementById('pf-desc').value.trim(),
       price: price,
+      inputCurrency: currency,
       stock: stock,
+      sizes: _sizes.slice(),
       category: state.cat,
       categories: [state.cat],
       images: _formImages,
@@ -486,6 +495,12 @@ function openProductModal() {
   document.getElementById('pf-price').value = '';
   document.getElementById('pf-stock').value = '';
   _formImages = [];
+  _sizes = [];
+  document.querySelectorAll('.size-btn').forEach(function(b) {
+    b.style.background = '#fff';
+    b.style.color = '#1a1a2e';
+    b.style.borderColor = '#e5e7eb';
+  });
   renderImagePreview();
   attachImageInput();
 }
@@ -552,13 +567,16 @@ async function saveProduct() {
   btn.textContent = '⏳ جاري الحفظ...';
   
   try {
+    var currency = document.getElementById('pf-currency').value || 'YER';
     var data = {
       name: name,
       brand: document.getElementById('pf-brand').value.trim(),
       sku: document.getElementById('pf-sku').value.trim(),
       description: document.getElementById('pf-desc').value.trim(),
       price: price,
+      inputCurrency: currency,
       stock: stock,
+      sizes: _sizes.slice(),
       category: state.cat,
       categories: [state.cat],
       images: _formImages,
@@ -662,6 +680,24 @@ function renderProductsView() {
   }).join('');
 }
 
+
+// ═══ المقاسات ═══
+var _sizes = [];
+function toggleSize(btn, size) {
+  var idx = _sizes.indexOf(size);
+  if (idx === -1) {
+    _sizes.push(size);
+    btn.style.background = '#a855f7';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#a855f7';
+  } else {
+    _sizes.splice(idx, 1);
+    btn.style.background = '#fff';
+    btn.style.color = '#1a1a2e';
+    btn.style.borderColor = '#e5e7eb';
+  }
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
@@ -698,15 +734,36 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
     <!-- التسعير -->
     <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
       <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">💰 التسعير</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
         <div>
-          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر (ر.ي) *</label>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">العملة</label>
+          <select id="pf-currency" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+            <option value="YER">🇾🇪 يمني</option>
+            <option value="SAR">🇸🇦 سعودي</option>
+            <option value="USD">🇺🇸 دولار</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر *</label>
           <input id="pf-price" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
         </div>
         <div>
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">المخزون *</label>
           <input id="pf-stock" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
         </div>
+      </div>
+    </div>
+
+    <!-- المقاسات -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">📏 المقاسات المتوفرة</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px;" id="sizesContainer">
+        <button type="button" onclick="toggleSize(this,'XS')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XS</button>
+        <button type="button" onclick="toggleSize(this,'S')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">S</button>
+        <button type="button" onclick="toggleSize(this,'M')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">M</button>
+        <button type="button" onclick="toggleSize(this,'L')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">L</button>
+        <button type="button" onclick="toggleSize(this,'XL')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XL</button>
+        <button type="button" onclick="toggleSize(this,'XXL')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XXL</button>
       </div>
     </div>
 
@@ -775,15 +832,36 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
     <!-- التسعير -->
     <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
       <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">💰 التسعير</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
         <div>
-          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر (ر.ي) *</label>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">العملة</label>
+          <select id="pf-currency" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+            <option value="YER">🇾🇪 يمني</option>
+            <option value="SAR">🇸🇦 سعودي</option>
+            <option value="USD">🇺🇸 دولار</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر *</label>
           <input id="pf-price" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
         </div>
         <div>
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">المخزون *</label>
           <input id="pf-stock" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
         </div>
+      </div>
+    </div>
+
+    <!-- المقاسات -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">📏 المقاسات المتوفرة</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px;" id="sizesContainer">
+        <button type="button" onclick="toggleSize(this,'XS')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XS</button>
+        <button type="button" onclick="toggleSize(this,'S')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">S</button>
+        <button type="button" onclick="toggleSize(this,'M')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">M</button>
+        <button type="button" onclick="toggleSize(this,'L')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">L</button>
+        <button type="button" onclick="toggleSize(this,'XL')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XL</button>
+        <button type="button" onclick="toggleSize(this,'XXL')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XXL</button>
       </div>
     </div>
 
