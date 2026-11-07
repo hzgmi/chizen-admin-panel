@@ -1300,8 +1300,14 @@ function startListeners(){
 
 async function loadProducts(){
   try {
-    var snap = await db.collection('products').where('category','==',state.cat).get();
-    state.products = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    var snap = await db.collection('products').get();
+    var _allProducts = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    var _cat = (state.cat || '').toLowerCase().trim();
+    state.products = _allProducts.filter(function(p) {
+      var pc = (p.category || '').toLowerCase().trim();
+      var pcs = Array.isArray(p.categories) ? p.categories.map(function(c){ return (c||'').toLowerCase().trim(); }) : [];
+      return pc === _cat || pcs.indexOf(_cat) !== -1;
+    });
     // Pre-load suppliers for faster form opening
     if(!state.suppliers.length) await loadSuppliers();
     if(state.activeTab==='products') render();
