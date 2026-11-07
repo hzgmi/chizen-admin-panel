@@ -1320,109 +1320,208 @@ if(document.readyState === 'loading'){
 
 
 
+
+
 <script>
 (function(){
   'use strict';
-  
-  // ─── دالة تحديد نوع القسم ───
-  function getCategoryType() {
-    var cat = (window.state && window.state.cat) || '';
-    cat = String(cat).toLowerCase();
-    if (cat.indexOf('shoe') !== -1 || cat.indexOf('حذاء') !== -1 || cat.indexOf('أحذية') !== -1 || cat.indexOf('footwear') !== -1) return 'shoes';
-    if (cat.indexOf('perfume') !== -1 || cat.indexOf('عطر') !== -1 || cat.indexOf('عطور') !== -1 || cat.indexOf('fragrance') !== -1) return 'perfume';
-    if (cat.indexOf('electronic') !== -1 || cat.indexOf('إلكترون') !== -1 || cat.indexOf('جهاز') !== -1) return 'electronics';
-    if (cat.indexOf('accessor') !== -1 || cat.indexOf('إكسسوار') !== -1) return 'accessories';
-    if (cat.indexOf('kid') !== -1 || cat.indexOf('طفل') !== -1 || cat.indexOf('أطفال') !== -1) return 'kids';
-    return 'fashion'; // افتراضي (ملابس)
-  }
-  
-  // ─── المقاسات لكل نوع ───
-  function getSizesForType(type) {
-    if (type === 'shoes') return ['36','37','38','39','40','41','42','43','44','45'];
-    if (type === 'kids') return ['2-3Y','4-5Y','6-7Y','8-9Y','10-11Y'];
-    if (type === 'perfume' || type === 'electronics' || type === 'accessories') return [];
-    return ['XS','S','M','L','XL','XXL','3XL'];
-  }
-  
-  // ─── بناء قسم الصور ───
+
+  // ═══════════════════════════════════════
+  // 1) قسم الصور الاحترافي (الصورة الرئيسية + إعادة الترتيب)
+  // ═══════════════════════════════════════
   function buildImageSection() {
     var container = document.getElementById('pf-images');
-    if (!container || container._imgReady) return;
-    container._imgReady = true;
-    
-    var wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;';
-    
+    if (!container || container._imgProReady) return;
+    container._imgProReady = true;
+
+    container.innerHTML = '';
+
+    // شريط الإضافة
+    var addBar = document.createElement('div');
+    addBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;';
+
     var addBtn = document.createElement('button');
     addBtn.type = 'button';
-    addBtn.textContent = '📸 إضافة صورة';
-    addBtn.style.cssText = 'padding:12px 16px;border:2px dashed rgba(197,160,89,0.5);border-radius:12px;background:rgba(197,160,89,0.05);color:#C5A059;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;';
+    addBtn.innerHTML = '📸 إضافة صور';
+    addBtn.style.cssText = 'padding:12px 20px;border:2px dashed rgba(197,160,89,0.5);border-radius:12px;background:rgba(197,160,89,0.05);color:#C5A059;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;flex:1;';
     addBtn.onclick = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       var input = document.getElementById('pf-images-input');
       if (input) input.click();
     };
-    wrapper.appendChild(addBtn);
-    container.appendChild(wrapper);
-    
-    function renderPreview() {
-      var old = container.querySelector('.chz-img-preview');
-      if (old) old.remove();
+    addBar.appendChild(addBtn);
+
+    var countInfo = document.createElement('div');
+    countInfo.style.cssText = 'font-size:12px;color:#6b7280;font-weight:700;margin-right:12px;';
+    addBar.appendChild(countInfo);
+    container.appendChild(addBar);
+
+    // شبكة المعاينة
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;';
+    container.appendChild(grid);
+
+    function renderGrid() {
       var imgs = (window.state && window.state.formImages) || [];
-      if (!imgs.length) return;
-      var preview = document.createElement('div');
-      preview.className = 'chz-img-preview';
-      preview.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;';
+      countInfo.textContent = imgs.length + ' / 5 صور';
+
+      grid.innerHTML = '';
+      if (!imgs.length) {
+        var empty = document.createElement('div');
+        empty.style.cssText = 'grid-column:1/-1;padding:24px;text-align:center;color:#9ca3af;font-size:13px;background:rgba(0,0,0,0.02);border-radius:12px;';
+        empty.textContent = 'لا توجد صور — اضغط "إضافة صور" لرفع أول صورة';
+        grid.appendChild(empty);
+        return;
+      }
+
       imgs.forEach(function(src, idx) {
         var item = document.createElement('div');
-        item.style.cssText = 'position:relative;width:70px;height:70px;border-radius:10px;overflow:hidden;border:1px solid rgba(197,160,89,0.3);';
-        item.innerHTML = '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;">' +
-          '<button type="button" style="position:absolute;top:2px;left:2px;background:rgba(239,68,68,0.9);color:#fff;border:none;width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer;">✕</button>';
-        item.querySelector('button').onclick = function(e) {
+        item.style.cssText = 'position:relative;padding-top:100%;border-radius:12px;overflow:hidden;border:2px solid ' + (idx === 0 ? '#C5A059' : 'rgba(197,160,89,0.2)') + ';background:#0f172a;';
+
+        var img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;';
+        item.appendChild(img);
+
+        // شارة "رئيسية" للصورة الأولى
+        if (idx === 0) {
+          var badge = document.createElement('div');
+          badge.innerHTML = '⭐ رئيسية';
+          badge.style.cssText = 'position:absolute;top:6px;right:6px;background:#C5A059;color:#1A2340;font-size:10px;font-weight:900;padding:3px 8px;border-radius:8px;';
+          item.appendChild(badge);
+        }
+
+        // أزرار التحكم
+        var controls = document.createElement('div');
+        controls.style.cssText = 'position:absolute;bottom:6px;left:6px;right:6px;display:flex;gap:4px;';
+
+        // زر "تعيين كرئيسية" (يظهر للصور ما عدا الأولى)
+        if (idx > 0) {
+          var setMainBtn = document.createElement('button');
+          setMainBtn.type = 'button';
+          setMainBtn.innerHTML = '⭐';
+          setMainBtn.title = 'تعيين كرئيسية';
+          setMainBtn.style.cssText = 'flex:1;background:rgba(197,160,89,0.9);color:#1A2340;border:none;border-radius:6px;font-size:12px;font-weight:900;padding:6px;cursor:pointer;';
+          setMainBtn.onclick = function(e) {
+            e.preventDefault(); e.stopPropagation();
+            var imgs = window.state.formImages;
+            var main = imgs.splice(idx, 1)[0];
+            imgs.unshift(main);
+            renderGrid();
+          };
+          controls.appendChild(setMainBtn);
+        }
+
+        // زر الحذف
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.innerHTML = '✕';
+        delBtn.title = 'حذف الصورة';
+        delBtn.style.cssText = 'flex:1;background:rgba(239,68,68,0.9);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:900;padding:6px;cursor:pointer;';
+        delBtn.onclick = function(e) {
           e.preventDefault(); e.stopPropagation();
           window.state.formImages.splice(idx, 1);
-          renderPreview();
+          renderGrid();
         };
-        preview.appendChild(item);
+        controls.appendChild(delBtn);
+
+        item.appendChild(controls);
+        grid.appendChild(item);
       });
-      container.appendChild(preview);
     }
-    
-    if (!window._imgRenderPreview) {
-      window._imgRenderPreview = renderPreview;
+
+    if (!window._imgProRender) {
+      window._imgProRender = renderGrid;
     }
-    renderPreview();
+    renderGrid();
   }
-  
-  // ─── بناء قسم المقاسات (ذكي) ───
+
+  // ربط حقل الرفع
+  function bindFileInput() {
+    var input = document.getElementById('pf-images-input');
+    if (!input || input._imgProBound) return;
+    input._imgProBound = true;
+    input.onchange = function(e) {
+      var files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      if (!window.state) window.state = {};
+      if (!window.state.formImages) window.state.formImages = [];
+      if (window.state.formImages.length >= 5) {
+        alert('الحد الأقصى 5 صور');
+        input.value = '';
+        return;
+      }
+      files.forEach(function(file) {
+        if (!file.type.startsWith('image/')) return;
+        if (window.state.formImages.length >= 5) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var maxSize = 800;
+            var w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+              if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+              else { w = Math.round(w * maxSize / h); h = maxSize; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            var compressed = canvas.toDataURL('image/jpeg', 0.8);
+            window.state.formImages.push(compressed);
+            if (window._imgProRender) window._imgProRender();
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+      input.value = '';
+    };
+  }
+
+  // ═══════════════════════════════════════
+  // 2) المقاسات الذكية
+  // ═══════════════════════════════════════
+  function getCategoryType() {
+    var cat = (window.state && window.state.cat) || '';
+    cat = String(cat).toLowerCase();
+    if (cat.indexOf('shoe') !== -1 || cat.indexOf('حذاء') !== -1 || cat.indexOf('أحذية') !== -1) return 'shoes';
+    if (cat.indexOf('perfume') !== -1 || cat.indexOf('عطر') !== -1 || cat.indexOf('عطور') !== -1) return 'perfume';
+    if (cat.indexOf('electronic') !== -1 || cat.indexOf('إلكترون') !== -1) return 'electronics';
+    if (cat.indexOf('kid') !== -1 || cat.indexOf('طفل') !== -1) return 'kids';
+    return 'fashion';
+  }
+
+  function getSizesForType(type) {
+    if (type === 'shoes') return ['36','37','38','39','40','41','42','43','44','45'];
+    if (type === 'kids') return ['2-3Y','4-5Y','6-7Y','8-9Y','10-11Y'];
+    if (type === 'perfume' || type === 'electronics') return [];
+    return ['XS','S','M','L','XL','XXL','3XL'];
+  }
+
   function buildSizesSection() {
     var chipsContainer = document.getElementById('pf-sizes-chips');
     var stockContainer = document.getElementById('pf-sizes-stock');
     if (!chipsContainer || !stockContainer) return;
-    
+
     var type = getCategoryType();
     var sizes = getSizesForType(type);
-    
-    // إذا لم تكن هناك مقاسات (عطور/إلكترونيات)، نخفي القسم
     var section = chipsContainer.closest('.form-section');
+
     if (!sizes.length) {
       if (section) section.style.display = 'none';
       return;
     }
-    
     if (section) section.style.display = 'block';
-    
-    // تحديث العنوان حسب النوع
+
     var title = section ? section.querySelector('.form-section-title') : null;
     if (title) {
       if (type === 'shoes') title.textContent = '👟 مقاسات الأحذية';
       else if (type === 'kids') title.textContent = '🧒 مقاسات الأطفال';
       else title.textContent = '📏 المقاسات المتوفرة';
     }
-    
+
     chipsContainer.innerHTML = '';
-    
     sizes.forEach(function(size) {
       var chip = document.createElement('button');
       chip.type = 'button';
@@ -1447,33 +1546,30 @@ if(document.readyState === 'loading'){
       };
       chipsContainer.appendChild(chip);
     });
-    
-    // إعادة تمييز المقاسات المحفوظة سابقاً
+
     var existing = (window.state && window.state.formSizes) || [];
-    if (existing.length) {
-      chipsContainer.querySelectorAll('button').forEach(function(chip) {
-        if (existing.indexOf(chip.textContent) !== -1) {
-          chip.style.background = 'rgba(197,160,89,0.2)';
-          chip.style.color = '#C5A059';
-          chip.style.borderColor = '#C5A059';
-        }
-      });
-    }
-    
+    chipsContainer.querySelectorAll('button').forEach(function(chip) {
+      if (existing.indexOf(chip.textContent) !== -1) {
+        chip.style.background = 'rgba(197,160,89,0.2)';
+        chip.style.color = '#C5A059';
+        chip.style.borderColor = '#C5A059';
+      }
+    });
+
     function updateStockFields() {
       stockContainer.innerHTML = '';
       var sizes = (window.state && window.state.formSizes) || [];
       if (!sizes.length) return;
-      var title = document.createElement('div');
-      title.textContent = 'الكمية لكل مقاس:';
-      title.style.cssText = 'font-size:12px;color:#C5A059;font-weight:800;margin-bottom:8px;';
-      stockContainer.appendChild(title);
+      var titleEl = document.createElement('div');
+      titleEl.textContent = 'الكمية لكل مقاس:';
+      titleEl.style.cssText = 'font-size:12px;color:#C5A059;font-weight:800;margin-bottom:8px;';
+      stockContainer.appendChild(titleEl);
       sizes.forEach(function(size) {
         var row = document.createElement('div');
         row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
-        var existingVal = (window.state.formSizeStock && window.state.formSizeStock[size]) || 0;
+        var val = (window.state.formSizeStock && window.state.formSizeStock[size]) || 0;
         row.innerHTML = '<span style="min-width:50px;font-weight:800;color:#F2E3C6;font-size:13px;">' + size + '</span>' +
-          '<input type="number" placeholder="0" value="' + (existingVal || '') + '" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(197,160,89,0.3);background:#0f172a;color:#F2E3C6;font-family:inherit;font-size:13px;">';
+          '<input type="number" placeholder="0" value="' + (val || '') + '" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(197,160,89,0.3);background:#0f172a;color:#F2E3C6;font-family:inherit;font-size:13px;">';
         row.querySelector('input').oninput = function() {
           if (!window.state.formSizeStock) window.state.formSizeStock = {};
           window.state.formSizeStock[size] = Number(this.value) || 0;
@@ -1481,29 +1577,26 @@ if(document.readyState === 'loading'){
         stockContainer.appendChild(row);
       });
     }
-    
     updateStockFields();
   }
-  
+
   function init() {
+    bindFileInput();
     buildImageSection();
     buildSizesSection();
   }
-  
+
   setInterval(init, 1500);
   document.addEventListener('DOMContentLoaded', init);
   setTimeout(init, 500);
-  
+
   var origOpen = window.openProductForm;
   window.openProductForm = async function(pid) {
     if (origOpen) await origOpen.call(this, pid);
-    setTimeout(function() {
-      buildImageSection();
-      buildSizesSection();
-    }, 150);
+    setTimeout(init, 150);
   };
-  
-  console.log('[Smart Sizes] ready — adapts to category type');
+
+  console.log('[Pro Images & Smart Sizes] ready');
 })();
 </script>
 </body>
