@@ -271,6 +271,36 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0a0825;color:#e5
       </div>
     </div>
 
+    <!-- ═══ قسم العرض الخاطف (جديد) ═══ -->
+    <div class="form-section">
+      <div class="form-section-title">⚡ العرض الخاطف (Flash Sale)</div>
+      
+      <div class="form-field" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="pf-flash-enabled" style="width:18px;height:18px;accent-color:#f59e0b;" onchange="document.getElementById('pf-flash-fields').style.display = this.checked ? 'block' : 'none';">
+        <label style="font-weight:800; cursor:pointer; margin:0;">تفعيل العرض الخاطف (سعر خاص لفترة محدودة)</label>
+      </div>
+      
+      <div id="pf-flash-fields" style="display:none; margin-top:12px;">
+        <div class="form-row">
+          <div class="form-field">
+            <label>سعر العرض (ر.ي) *</label>
+            <input id="pf-flash-price" type="number" placeholder="0" inputmode="numeric">
+          </div>
+          <div class="form-field">
+            <label>ينتهي في *</label>
+            <input id="pf-flash-end" type="datetime-local">
+          </div>
+        </div>
+        <div class="form-field">
+          <label>عنوان العرض (اختياري)</label>
+          <input id="pf-flash-title" placeholder="مثال: خصم 50% لمدة 24 ساعة">
+        </div>
+        <div style="font-size:11px; color:#f59e0b; margin-top:8px; text-align:center;">
+          ⚡ سيظهر المنتج في قسم "العروض الخاطفة" في الصفحة الرئيسية حتى انتهاء المدة.
+        </div>
+      </div>
+    </div>
+
     <div class="form-section">
       <div class="form-section-title">🏪 المورد</div>
       <div class="form-field">
