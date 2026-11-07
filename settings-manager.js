@@ -65,6 +65,22 @@
       html += '<button onclick="window.__saveSettingsFull()" style="width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;margin-top:16px">💾 حفظ كل الإعدادات</button>';
       html += '</div>';
       
+
+      // ═══ قسم الصرف (جديد) ═══
+      html += '<div style="font-weight:900;color:#3b82f6;margin:16px 0 8px">💱 إعدادات سعر الصرف (شمال/جنوب)</div>';
+      var rates = s.rates || {};
+      html += '<div style="background:rgba(59,130,246,0.08);padding:12px;border-radius:10px;margin-bottom:10px;border:1px solid rgba(59,130,246,0.2)">';
+      html += '<div style="font-size:12px;font-weight:800;color:#10b981;margin-bottom:6px">🌍 صرف الجنوب (عدن - حضرموت)</div>';
+      html += field('s-rate-sar-south', 'سعر السعودي (جنوب)', rates.sarSouth || 350, 'number');
+      html += field('s-rate-usd-south', 'سعر الدولار (جنوب)', rates.usdSouth || 1300, 'number');
+      html += '</div>';
+      html += '<div style="background:rgba(245,158,11,0.08);padding:12px;border-radius:10px;margin-bottom:10px;border:1px solid rgba(245,158,11,0.2)">';
+      html += '<div style="font-size:12px;font-weight:800;color:#f59e0b;margin-bottom:6px">🌍 صرف الشمال (صنعاء - تعز)</div>';
+      html += field('s-rate-sar-north', 'سعر السعودي (شمال)', rates.sarNorth || 500, 'number');
+      html += field('s-rate-usd-north', 'سعر الدولار (شمال)', rates.usdNorth || 2000, 'number');
+      html += '</div>';
+      html += '<button onclick="window.__saveRates()" style="width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;margin-bottom:10px">💾 حفظ أسعار الصرف</button>';
+      
       showModal('⚙️ الإعدادات الكاملة', html);
     } catch(e){ toast('❌ ' + e.message, 'error'); }
   };
