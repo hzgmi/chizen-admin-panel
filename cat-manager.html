@@ -814,7 +814,8 @@ function renderConfirmed(){
 
 // ═══ PRODUCTS ═══
 function renderProducts(){
-  var h = '<div class="v100-search"><input id="products-search" placeholder="🔍 ابحث في منتجاتك..." oninput="renderProductsGrid(this.value)"></div>';
+  var h = '<div style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;margin:8px 16px;font-size:11px;color:#ef4444;" onclick="(async function(){var snap = await db.collection(\'products\').get(); var all = []; snap.forEach(function(d){var x=d.data();all.push({id:d.id,cat:x.category,name:x.name,status:x.status});}); alert(\'state.cat = \' + state.cat + \'\n\nعدد المنتجات في state = \' + state.products.length + \'\n\nجميع المنتجات في Firestore:\n\' + JSON.stringify(all.slice(0,10), null, 2));})()">🔍 تشخيص (اضغط)</div>';
+  h += '<div class="v100-search"><input id="products-search" placeholder="🔍 ابحث في منتجاتك..." oninput="renderProductsGrid(this.value)"></div>';
   h += '<div id="products-grid" class="v100-products-grid"></div>';
   // We render the grid immediately after returning
   setTimeout(()=>renderProductsGrid(''), 0);
