@@ -368,7 +368,8 @@ auth.onAuthStateChanged(async function(user) {
 // ═══ Modal إضافة منتج ═══
 var _formImages = [];
 
-function openProductModal() {
+async function openProductModal() {
+  await loadRates();
   document.getElementById('productModal').style.display = 'block';
   document.getElementById('pf-name').value = '';
   document.getElementById('pf-brand').value = '';
@@ -486,7 +487,8 @@ async function saveProduct() {
 // ═══ Modal إضافة منتج ═══
 var _formImages = [];
 
-function openProductModal() {
+async function openProductModal() {
+  await loadRates();
   document.getElementById('productModal').style.display = 'block';
   document.getElementById('pf-name').value = '';
   document.getElementById('pf-brand').value = '';
@@ -698,6 +700,57 @@ function toggleSize(btn, size) {
   }
 }
 
+
+// ═══ أسعار الصرف التلقائية ═══
+var _rates = { sarSouth: 350, usdSouth: 1300, sarNorth: 500, usdNorth: 2000 };
+
+async function loadRates() {
+  try {
+    var doc = await db.collection('config').doc('rates').get();
+    if (doc.exists) {
+      var d = doc.data();
+      _rates = {
+        sarSouth: Number(d.sarSouth) || 350,
+        usdSouth: Number(d.usdSouth) || 1300,
+        sarNorth: Number(d.sarNorth) || 500,
+        usdNorth: Number(d.usdNorth) || 2000
+      };
+      console.log('[rates] loaded:', _rates);
+    }
+  } catch(e) {
+    console.warn('[rates] failed:', e.message);
+  }
+}
+
+function calculateAutoRates() {
+  var price = parseFloat((document.getElementById('pf-price')||{}).value) || 0;
+  var currency = (document.getElementById('pf-currency')||{}).value || 'YER';
+  
+  var yerEl = document.getElementById('rate-yer');
+  var sarEl = document.getElementById('rate-sar');
+  var usdEl = document.getElementById('rate-usd');
+  
+  if (price <= 0) {
+    if (yerEl) yerEl.textContent = '—';
+    if (sarEl) sarEl.textContent = '—';
+    if (usdEl) usdEl.textContent = '—';
+    return;
+  }
+  
+  // تحويل السعر إلى اليمني (الأساس)
+  var priceYER = price;
+  if (currency === 'SAR') priceYER = price * _rates.sarSouth;
+  else if (currency === 'USD') priceYER = price * _rates.usdSouth;
+  
+  // حساب العملات الأخرى
+  var priceSAR = _rates.sarSouth > 0 ? Math.round(priceYER / _rates.sarSouth) : 0;
+  var priceUSD = _rates.usdSouth > 0 ? Math.round(priceYER / _rates.usdSouth) : 0;
+  
+  if (yerEl) yerEl.textContent = Math.round(priceYER).toLocaleString();
+  if (sarEl) sarEl.textContent = priceSAR.toLocaleString();
+  if (usdEl) usdEl.textContent = priceUSD.toLocaleString();
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
@@ -737,7 +790,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
         <div>
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">العملة</label>
-          <select id="pf-currency" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+          <select id="pf-currency" onchange="calculateAutoRates()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
             <option value="YER">🇾🇪 يمني</option>
             <option value="SAR">🇸🇦 سعودي</option>
             <option value="USD">🇺🇸 دولار</option>
@@ -745,11 +798,30 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
         </div>
         <div>
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر *</label>
-          <input id="pf-price" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+          <input id="pf-price" type="number" placeholder="0" oninput="calculateAutoRates()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
         </div>
         <div>
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">المخزون *</label>
           <input id="pf-stock" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- الحقول التلقائية للصرف -->
+      <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; margin-bottom:16px;">
+        <div style="font-size:12px; font-weight:900; color:#3b82f6; margin-bottom:10px;">💱 السعر المحول تلقائياً (حسب صرف الإدارة)</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇾🇪 يمني</div>
+            <div id="rate-yer" style="font-size:15px; font-weight:900; color:#10b981; margin-top:2px;">—</div>
+          </div>
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇸🇦 سعودي</div>
+            <div id="rate-sar" style="font-size:15px; font-weight:900; color:#f59e0b; margin-top:2px;">—</div>
+          </div>
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇺🇸 دولار</div>
+            <div id="rate-usd" style="font-size:15px; font-weight:900; color:#3b82f6; margin-top:2px;">—</div>
+          </div>
         </div>
       </div>
     </div>
@@ -835,7 +907,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
         <div>
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">العملة</label>
-          <select id="pf-currency" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+          <select id="pf-currency" onchange="calculateAutoRates()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
             <option value="YER">🇾🇪 يمني</option>
             <option value="SAR">🇸🇦 سعودي</option>
             <option value="USD">🇺🇸 دولار</option>
@@ -843,11 +915,30 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
         </div>
         <div>
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر *</label>
-          <input id="pf-price" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+          <input id="pf-price" type="number" placeholder="0" oninput="calculateAutoRates()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
         </div>
         <div>
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">المخزون *</label>
           <input id="pf-stock" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- الحقول التلقائية للصرف -->
+      <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; margin-bottom:16px;">
+        <div style="font-size:12px; font-weight:900; color:#3b82f6; margin-bottom:10px;">💱 السعر المحول تلقائياً (حسب صرف الإدارة)</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇾🇪 يمني</div>
+            <div id="rate-yer" style="font-size:15px; font-weight:900; color:#10b981; margin-top:2px;">—</div>
+          </div>
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇸🇦 سعودي</div>
+            <div id="rate-sar" style="font-size:15px; font-weight:900; color:#f59e0b; margin-top:2px;">—</div>
+          </div>
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇺🇸 دولار</div>
+            <div id="rate-usd" style="font-size:15px; font-weight:900; color:#3b82f6; margin-top:2px;">—</div>
+          </div>
         </div>
       </div>
     </div>
