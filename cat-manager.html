@@ -935,6 +935,9 @@ window.saveProduct = async function(){
   var supIdx = document.getElementById('pf-supplier').value;
   var sup = (supIdx !== '' && state.suppliers[parseInt(supIdx)]) ? state.suppliers[parseInt(supIdx)] : null;
   var data = {
+      sold: parseFloat((document.getElementById('pf-sold')||{}).value) || 0,
+      maxQty: parseFloat((document.getElementById('pf-maxqty')||{}).value) || 0,
+      featured: !!(document.getElementById('pf-featured')||{}).checked,
     name: name,
     brand: document.getElementById('pf-brand').value.trim(),
     sku: document.getElementById('pf-sku').value.trim(),
