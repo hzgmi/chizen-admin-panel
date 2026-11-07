@@ -1300,9 +1300,26 @@ function startListeners(){
 
 async function loadProducts(){
   try {
-    var snap = await db.collection('products').where('category','==',state.cat).get();
-    state.products = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
-    // Pre-load suppliers for faster form opening
+    // جلب كل المنتجات (بدون فلترة في Firestore)
+    var snap = await db.collection('products').get();
+    var all = [];
+    snap.forEach(function(d){
+      var x = d.data();
+      x.id = d.id;
+      all.push(x);
+    });
+    
+    // فلترة مرنة في JavaScript
+    var currentCat = (state.cat || '').toLowerCase().trim();
+    state.products = all.filter(function(p){
+      var pCat = (p.category || '').toLowerCase().trim();
+      var pCats = Array.isArray(p.categories) ? p.categories.map(function(c){ return (c||'').toLowerCase().trim(); }) : [];
+      return pCat === currentCat || pCats.indexOf(currentCat) !== -1;
+    });
+    
+    console.log('[loadProducts] state.cat = "' + state.cat + '", total in DB = ' + all.length + ', matched = ' + state.products.length);
+    
+    // Pre-load suppliers
     if(!state.suppliers.length) await loadSuppliers();
     if(state.activeTab==='products') render();
   } catch(e){ console.warn('[products]', e.message); }
