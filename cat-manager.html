@@ -961,7 +961,7 @@ window.saveProduct = async function(){
   var name = document.getElementById('pf-name').value.trim();
   var price = Number(document.getElementById('pf-price').value);
   if(!name || price <= 0){ toast('❌ أدخل الاسم والسعر','err'); return; }
-  if(!state.formImages.length){ toast('❌ أضف صورة واحدة على الأقل','err'); return; }
+  var _imgs = (window.state && window.state.formImages) || state.formImages || []; if(!_imgs.length){ toast('❌ أضف صورة واحدة على الأقل','err'); return; }
   // Supplier
   var supIdx = document.getElementById('pf-supplier').value;
   var sup = (supIdx !== '' && state.suppliers[parseInt(supIdx)]) ? state.suppliers[parseInt(supIdx)] : null;
@@ -983,8 +983,8 @@ window.saveProduct = async function(){
     sizes: state.formSizes,
     sizeStock: state.formSizeStock,
     colors: state.formColors,
-    images: state.formImages,
-    img: state.formImages[0],
+    images: _imgs,
+    img: _imgs[0],
     supplierId: sup ? sup.id : null,
     supplierName: sup ? sup.name : null,
     supplierPhone: sup ? sup.phone : null,
