@@ -195,6 +195,16 @@ body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e
 
 <script>
 'use strict';
+// Initialize Firebase
+if (!firebase.apps.length) {
+  if (window.FIREBASE_CONFIG) {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+  } else {
+    console.error('FIREBASE_CONFIG not found!');
+    document.getElementById('catName').textContent = 'خطأ: FIREBASE_CONFIG غير موجود';
+  }
+}
+
 var auth = firebase.auth();
 var db = firebase.firestore();
 var state = { user: null, userData: {}, cat: null, orders: [], products: [] };
