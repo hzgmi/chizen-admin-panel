@@ -307,11 +307,44 @@ function renderTab(type){
   });
 }
 
+
+  function getAdminReminder(b) {
+    var d = b.data || {};
+    var type = b.type;
+    var dateStr = d.date || d.checkin;
+    if (!dateStr) return null;
+
+    var parts = dateStr.split('-');
+    if (parts.length !== 3) return null;
+    var target = new Date(parts[0], parts[1]-1, parts[2]);
+    var now = new Date(); now.setHours(0,0,0,0); target.setHours(0,0,0,0);
+    var days = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (type === 'flight' || type === 'bus' || type === 'hotel') {
+      if (days === 0) return { text: '🔴 الرحلة اليوم!', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };
+      if (days === 1) return { text: '⏰ الرحلة غداً!', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' };
+      if (days <= 3 && days > 1) return { text: '📅 الرحلة بعد ' + days + ' أيام', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' };
+    }
+
+    if (type === 'hajj' || type === 'umrah') {
+      var visaEndDays = days + 30;
+      if (days <= 0 && visaEndDays > 0 && visaEndDays <= 3) {
+        return { text: '🚨 تأشيرة العميل تنتهي بعد ' + visaEndDays + ' أيام! (غرامة)', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };
+      }
+      if (visaEndDays <= 0) {
+        return { text: '🚨 انتهت التأشيرة! تواصل فوراً', color: '#ef4444', bg: 'rgba(239,68,68,0.2)' };
+      }
+    }
+    return null;
+  }
+
 function renderBookingCard(b){
   var d = b.data || {};
   var typeInfo = TYPES[b.type] || {label:b.type, icon:'📄'};
   var phone = b.phone || b.userPhone || d.phone || '';
   var stLbl = {pending:'⏳ معلقة', price_quoted:'📤 عرض سعر', price_approved:'✅ وافق العميل', confirmed:'✅ مؤكدة', completed:'🏁 مكتملة', cancelled:'❌ ملغاة'}[b.status] || b.status;
+  var rem = getAdminReminder(b);
+  var remHtml = rem ? '<div style="margin:8px 0;padding:8px 12px;border-radius:8px;background:' + rem.bg + ';color:' + rem.color + ';font-size:11px;font-weight:900;text-align:center;border:1px solid ' + rem.color + '">' + rem.text + '</div>' : '';
   var est = Number(b.estimatedPrice) || 0;
   var fin = Number(b.finalPrice) || 0;
   var hasDelivery = b.freeDelivery || d.freeDelivery;
