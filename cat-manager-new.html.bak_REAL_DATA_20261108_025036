@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CHIZEN — لوحة مدير القسم</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,sans-serif; }
+body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e; }
+
+/* ═══ Header ═══ */
+.header {
+  background:linear-gradient(135deg,#ff6b6b 0%,#a855f7 50%,#3b82f6 100%);
+  padding:16px 20px;
+  border-radius:0 0 24px 24px;
+  display:flex; justify-content:space-between; align-items:center;
+  color:#fff;
+  box-shadow:0 4px 20px rgba(168,85,247,0.3);
+  position:relative;
+  overflow:hidden;
+}
+.header::before {
+  content:''; position:absolute; top:-50%; right:-20%;
+  width:200px; height:200px;
+  background:radial-gradient(circle,rgba(255,255,255,0.2),transparent);
+  border-radius:50%;
+}
+.header .logo { display:flex; align-items:center; gap:8px; font-size:20px; font-weight:900; }
+.header .logo span { font-size:32px; }
+.header .profile { display:flex; align-items:center; gap:12px; position:relative; z-index:2; }
+.header .avatar { width:48px; height:48px; border-radius:50%; border:2px solid #fff; background:rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; font-size:24px; }
+.header .info { text-align:right; }
+.header .info .title { font-size:14px; font-weight:800; }
+.header .info .subtitle { font-size:11px; opacity:0.9; margin-top:2px; }
+.header .crown { position:absolute; top:-8px; right:-8px; font-size:20px; }
+
+/* ═══ Stats ═══ */
+.stats { padding:16px 16px 0; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.stat-card { background:#fff; border-radius:16px; padding:14px 10px; text-align:center; box-shadow:0 2px 12px rgba(0,0,0,0.06); position:relative; overflow:hidden; cursor:pointer; transition:transform 0.15s; }
+.stat-card:active { transform:scale(0.97); }
+.stat-card .icon { font-size:28px; margin-bottom:6px; }
+.stat-card .value { font-size:22px; font-weight:900; color:#1a1a2e; }
+.stat-card .label { font-size:10px; color:#6b7280; font-weight:700; margin-top:2px; }
+.stat-card .arrow { position:absolute; bottom:8px; left:8px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+.stat-card.s1 .arrow { background:#ef4444; }
+.stat-card.s2 .arrow { background:#10b981; }
+.stat-card.s3 .arrow { background:#f59e0b; }
+
+/* ═══ Actions ═══ */
+.actions { padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.action-btn { border-radius:18px; padding:18px 14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform 0.15s; color:#fff; box-shadow:0 6px 20px rgba(0,0,0,0.15); }
+.action-btn:active { transform:scale(0.97); }
+.action-btn .icon-box { width:48px; height:48px; background:rgba(255,255,255,0.25); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:26px; }
+.action-btn .text { flex:1; text-align:right; }
+.action-btn .text .t { font-size:14px; font-weight:900; }
+.action-btn .text .s { font-size:10px; opacity:0.9; margin-top:2px; }
+.action-btn .chevron { font-size:20px; opacity:0.8; }
+.action-btn.add { background:linear-gradient(135deg,#a855f7 0%,#ec4899 100%); }
+.action-btn.view { background:linear-gradient(135deg,#3b82f6 0%,#06b6d4 100%); }
+
+/* ═══ Section ═══ */
+.section { padding:0 16px 16px; }
+.section-title { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.section-title h3 { font-size:15px; font-weight:900; color:#1a1a2e; }
+.section-title a { font-size:12px; color:#a855f7; font-weight:800; text-decoration:none; }
+.card { background:#fff; border-radius:16px; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,0.06); margin-bottom:10px; }
+
+/* ═══ Order Row ═══ */
+.order-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f3f4f6; }
+.order-row:last-child { border-bottom:none; }
+.order-avatar { width:38px; height:38px; background:linear-gradient(135deg,#a855f7,#ec4899); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; font-weight:900; }
+.order-info { flex:1; }
+.order-info .name { font-size:13px; font-weight:800; }
+.order-info .id { font-size:10px; color:#9ca3af; font-weight:700; margin-top:2px; }
+.order-status { font-size:10px; font-weight:800; padding:4px 10px; border-radius:8px; }
+.order-status.pending { background:rgba(245,158,11,0.15); color:#f59e0b; }
+.order-status.confirmed { background:rgba(16,185,129,0.15); color:#10b981; }
+.order-status.completed { background:rgba(59,130,246,0.15); color:#3b82f6; }
+
+/* ═══ Bottom Nav ═══ */
+.bottom-nav { position:fixed; bottom:12px; left:12px; right:12px; background:#fff; border-radius:22px; padding:10px 8px; display:flex; justify-content:space-around; align-items:center; box-shadow:0 8px 30px rgba(0,0,0,0.15); z-index:100; }
+.nav-item { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:6px 12px; border-radius:14px; transition:all 0.2s; }
+.nav-item .icon { font-size:20px; }
+.nav-item .label { font-size:9px; font-weight:800; color:#9ca3af; }
+.nav-item.active .label { color:#a855f7; }
+.nav-item.home { background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#a855f7 100%); color:#fff; margin-top:-20px; padding:14px 22px; border-radius:20px; box-shadow:0 6px 20px rgba(236,72,153,0.4); }
+.nav-item.home .label { color:#fff; }
+.nav-item.home .icon { font-size:24px; }
+.nav-badge { position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:9px; font-weight:900; padding:2px 5px; border-radius:10px; }
+
+/* ═══ Empty ═══ */
+.empty { text-align:center; padding:60px 20px; color:#9ca3af; }
+.empty i { font-style:normal; font-size:52px; display:block; margin-bottom:12px; }
+.empty b { font-size:14px; color:#6b7280; display:block; margin-bottom:4px; }
+.empty small { font-size:11px; }
+
+/* ═══ Loading ═══ */
+.loading { text-align:center; padding:60px 20px; color:#9ca3af; font-size:14px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo"><span>🛒</span> CHIZEN</div>
+  <div class="profile">
+    <div class="info">
+      <div class="title">لوحة مدير القسم</div>
+      <div class="subtitle" id="catName">جاري التحميل...</div>
+    </div>
+    <div class="avatar" style="position:relative;">
+      👤
+      <span class="crown">👑</span>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats" id="statsContainer">
+  <div class="stat-card s1">
+    <div class="icon">📦</div>
+    <div class="value" id="statNew">0</div>
+    <div class="label">طلب جديد</div>
+    <div class="arrow">→</div>
+  </div>
+  <div class="stat-card s2">
+    <div class="icon">✅</div>
+    <div class="value" id="statDone">0</div>
+    <div class="label">طلب مكتمل</div>
+    <div class="arrow">→</div>
+  </div>
+  <div class="stat-card s3">
+    <div class="icon">🎁</div>
+    <div class="value" id="statPrep">0</div>
+    <div class="label">قيد التجهيز</div>
+    <div class="arrow">→</div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="actions">
+  <div class="action-btn add" onclick="alert('إضافة منتج (قيد التطوير)')">
+    <div class="icon-box">📦</div>
+    <div class="text">
+      <div class="t">إضافة منتج</div>
+      <div class="s">إضافة منتج جديد للقسم</div>
+    </div>
+    <div class="chevron">›</div>
+  </div>
+  <div class="action-btn view" onclick="alert('معاينة منتجاتي (قيد التطوير)')">
+    <div class="icon-box">👁️</div>
+    <div class="text">
+      <div class="t">معاينة منتجاتي</div>
+      <div class="s">عرض المنتجات في التطبيق</div>
+    </div>
+    <div class="chevron">›</div>
+  </div>
+</div>
+
+<!-- Latest Orders -->
+<div class="section">
+  <div class="section-title">
+    <h3>📋 آخر الطلبات</h3>
+    <a href="#" onclick="alert('عرض الكل (قيد التطوير)')">عرض الكل ←</a>
+  </div>
+  <div class="card" id="ordersContainer">
+    <div class="loading">⏳ جاري التحميل...</div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item" onclick="alert('الإشعارات (قيد التطوير)')" style="position:relative;">
+    <div class="icon">🔔</div>
+    <div class="label">الإشعارات</div>
+    <span class="nav-badge">2</span>
+  </div>
+  <div class="nav-item active home">
+    <div class="icon">🏠</div>
+    <div class="label">الرئيسية</div>
+  </div>
+  <div class="nav-item" onclick="alert('التقارير (قيد التطوير)')">
+    <div class="icon">📊</div>
+    <div class="label">التقارير</div>
+  </div>
+  <div class="nav-item" onclick="alert('الإعدادات (قيد التطوير)')">
+    <div class="icon">⚙️</div>
+    <div class="label">الإعدادات</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// Initialize Firebase
+if (!firebase.apps.length) {
+  if (window.FIREBASE_CONFIG) {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+  } else {
+    console.error('FIREBASE_CONFIG not found!');
+    document.getElementById('catName').textContent = 'خطأ: FIREBASE_CONFIG غير موجود';
+  }
+}
+
+var auth = firebase.auth();
+var db = firebase.firestore();
+var state = { user: null, userData: {}, cat: null, orders: [], products: [] };
+
+function catLabel(c) {
+  var labels = { fashion:'أزياء وموضة', shoes:'أحذية', perfume:'عطور', electronics:'إلكترونيات', accessories:'إكسسوارات', kids:'أطفال', supermarket:'سوبر ماركت', home:'منزل وأثاث', beauty:'جمال' };
+  return labels[c] || c || '—';
+}
+
+function esc(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+function showLoading() {
+  document.getElementById('ordersContainer').innerHTML = '<div class="loading">⏳ جاري التحميل...</div>';
+}
+
+function showError(msg) {
+  document.getElementById('ordersContainer').innerHTML = '<div class="loading" style="color:#ef4444;">❌ ' + msg + '</div>';
+}
+
+async function loadUserData(user) {
+  var udoc = await db.collection('users').doc(user.uid).get();
+  state.userData = udoc.exists ? udoc.data() : {};
+  state.cat = state.userData.category || state.userData.cat || null;
+  
+  if (!state.cat) {
+    var _mc = prompt('اختر رقم القسم: 1=fashion, 2=electronics, 3=perfume, 4=shoes'); var _map={'1':'fashion','2':'electronics','3':'perfume','4':'shoes'}; if(_mc && _map[_mc]) { state.cat = _map[_mc]; localStorage.setItem('chz_cat_manager_cat', state.cat); document.getElementById('catName').textContent = 'قسم: ' + catLabel(state.cat); return true; } else { document.getElementById('catName').textContent = '⚠️ لم يتم تعيين قسم'; }
+    return false;
+  }
+  
+  document.getElementById('catName').textContent = 'قسم: ' + catLabel(state.cat);
+  return true;
+}
+
+async function loadOrders() {
+  try {
+    var snap = await db.collection('orders').where('category','==',state.cat).limit(50).get();
+    state.orders = [];
+    snap.forEach(function(d) { var x = d.data(); x.id = d.id; state.orders.push(x); });
+    // ترتيب: الأحدث أولاً
+    state.orders.sort(function(a, b) {
+      var ta = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+      var tb = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+      return tb - ta;
+    });
+  } catch(e) { console.error('[orders]', e); }
+}
+
+async function loadProducts() {
+  try {
+    var snap = await db.collection('products').get();
+    var all = [];
+    snap.forEach(function(d) { var x = d.data(); x.id = d.id; all.push(x); });
+    var cat = (state.cat || '').toLowerCase().trim();
+    state.products = all.filter(function(p) {
+      var pc = (p.category || '').toLowerCase().trim();
+      var pcs = Array.isArray(p.categories) ? p.categories.map(function(c){ return (c||'').toLowerCase().trim(); }) : [];
+      return pc === cat || pcs.indexOf(cat) !== -1;
+    });
+  } catch(e) { console.error('[products]', e); }
+}
+
+function renderStats() {
+  var newOrders = state.orders.filter(function(o) { return o.status === 'pending'; }).length;
+  var doneOrders = state.orders.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; }).length;
+  var prepOrders = state.orders.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; }).length;
+  
+  document.getElementById('statNew').textContent = newOrders;
+  document.getElementById('statDone').textContent = doneOrders;
+  document.getElementById('statPrep').textContent = prepOrders;
+}
+
+function renderLatestOrders() {
+  var latest = state.orders.slice(0, 3);
+  var container = document.getElementById('ordersContainer');
+  
+  if (!latest.length) {
+    container.innerHTML = '<div class="empty" style="padding:30px 20px;"><i>📭</i><b>لا توجد طلبات</b><small>ستظهر الطلبات هنا</small></div>';
+    return;
+  }
+  
+  container.innerHTML = latest.map(function(o) {
+    var statusClass = o.status === 'pending' ? 'pending' : (o.status === 'completed' || o.status === 'delivered' ? 'completed' : 'confirmed');
+    var statusLabel = o.status === 'pending' ? '⏳ معلق' : (o.status === 'completed' || o.status === 'delivered' ? '🏁 مكتمل' : '✅ مؤكد');
+    var initial = (o.customerName || o.name || '؟').charAt(0);
+    var orderId = (o.id || '').substring(0, 8);
+    var total = Number(o.total) || 0;
+    
+    return '<div class="order-row">' +
+      '<div class="order-avatar">' + esc(initial) + '</div>' +
+      '<div class="order-info">' +
+        '<div class="name">' + esc(o.customerName || o.name || 'عميل') + '</div>' +
+        '<div class="id">#' + esc(orderId) + ' • ' + total.toFixed(0) + ' ر.ي</div>' +
+      '</div>' +
+      '<div class="order-status ' + statusClass + '">' + statusLabel + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+auth.onAuthStateChanged(async function(user) {
+  console.log('[AUTH] user:', user ? user.uid : 'null');
+  if (!user) {
+    document.getElementById('catName').textContent = 'غير مسجل';
+    document.getElementById('ordersContainer').innerHTML = 
+      '<div style="text-align:center;padding:30px;">' +
+        '<div style="font-size:48px;margin-bottom:12px;">🔒</div>' +
+        '<div style="font-size:14px;font-weight:800;color:#6b7280;margin-bottom:16px;">سجّل الدخول لعرض بياناتك</div>' +
+        '<a href="cat-login.html" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;border-radius:12px;text-decoration:none;font-weight:900;font-size:14px;">🔑 تسجيل الدخول</a>' +
+      '</div>';
+    return;
+  }
+  if (!user) {
+    document.getElementById('catName').textContent = 'سجّل الدخول أولاً';
+    document.getElementById('ordersContainer').innerHTML = '<div class="empty"><i>🔒</i><b>غير مسجل</b><small>سجّل الدخول لعرض البيانات</small></div>';
+    return;
+  }
+  
+  state.user = user;
+  showLoading();
+  
+  try {
+    var ok = await loadUserData(user);
+    if (!ok) {
+      document.getElementById('ordersContainer').innerHTML = '<div class="empty"><i>⚠️</i><b>لم يتم تعيين قسم</b><small>تواصل مع الإدارة</small></div>';
+      return;
+    }
+    
+    await Promise.all([loadOrders(), loadProducts()]);
+    
+    renderStats();
+    renderLatestOrders();
+    
+  } catch(e) {
+    console.error('[AUTH ERROR]', e);
+    document.getElementById('catName').textContent = 'خطأ: ' + (e.message || 'غير معروف').substring(0, 30);
+    document.getElementById('ordersContainer').innerHTML = '<div style="text-align:center;padding:20px;color:#ef4444;">❌ خطأ:<br><small>' + (e.message || 'حدث خطأ') + '</small></div>';
+  }
+});
+
+console.log('[CAT-MANAGER-NEW v2] loaded');
+</script>
+</body>
+</html>

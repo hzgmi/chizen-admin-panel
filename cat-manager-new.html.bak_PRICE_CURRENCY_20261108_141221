@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CHIZEN — لوحة مدير القسم</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,sans-serif; }
+body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e; }
+
+/* ═══ Header ═══ */
+.header {
+  background:linear-gradient(135deg,#ff6b6b 0%,#a855f7 50%,#3b82f6 100%);
+  padding:16px 20px;
+  border-radius:0 0 24px 24px;
+  display:flex; justify-content:space-between; align-items:center;
+  color:#fff;
+  box-shadow:0 4px 20px rgba(168,85,247,0.3);
+  position:relative;
+  overflow:hidden;
+}
+.header::before {
+  content:''; position:absolute; top:-50%; right:-20%;
+  width:200px; height:200px;
+  background:radial-gradient(circle,rgba(255,255,255,0.2),transparent);
+  border-radius:50%;
+}
+.header .logo { display:flex; align-items:center; gap:8px; font-size:20px; font-weight:900; }
+.header .logo span { font-size:32px; }
+.header .profile { display:flex; align-items:center; gap:12px; position:relative; z-index:2; }
+.header .avatar { width:48px; height:48px; border-radius:50%; border:2px solid #fff; background:rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; font-size:24px; }
+.header .info { text-align:right; }
+.header .info .title { font-size:14px; font-weight:800; }
+.header .info .subtitle { font-size:11px; opacity:0.9; margin-top:2px; }
+.header .crown { position:absolute; top:-8px; right:-8px; font-size:20px; }
+
+/* ═══ Stats ═══ */
+.stats { padding:16px 16px 0; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.stat-card { background:#fff; border-radius:16px; padding:14px 10px; text-align:center; box-shadow:0 2px 12px rgba(0,0,0,0.06); position:relative; overflow:hidden; cursor:pointer; transition:transform 0.15s; }
+.stat-card:active { transform:scale(0.97); }
+.stat-card .icon { font-size:28px; margin-bottom:6px; }
+.stat-card .value { font-size:22px; font-weight:900; color:#1a1a2e; }
+.stat-card .label { font-size:10px; color:#6b7280; font-weight:700; margin-top:2px; }
+.stat-card .arrow { position:absolute; bottom:8px; left:8px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+.stat-card.s1 .arrow { background:#ef4444; }
+.stat-card.s2 .arrow { background:#10b981; }
+.stat-card.s3 .arrow { background:#f59e0b; }
+
+/* ═══ Actions ═══ */
+.actions { padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.action-btn { border-radius:18px; padding:18px 14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform 0.15s; color:#fff; box-shadow:0 6px 20px rgba(0,0,0,0.15); }
+.action-btn:active { transform:scale(0.97); }
+.action-btn .icon-box { width:48px; height:48px; background:rgba(255,255,255,0.25); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:26px; }
+.action-btn .text { flex:1; text-align:right; }
+.action-btn .text .t { font-size:14px; font-weight:900; }
+.action-btn .text .s { font-size:10px; opacity:0.9; margin-top:2px; }
+.action-btn .chevron { font-size:20px; opacity:0.8; }
+.action-btn.add { background:linear-gradient(135deg,#a855f7 0%,#ec4899 100%); }
+.action-btn.view { background:linear-gradient(135deg,#3b82f6 0%,#06b6d4 100%); }
+
+/* ═══ Section ═══ */
+.section { padding:0 16px 16px; }
+.section-title { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.section-title h3 { font-size:15px; font-weight:900; color:#1a1a2e; }
+.section-title a { font-size:12px; color:#a855f7; font-weight:800; text-decoration:none; }
+.card { background:#fff; border-radius:16px; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,0.06); margin-bottom:10px; }
+
+/* ═══ Order Row ═══ */
+.order-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f3f4f6; }
+.order-row:last-child { border-bottom:none; }
+.order-avatar { width:38px; height:38px; background:linear-gradient(135deg,#a855f7,#ec4899); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; font-weight:900; }
+.order-info { flex:1; }
+.order-info .name { font-size:13px; font-weight:800; }
+.order-info .id { font-size:10px; color:#9ca3af; font-weight:700; margin-top:2px; }
+.order-status { font-size:10px; font-weight:800; padding:4px 10px; border-radius:8px; }
+.order-status.pending { background:rgba(245,158,11,0.15); color:#f59e0b; }
+.order-status.confirmed { background:rgba(16,185,129,0.15); color:#10b981; }
+.order-status.completed { background:rgba(59,130,246,0.15); color:#3b82f6; }
+
+/* ═══ Bottom Nav ═══ */
+.bottom-nav { position:fixed; bottom:12px; left:12px; right:12px; background:#fff; border-radius:22px; padding:10px 8px; display:flex; justify-content:space-around; align-items:center; box-shadow:0 8px 30px rgba(0,0,0,0.15); z-index:100; }
+.nav-item { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:6px 12px; border-radius:14px; transition:all 0.2s; }
+.nav-item .icon { font-size:20px; }
+.nav-item .label { font-size:9px; font-weight:800; color:#9ca3af; }
+.nav-item.active .label { color:#a855f7; }
+.nav-item.home { background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#a855f7 100%); color:#fff; margin-top:-20px; padding:14px 22px; border-radius:20px; box-shadow:0 6px 20px rgba(236,72,153,0.4); }
+.nav-item.home .label { color:#fff; }
+.nav-item.home .icon { font-size:24px; }
+.nav-badge { position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:9px; font-weight:900; padding:2px 5px; border-radius:10px; }
+
+/* ═══ Empty ═══ */
+.empty { text-align:center; padding:60px 20px; color:#9ca3af; }
+.empty i { font-style:normal; font-size:52px; display:block; margin-bottom:12px; }
+.empty b { font-size:14px; color:#6b7280; display:block; margin-bottom:4px; }
+.empty small { font-size:11px; }
+
+/* ═══ Loading ═══ */
+.loading { text-align:center; padding:60px 20px; color:#9ca3af; font-size:14px; }
+
+/* ═══ الوضع الليلي ═══ */
+body.dark-mode {
+  background: #0a0418 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode .header {
+  background: linear-gradient(135deg, #2d1b4e, #1a2340);
+}
+body.dark-mode .stat-card {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode .stat-card .value {
+  color: #C5A059 !important;
+}
+body.dark-mode .stat-card .label {
+  color: #9ca3af !important;
+}
+body.dark-mode .action-btn.add {
+  background: linear-gradient(135deg, #a855f7, #ec4899) !important;
+}
+body.dark-mode .action-btn.view {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4) !important;
+}
+body.dark-mode .section-title h3 {
+  color: #F2E3C6 !important;
+}
+body.dark-mode .card {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode .order-info .name {
+  color: #F2E3C6 !important;
+}
+body.dark-mode .order-info .id {
+  color: #9ca3af !important;
+}
+body.dark-mode .bottom-nav {
+  background: #1A2340 !important;
+}
+body.dark-mode .nav-item .label {
+  color: #9ca3af !important;
+}
+body.dark-mode .nav-item.active .label {
+  color: #C5A059 !important;
+}
+body.dark-mode #productModal > div,
+body.dark-mode #productsViewModal > div,
+body.dark-mode #ordersModal > div,
+body.dark-mode #notifModal > div,
+body.dark-mode #reportsModal > div,
+body.dark-mode #settingsModal > div {
+  background: #0a0418 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode #productModal h2,
+body.dark-mode #productsViewModal h2,
+body.dark-mode #ordersModal h2,
+body.dark-mode #notifModal h2,
+body.dark-mode #reportsModal h2,
+body.dark-mode #settingsModal h2 {
+  color: #C5A059 !important;
+}
+body.dark-mode .form-group input,
+body.dark-mode .form-group textarea,
+body.dark-mode .form-group select {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+  border-color: rgba(197,160,89,0.3) !important;
+}
+body.dark-mode .chz-fake-select-final {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode #productModal div[style*="background:#f9fafb"],
+body.dark-mode #productModal div[style*="background: #f9fafb"] {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode #productModal label {
+  color: #C5A059 !important;
+}
+body.dark-mode #productModal input,
+body.dark-mode #productModal textarea,
+body.dark-mode #productModal select {
+  background: #0f172a !important;
+  color: #F2E3C6 !important;
+  border-color: rgba(197,160,89,0.3) !important;
+}
+body.dark-mode .size-btn {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+  border-color: rgba(197,160,89,0.3) !important;
+}
+
+/* ═══ تحسينات مرئية ═══ */
+.card {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.card:active {
+  transform: scale(0.99);
+}
+.stat-card {
+  transition: transform 0.15s;
+}
+.stat-card:active {
+  transform: scale(0.97);
+}
+.action-btn {
+  transition: all 0.2s;
+}
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo"><span>🛒</span> CHIZEN</div>
+  <div class="profile">
+    <button id="darkModeBtn" onclick="toggleDarkMode()" style="background:rgba(255,255,255,0.2); color:#fff; border:none; width:36px; height:36px; border-radius:50%; font-size:16px; cursor:pointer; margin-left:8px;">🌙</button>
+    <div class="info">
+      <div class="title">لوحة مدير القسم</div>
+      <div class="subtitle" id="catName">جاري التحميل...</div>
+    </div>
+    <div class="avatar" style="position:relative;">
+      👤
+      <span class="crown">👑</span>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats" id="statsContainer">
+  <div class="stat-card s1">
+    <div class="icon">📦</div>
+    <div class="value" id="statNew">0</div>
+    <div class="label">طلب جديد</div>
+    <div class="arrow">→</div>
+  </div>
+  <div class="stat-card s2">
+    <div class="icon">✅</div>
+    <div class="value" id="statDone">0</div>
+    <div class="label">طلب مكتمل</div>
+    <div class="arrow">→</div>
+  </div>
+  <div class="stat-card s3">
+    <div class="icon">🎁</div>
+    <div class="value" id="statPrep">0</div>
+    <div class="label">قيد التجهيز</div>
+    <div class="arrow">→</div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="actions">
+  <div class="action-btn add" onclick="openProductModal()">
+    <div class="icon-box">📦</div>
+    <div class="text">
+      <div class="t">إضافة منتج</div>
+      <div class="s">إضافة منتج جديد للقسم</div>
+    </div>
+    <div class="chevron">›</div>
+  </div>
+  <div class="action-btn view" onclick="openProductsView()">
+    <div class="icon-box">👁️</div>
+    <div class="text">
+      <div class="t">معاينة منتجاتي</div>
+      <div class="s">عرض المنتجات في التطبيق</div>
+    </div>
+    <div class="chevron">›</div>
+  </div>
+</div>
+
+<!-- Latest Orders -->
+<div class="section">
+  <div class="section-title">
+    <h3>📋 آخر الطلبات</h3>
+    <a href="#" onclick="openOrdersModal(); return false;">عرض الكل ←</a>
+  </div>
+  <div class="card" id="ordersContainer">
+    <div class="loading">⏳ جاري التحميل...</div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item" onclick="openNotifModal()" style="position:relative;">
+    <div class="icon">🔔</div>
+    <div class="label">الإشعارات</div>
+    <span class="nav-badge">2</span>
+  </div>
+  <div class="nav-item active home">
+    <div class="icon">🏠</div>
+    <div class="label">الرئيسية</div>
+  </div>
+  <div class="nav-item" onclick="openReportsModal()">
+    <div class="icon">📊</div>
+    <div class="label">التقارير</div>
+  </div>
+  <div class="nav-item" onclick="openSettingsModal()">
+    <div class="icon">⚙️</div>
+    <div class="label">الإعدادات</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// Initialize Firebase
+if (!firebase.apps.length) {
+  if (window.FIREBASE_CONFIG) {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+  } else {
+    console.error('FIREBASE_CONFIG not found!');
+    document.getElementById('catName').textContent = 'خطأ: FIREBASE_CONFIG غير موجود';
+  }
+}
+
+var auth = firebase.auth();
+var db = firebase.firestore();
+var state = { user: null, userData: {}, cat: null, orders: [], products: [] };
+
+function catLabel(c) {
+  var labels = { fashion:'أزياء وموضة', shoes:'أحذية', perfume:'عطور', electronics:'إلكترونيات', accessories:'إكسسوارات', kids:'أطفال', supermarket:'سوبر ماركت', home:'منزل وأثاث', beauty:'جمال' };
+  return labels[c] || c || '—';
+}
+
+function esc(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+function showLoading() {
+  document.getElementById('ordersContainer').innerHTML = '<div class="loading">⏳ جاري التحميل...</div>';
+}
+
+function showError(msg) {
+  document.getElementById('ordersContainer').innerHTML = '<div class="loading" style="color:#ef4444;">❌ ' + msg + '</div>';
+}
+
+async function loadUserData(user) {
+  var udoc = await db.collection('users').doc(user.uid).get();
+  state.userData = udoc.exists ? udoc.data() : {};
+  state.cat = state.userData.category || state.userData.cat || null;
+  
+  if (!state.cat) {
+    var _mc = prompt('اختر رقم القسم: 1=fashion, 2=electronics, 3=perfume, 4=shoes'); var _map={'1':'fashion','2':'electronics','3':'perfume','4':'shoes'}; if(_mc && _map[_mc]) { state.cat = _map[_mc]; localStorage.setItem('chz_cat_manager_cat', state.cat); document.getElementById('catName').textContent = 'قسم: ' + catLabel(state.cat); return true; } else { document.getElementById('catName').textContent = '⚠️ لم يتم تعيين قسم'; }
+    return false;
+  }
+  
+  document.getElementById('catName').textContent = 'قسم: ' + catLabel(state.cat);
+  return true;
+}
+
+async function loadOrders() {
+  try {
+    var snap = await db.collection('orders').limit(100).get();
+    state.orders = [];
+    snap.forEach(function(d) {
+      var x = d.data();
+      x.id = d.id;
+      // فلترة: طلبات تحتوي على منتجات من هذا القسم
+      var inCat = false;
+      if (x.category === state.cat) inCat = true;
+      if (x.categories && x.categories[state.cat]) inCat = true;
+      if (inCat) state.orders.push(x);
+    });
+    state.orders.sort(function(a, b) {
+      var ta = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+      var tb = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+      return tb - ta;
+    });
+    console.log('[loadOrders] cat=' + state.cat + ' total=' + snap.size + ' matched=' + state.orders.length);
+  } catch(e) { console.error('[orders]', e); }
+}
+
+async function loadProducts() {
+  try {
+    var snap = await db.collection('products').get();
+    var all = [];
+    snap.forEach(function(d) { var x = d.data(); x.id = d.id; all.push(x); });
+    var cat = (state.cat || '').toLowerCase().trim();
+    state.products = all.filter(function(p) {
+      var pc = (p.category || '').toLowerCase().trim();
+      var pcs = Array.isArray(p.categories) ? p.categories.map(function(c){ return (c||'').toLowerCase().trim(); }) : [];
+      return pc === cat || pcs.indexOf(cat) !== -1;
+    });
+  } catch(e) { console.error('[products]', e); }
+}
+
+function renderStats() {
+  var newOrders = state.orders.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; }).length;
+  var doneOrders = state.orders.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; }).length;
+  var prepOrders = state.orders.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing' || o.status === 'preparing'; }).length;
+  
+  document.getElementById('statNew').textContent = newOrders;
+  document.getElementById('statDone').textContent = doneOrders;
+  document.getElementById('statPrep').textContent = prepOrders;
+  
+  console.log('[stats] new=' + newOrders + ' done=' + doneOrders + ' prep=' + prepOrders);
+}
+
+function renderLatestOrders() {
+  var latest = state.orders.slice(0, 3);
+  var container = document.getElementById('ordersContainer');
+  
+  if (!latest.length) {
+    container.innerHTML = '<div style="text-align:center;padding:30px 20px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:8px;">📭</div><b style="font-size:14px;color:#6b7280;">لا توجد طلبات</b><br><small style="font-size:11px;">ستظهر الطلبات هنا</small></div>';
+    return;
+  }
+  
+  container.innerHTML = latest.map(function(o) {
+    var statusClass = 'pending';
+    var statusLabel = '⏳ معلق';
+    if (o.status === 'completed' || o.status === 'delivered') { statusClass = 'completed'; statusLabel = '🏁 مكتمل'; }
+    else if (o.status === 'confirmed' || o.status === 'processing') { statusClass = 'confirmed'; statusLabel = '✅ مؤكد'; }
+    
+    var initial = (o.customerName || o.name || '؟').charAt(0);
+    var orderId = (o.id || '').substring(0, 8);
+    var total = Number(o.total) || 0;
+    var timeAgo = '';
+    if (o.createdAt && o.createdAt.seconds) {
+      var diff = Math.floor((Date.now()/1000) - o.createdAt.seconds);
+      if (diff < 60) timeAgo = 'الآن';
+      else if (diff < 3600) timeAgo = Math.floor(diff/60) + ' دقيقة';
+      else if (diff < 86400) timeAgo = Math.floor(diff/3600) + ' ساعة';
+      else timeAgo = Math.floor(diff/86400) + ' يوم';
+    }
+    
+    return '<div class="order-row">' +
+      '<div class="order-avatar">' + esc(initial) + '</div>' +
+      '<div class="order-info">' +
+        '<div class="name">' + esc(o.customerName || o.name || 'عميل') + '</div>' +
+        '<div class="id">#' + esc(orderId) + ' • ' + total.toFixed(0) + ' ر.ي' + (timeAgo ? ' • ' + timeAgo : '') + '</div>' +
+      '</div>' +
+      '<div class="order-status ' + statusClass + '">' + statusLabel + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+auth.onAuthStateChanged(async function(user) {
+  console.log('[AUTH] user:', user ? user.uid : 'null');
+  if (!user) {
+    document.getElementById('catName').textContent = 'غير مسجل';
+    document.getElementById('ordersContainer').innerHTML = 
+      '<div style="text-align:center;padding:30px;">' +
+        '<div style="font-size:48px;margin-bottom:12px;">🔒</div>' +
+        '<div style="font-size:14px;font-weight:800;color:#6b7280;margin-bottom:16px;">سجّل الدخول لعرض بياناتك</div>' +
+        '<a href="cat-login.html" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;border-radius:12px;text-decoration:none;font-weight:900;font-size:14px;">🔑 تسجيل الدخول</a>' +
+      '</div>';
+    return;
+  }
+  if (!user) {
+    document.getElementById('catName').textContent = 'سجّل الدخول أولاً';
+    document.getElementById('ordersContainer').innerHTML = '<div class="empty"><i>🔒</i><b>غير مسجل</b><small>سجّل الدخول لعرض البيانات</small></div>';
+    return;
+  }
+  
+  state.user = user;
+  showLoading();
+  
+  try {
+    var ok = await loadUserData(user);
+    if (!ok) {
+      document.getElementById('ordersContainer').innerHTML = '<div class="empty"><i>⚠️</i><b>لم يتم تعيين قسم</b><small>تواصل مع الإدارة</small></div>';
+      return;
+    }
+    
+    await Promise.all([loadOrders(), loadProducts()]);
+    
+    renderStats();
+    renderLatestOrders();
+    
+  } catch(e) {
+    console.error('[AUTH ERROR]', e);
+    document.getElementById('catName').textContent = 'خطأ: ' + (e.message || 'غير معروف').substring(0, 30);
+    document.getElementById('ordersContainer').innerHTML = '<div style="text-align:center;padding:20px;color:#ef4444;">❌ خطأ:<br><small>' + (e.message || 'حدث خطأ') + '</small></div>';
+  }
+});
+
+
+// ═══ Modal إضافة منتج ═══
+var _formImages = [];
+var _editingId = null;
+
+async function openProductModal(productData) {
+  await loadRates();
+  _editingId = productData ? productData.id : null;
+  
+  var titleEl = document.querySelector('#productModal h2');
+  if (titleEl) titleEl.textContent = productData ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد';
+  
+  document.getElementById('pf-name').value = productData ? (productData.name || '') : '';
+  document.getElementById('pf-brand').value = productData ? (productData.brand || '') : '';
+  document.getElementById('pf-sku').value = productData ? (productData.sku || '') : '';
+  document.getElementById('pf-desc').value = productData ? (productData.description || '') : '';
+  document.getElementById('pf-price').value = productData ? (productData.inputPrice || productData.price || '') : '';
+  document.getElementById('pf-currency').value = productData ? (productData.inputCurrency || 'YER') : 'YER';
+  document.getElementById('pf-stock').value = productData ? (productData.stock || '') : '';
+  
+  _formImages = productData && Array.isArray(productData.images) ? productData.images.slice() : [];
+  _sizes = productData && Array.isArray(productData.sizes) ? productData.sizes.slice() : [];
+  
+  document.querySelectorAll('.size-btn').forEach(function(b) {
+    var size = b.textContent;
+    if (_sizes.indexOf(size) !== -1) {
+      b.style.background = '#a855f7';
+      b.style.color = '#fff';
+      b.style.borderColor = '#a855f7';
+    } else {
+      b.style.background = '#fff';
+      b.style.color = '#1a1a2e';
+      b.style.borderColor = '#e5e7eb';
+    }
+  });
+  
+  renderImagePreview();
+  attachImageInput();
+  calculateAutoRates();
+  document.getElementById('productModal').style.display = 'block';
+}
+
+function closeProductModal() {
+  document.getElementById('productModal').style.display = 'none';
+}
+
+function attachImageInput() {
+  var input = document.getElementById('pf-images-input');
+  if (input._attached) return;
+  input._attached = true;
+  input.onchange = function(e) {
+    var files = Array.from(e.target.files || []);
+    files.forEach(function(file) {
+      if (!file.type.startsWith('image/')) return;
+      if (_formImages.length >= 5) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var max = 600;
+          var w = img.width, h = img.height;
+          if (w > max || h > max) {
+            if (w > h) { h = Math.round(h * max / w); w = max; }
+            else { w = Math.round(w * max / h); h = max; }
+          }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          _formImages.push(canvas.toDataURL('image/jpeg', 0.8));
+          renderImagePreview();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = '';
+  };
+}
+
+function renderImagePreview() {
+  var preview = document.getElementById('pf-images-preview');
+  if (!preview) return;
+  preview.innerHTML = _formImages.map(function(src, idx) {
+    var isMain = idx === 0;
+    return '<div style="position:relative; padding-top:100%; background:#f3f4f6; border-radius:8px; overflow:hidden; border:2px solid ' + (isMain ? '#ec4899' : '#e5e7eb') + ';">' +
+      '<img src="' + src + '" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">' +
+      (isMain ? '<div style="position:absolute; top:2px; left:2px; background:#ec4899; color:#fff; font-size:8px; font-weight:900; padding:2px 4px; border-radius:4px;">⭐</div>' : '') +
+      '<button onclick="_formImages.splice(' + idx + ',1); renderImagePreview();" style="position:absolute; top:2px; right:2px; background:#ef4444; color:#fff; border:none; width:20px; height:20px; border-radius:50%; font-size:11px; cursor:pointer;">✕</button>' +
+      (idx > 0 ? '<button onclick="(function(){var m=_formImages.splice(' + idx + ',1)[0]; _formImages.unshift(m); renderImagePreview();})()" style="position:absolute; bottom:2px; left:2px; right:2px; background:rgba(0,0,0,0.7); color:#fff; border:none; font-size:9px; font-weight:900; padding:2px; border-radius:4px; cursor:pointer;">⭐ تعيين</button>' : '') +
+    '</div>';
+  }).join('');
+}
+
+async function saveProduct() {
+  var name = document.getElementById('pf-name').value.trim();
+  var price = Number(document.getElementById('pf-price').value) || 0;
+  var stock = Number(document.getElementById('pf-stock').value) || 0;
+  
+  if (!name) { alert('❌ أدخل اسم المنتج'); return; }
+  if (price <= 0) { alert('❌ أدخل السعر'); return; }
+  if (!_formImages.length) { alert('❌ أضف صورة واحدة على الأقل'); return; }
+  
+  var btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ...';
+  
+  try {
+    var currency = document.getElementById('pf-currency').value || 'YER';
+    var data = {
+      name: name,
+      brand: document.getElementById('pf-brand').value.trim(),
+      sku: document.getElementById('pf-sku').value.trim(),
+      description: document.getElementById('pf-desc').value.trim(),
+      price: price,
+      inputCurrency: currency,
+      stock: stock,
+      sizes: _sizes.slice(),
+      category: state.cat,
+      categories: [state.cat],
+      images: _formImages,
+      img: _formImages[0],
+      status: 'pending_review',
+      isActive: false,
+      active: false,
+      sold: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    if (_editingId) {
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('products').doc(_editingId).update(data);
+      alert('✅ تم تحديث المنتج بنجاح!');
+    } else {
+      await db.collection('products').add(data);
+      alert('✅ تم إضافة المنتج بنجاح! بانتظار مراجعة الإدارة.');
+    }
+    closeProductModal();
+    await loadProductsList();
+    if (document.getElementById('productsViewModal').style.display !== 'none') {
+      renderProductsView();
+    }
+  } catch(e) {
+    alert('❌ خطأ: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 حفظ المنتج';
+  }
+}
+
+
+// ═══ Modal إضافة منتج ═══
+var _formImages = [];
+
+async function openProductModal(productData) {
+  await loadRates();
+  _editingId = productData ? productData.id : null;
+  
+  var titleEl = document.querySelector('#productModal h2');
+  if (titleEl) titleEl.textContent = productData ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد';
+  
+  document.getElementById('pf-name').value = productData ? (productData.name || '') : '';
+  document.getElementById('pf-brand').value = productData ? (productData.brand || '') : '';
+  document.getElementById('pf-sku').value = productData ? (productData.sku || '') : '';
+  document.getElementById('pf-desc').value = productData ? (productData.description || '') : '';
+  document.getElementById('pf-price').value = productData ? (productData.inputPrice || productData.price || '') : '';
+  document.getElementById('pf-currency').value = productData ? (productData.inputCurrency || 'YER') : 'YER';
+  document.getElementById('pf-stock').value = productData ? (productData.stock || '') : '';
+  
+  _formImages = productData && Array.isArray(productData.images) ? productData.images.slice() : [];
+  _sizes = productData && Array.isArray(productData.sizes) ? productData.sizes.slice() : [];
+  
+  document.querySelectorAll('.size-btn').forEach(function(b) {
+    var size = b.textContent;
+    if (_sizes.indexOf(size) !== -1) {
+      b.style.background = '#a855f7';
+      b.style.color = '#fff';
+      b.style.borderColor = '#a855f7';
+    } else {
+      b.style.background = '#fff';
+      b.style.color = '#1a1a2e';
+      b.style.borderColor = '#e5e7eb';
+    }
+  });
+  
+  renderImagePreview();
+  attachImageInput();
+  calculateAutoRates();
+  document.getElementById('productModal').style.display = 'block';
+}
+
+function closeProductModal() {
+  document.getElementById('productModal').style.display = 'none';
+}
+
+function attachImageInput() {
+  var input = document.getElementById('pf-images-input');
+  if (input._attached) return;
+  input._attached = true;
+  input.onchange = function(e) {
+    var files = Array.from(e.target.files || []);
+    files.forEach(function(file) {
+      if (!file.type.startsWith('image/')) return;
+      if (_formImages.length >= 5) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var max = 600;
+          var w = img.width, h = img.height;
+          if (w > max || h > max) {
+            if (w > h) { h = Math.round(h * max / w); w = max; }
+            else { w = Math.round(w * max / h); h = max; }
+          }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          _formImages.push(canvas.toDataURL('image/jpeg', 0.8));
+          renderImagePreview();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = '';
+  };
+}
+
+function renderImagePreview() {
+  var preview = document.getElementById('pf-images-preview');
+  if (!preview) return;
+  preview.innerHTML = _formImages.map(function(src, idx) {
+    var isMain = idx === 0;
+    return '<div style="position:relative; padding-top:100%; background:#f3f4f6; border-radius:8px; overflow:hidden; border:2px solid ' + (isMain ? '#ec4899' : '#e5e7eb') + ';">' +
+      '<img src="' + src + '" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">' +
+      (isMain ? '<div style="position:absolute; top:2px; left:2px; background:#ec4899; color:#fff; font-size:8px; font-weight:900; padding:2px 4px; border-radius:4px;">⭐</div>' : '') +
+      '<button onclick="_formImages.splice(' + idx + ',1); renderImagePreview();" style="position:absolute; top:2px; right:2px; background:#ef4444; color:#fff; border:none; width:20px; height:20px; border-radius:50%; font-size:11px; cursor:pointer;">✕</button>' +
+      (idx > 0 ? '<button onclick="(function(){var m=_formImages.splice(' + idx + ',1)[0]; _formImages.unshift(m); renderImagePreview();})()" style="position:absolute; bottom:2px; left:2px; right:2px; background:rgba(0,0,0,0.7); color:#fff; border:none; font-size:9px; font-weight:900; padding:2px; border-radius:4px; cursor:pointer;">⭐ تعيين</button>' : '') +
+    '</div>';
+  }).join('');
+}
+
+async function saveProduct() {
+  var name = document.getElementById('pf-name').value.trim();
+  var price = Number(document.getElementById('pf-price').value) || 0;
+  var stock = Number(document.getElementById('pf-stock').value) || 0;
+  
+  if (!name) { alert('❌ أدخل اسم المنتج'); return; }
+  if (price <= 0) { alert('❌ أدخل السعر'); return; }
+  if (!_formImages.length) { alert('❌ أضف صورة واحدة على الأقل'); return; }
+  
+  var btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ...';
+  
+  try {
+    var currency = document.getElementById('pf-currency').value || 'YER';
+    var data = {
+      name: name,
+      brand: document.getElementById('pf-brand').value.trim(),
+      sku: document.getElementById('pf-sku').value.trim(),
+      description: document.getElementById('pf-desc').value.trim(),
+      price: price,
+      inputCurrency: currency,
+      stock: stock,
+      sizes: _sizes.slice(),
+      category: state.cat,
+      categories: [state.cat],
+      images: _formImages,
+      img: _formImages[0],
+      status: 'pending_review',
+      isActive: false,
+      active: false,
+      sold: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    if (_editingId) {
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('products').doc(_editingId).update(data);
+      alert('✅ تم تحديث المنتج بنجاح!');
+    } else {
+      await db.collection('products').add(data);
+      alert('✅ تم إضافة المنتج بنجاح! بانتظار مراجعة الإدارة.');
+    }
+    closeProductModal();
+    await loadProductsList();
+    if (document.getElementById('productsViewModal').style.display !== 'none') {
+      renderProductsView();
+    }
+  } catch(e) {
+    alert('❌ خطأ: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 حفظ المنتج';
+  }
+}
+
+
+// ═══ عرض المنتجات ═══
+var _allProducts = [];
+
+async function loadProductsList() {
+  try {
+    var snap = await db.collection('products').get();
+    var all = [];
+    snap.forEach(function(d) {
+      var x = d.data();
+      x.id = d.id;
+      all.push(x);
+    });
+    var cat = (state.cat || '').toLowerCase().trim();
+    _allProducts = all.filter(function(p) {
+      var pc = (p.category || '').toLowerCase().trim();
+      var pcs = Array.isArray(p.categories) ? p.categories.map(function(c){ return (c||'').toLowerCase().trim(); }) : [];
+      return pc === cat || pcs.indexOf(cat) !== -1;
+    });
+    console.log('[products] cat=' + cat + ' total=' + all.length + ' matched=' + _allProducts.length);
+  } catch(e) {
+    console.error('[products]', e);
+  }
+}
+
+async function openProductsView() {
+  document.getElementById('productsViewModal').style.display = 'block';
+  // إذا كانت البيانات محملة، اعرضها فوراً
+  if (_allProducts.length > 0) {
+    renderProductsView();
+    return;
+  }
+  document.getElementById('productsViewGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
+  await loadProductsList();
+  renderProductsView();
+}
+
+function closeProductsView() {
+  document.getElementById('productsViewModal').style.display = 'none';
+}
+
+function filterProductsView() {
+  renderProductsView();
+}
+
+function renderProductsView() {
+  var grid = document.getElementById('productsViewGrid');
+  if (!grid) return;
+  
+  var q = (document.getElementById('prodSearch')||{}).value || '';
+  q = q.toLowerCase().trim();
+  
+  var arr = _allProducts.slice();
+  if (q) {
+    arr = arr.filter(function(p) {
+      return (p.name||'').toLowerCase().indexOf(q) !== -1 
+        || (p.brand||'').toLowerCase().indexOf(q) !== -1
+        || (p.sku||'').toLowerCase().indexOf(q) !== -1
+        || (p.description||'').toLowerCase().indexOf(q) !== -1
+        || String(p.price||'').indexOf(q) !== -1;
+    });
+  }
+  
+  if (!arr.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📦</div><b>لا توجد منتجات</b><br><small>أضف منتجك الأول</small></div>';
+    return;
+  }
+  
+  grid.innerHTML = arr.map(function(p) {
+    var img = p.img || (p.images && p.images[0]) || '';
+    var stock = Number(p.stock) || 0;
+    var isLive = p.status === 'live' || p.active === true;
+    var stockColor = stock <= 0 ? '#ef4444' : (stock <= 3 ? '#f59e0b' : '#10b981');
+    
+    return '<div style="background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.06); position:relative;">' +
+      '<div style="position:absolute; top:6px; right:6px; background:' + (isLive ? '#10b981' : '#f59e0b') + '; color:#fff; font-size:9px; font-weight:900; padding:2px 6px; border-radius:6px; z-index:2;">' + (isLive ? '✅ منشور' : '⏳ مراجعة') + '</div>' +
+      '<div style="position:relative; padding-top:100%; background:#f9fafb;">' +
+        (img ? '<img src="' + img + '" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">' : '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:40px; opacity:0.3;">📦</div>') +
+      '</div>' +
+      '<div style="padding:10px;">' +
+        (p.brand ? '<div style="font-size:10px; color:#a855f7; font-weight:800; margin-bottom:2px;">' + p.brand + '</div>' : '') +
+        '<div style="font-size:12px; color:#1a1a2e; font-weight:800; margin-bottom:6px; line-height:1.4; height:34px; overflow:hidden;">' + (p.name || '—') + '</div>' +
+        '<div style="font-size:15px; font-weight:900; color:#a855f7; margin-bottom:4px;">' + (Number(p.price) || 0).toFixed(0) + ' <span style="font-size:11px;">ر.ي</span></div>' +
+        '<div style="font-size:10px; color:' + stockColor + '; font-weight:800; margin-bottom:8px;">' + stock + ' متبقي</div>' +
+        '<div style="display:flex; gap:4px;">' +
+          '<button onclick="editProduct(\'' + p.id + '\')" style="flex:1; padding:6px; background:rgba(59,130,246,0.15); color:#3b82f6; border:none; border-radius:6px; font-size:13px; font-weight:900; cursor:pointer;">✏️</button>' +
+          '<button onclick="toggleProduct(\'' + p.id + '\')" style="flex:1; padding:6px; background:' + (isLive ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)') + '; color:' + (isLive ? '#f59e0b' : '#10b981') + '; border:none; border-radius:6px; font-size:13px; font-weight:900; cursor:pointer;">' + (isLive ? '👁' : '✅') + '</button>' +
+          '<button onclick="deleteProduct(\'' + p.id + '\')" style="flex:1; padding:6px; background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:6px; font-size:13px; font-weight:900; cursor:pointer;">🗑</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+
+// ═══ المقاسات ═══
+var _sizes = [];
+function toggleSize(btn, size) {
+  var idx = _sizes.indexOf(size);
+  if (idx === -1) {
+    _sizes.push(size);
+    btn.style.background = '#a855f7';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#a855f7';
+  } else {
+    _sizes.splice(idx, 1);
+    btn.style.background = '#fff';
+    btn.style.color = '#1a1a2e';
+    btn.style.borderColor = '#e5e7eb';
+  }
+}
+
+
+// ═══ أسعار الصرف التلقائية ═══
+var _rates = { sarSouth: 350, usdSouth: 1300, sarNorth: 500, usdNorth: 2000 };
+
+async function loadRates() {
+  try {
+    var doc = await db.collection('config').doc('rates').get();
+    if (doc.exists) {
+      var d = doc.data();
+      _rates = {
+        sarSouth: Number(d.sarSouth) || 350,
+        usdSouth: Number(d.usdSouth) || 1300,
+        sarNorth: Number(d.sarNorth) || 500,
+        usdNorth: Number(d.usdNorth) || 2000
+      };
+      console.log('[rates] loaded:', _rates);
+    }
+  } catch(e) {
+    console.warn('[rates] failed:', e.message);
+  }
+}
+
+function calculateAutoRates() {
+  var price = parseFloat((document.getElementById('pf-price')||{}).value) || 0;
+  var currency = (document.getElementById('pf-currency')||{}).value || 'YER';
+  
+  var yerEl = document.getElementById('rate-yer');
+  var sarEl = document.getElementById('rate-sar');
+  var usdEl = document.getElementById('rate-usd');
+  
+  if (price <= 0) {
+    if (yerEl) yerEl.textContent = '—';
+    if (sarEl) sarEl.textContent = '—';
+    if (usdEl) usdEl.textContent = '—';
+    return;
+  }
+  
+  // تحويل السعر إلى اليمني (الأساس)
+  var priceYER = price;
+  if (currency === 'SAR') priceYER = price * _rates.sarSouth;
+  else if (currency === 'USD') priceYER = price * _rates.usdSouth;
+  
+  // حساب العملات الأخرى
+  var priceSAR = _rates.sarSouth > 0 ? Math.round(priceYER / _rates.sarSouth) : 0;
+  var priceUSD = _rates.usdSouth > 0 ? Math.round(priceYER / _rates.usdSouth) : 0;
+  
+  if (yerEl) yerEl.textContent = Math.round(priceYER).toLocaleString();
+  if (sarEl) sarEl.textContent = priceSAR.toFixed(2);
+  if (usdEl) usdEl.textContent = priceUSD.toFixed(2);
+}
+
+
+// ═══ أزرار الإجراءات ═══
+async function editProduct(id) {
+  try {
+    var doc = await db.collection('products').doc(id).get();
+    if (!doc.exists) { alert('المنتج غير موجود'); return; }
+    var p = doc.data();
+    p.id = doc.id;
+    closeProductsView();
+    await openProductModal(p);
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function toggleProduct(id) {
+  try {
+    var doc = await db.collection('products').doc(id).get();
+    if (!doc.exists) { alert('المنتج غير موجود'); return; }
+    var p = doc.data();
+    var isLive = p.status === 'live' || p.active === true;
+    var newState = !isLive;
+    await db.collection('products').doc(id).update({
+      active: newState,
+      isActive: newState,
+      status: newState ? 'live' : 'pending_review'
+    });
+    alert(newState ? '✅ تم إظهار المنتج' : '👁️ تم إخفاء المنتج');
+    await loadProductsList();
+    renderProductsView();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('⚠️ حذف المنتج نهائياً؟ لا يمكن التراجع.')) return;
+  try {
+    await db.collection('products').doc(id).delete();
+    alert('🗑️ تم حذف المنتج');
+    await loadProductsList();
+    renderProductsView();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+
+// ═══ هامش الربح ═══
+function calcProfit() {
+  var price = parseFloat((document.getElementById('pf-price')||{}).value) || 0;
+  var cost = parseFloat((document.getElementById('pf-cost')||{}).value) || 0;
+  var el = document.getElementById('profit-display');
+  if (!el) return;
+  if (price <= 0 || cost <= 0) { el.textContent = '—'; el.style.color = '#6b7280'; return; }
+  var profit = price - cost;
+  var margin = ((profit / price) * 100).toFixed(1);
+  if (profit > 0) {
+    el.textContent = profit.toLocaleString() + ' (' + margin + '%)';
+    el.style.color = margin > 30 ? '#10b981' : (margin > 15 ? '#f59e0b' : '#ef4444');
+  } else {
+    el.textContent = '⚠️ خسارة!';
+    el.style.color = '#ef4444';
+  }
+}
+
+
+// ═══ إدارة الطلبات ═══
+var _orderFilter = 'all';
+
+function openOrdersModal() {
+  document.getElementById('ordersModal').style.display = 'block';
+  // إذا كانت الطلبات محملة، اعرضها فوراً
+  if (state.orders && state.orders.length > 0) {
+    renderOrdersList();
+    return;
+  }
+  document.getElementById('ordersModalList').innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
+  loadOrders().then(function() {
+    renderOrdersList();
+  });
+}
+
+function closeOrdersModal() {
+  document.getElementById('ordersModal').style.display = 'none';
+}
+
+function setOrderFilter(f) {
+  _orderFilter = f;
+  document.querySelectorAll('.order-filter-btn').forEach(function(b) {
+    if (b.getAttribute('data-filter') === f) {
+      b.style.background = 'rgba(168,85,247,0.1)';
+      b.style.color = '#a855f7';
+      b.style.borderColor = '#a855f7';
+    } else {
+      b.style.background = '#fff';
+      b.style.color = '#6b7280';
+      b.style.borderColor = '#e5e7eb';
+    }
+  });
+  renderOrdersList();
+}
+
+function renderOrdersList() {
+  var el = document.getElementById('ordersModalList');
+  if (!el) return;
+
+  var arr = (state.orders || []).slice();
+  if (_orderFilter === 'pending') arr = arr.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; });
+  else if (_orderFilter === 'confirmed') arr = arr.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; });
+  else if (_orderFilter === 'completed') arr = arr.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; });
+
+  if (!arr.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📭</div><b>لا توجد طلبات</b></div>';
+    return;
+  }
+
+  el.innerHTML = arr.map(function(o) {
+    var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
+    var isDone = o.status === 'completed' || o.status === 'delivered';
+    var statusLabel = isPending ? '⏳ معلق' : (isDone ? '🏁 مكتمل' : '✅ مؤكد');
+    var total = Number(o.total) || 0;
+    var orderId = (o.id || '').substring(0, 8);
+
+    // رأس الطلب
+    var headerHtml = 
+      '<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:#f9fafb; border-bottom:1px solid #e5e7eb; border-radius:14px 14px 0 0;">' +
+        '<div>' +
+          '<div style="font-size:11px; color:#6b7280; font-weight:700;">رقم الطلب</div>' +
+          '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">#' + orderId + '</div>' +
+        '</div>' +
+        '<div style="text-align:left;">' +
+          '<div style="display:inline-block; padding:4px 10px; border-radius:20px; background:' + (isPending ? 'rgba(245,158,11,0.1)' : (isDone ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)')) + '; color:' + (isPending ? '#f59e0b' : (isDone ? '#3b82f6' : '#10b981')) + '; font-size:10px; font-weight:900;">' + statusLabel + '</div>' +
+          '<div style="font-size:11px; color:#6b7280; margin-top:4px;">' + (o.items ? o.items.length : 0) + ' منتج</div>' +
+        '</div>' +
+      '</div>';
+
+    // بيانات العميل
+    var customerHtml = 
+      '<div style="padding:12px 16px; border-bottom:1px solid #f3f4f6; background:#fff;">' +
+        '<div style="display:flex; align-items:center; gap:8px;">' +
+          '<div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#a855f7,#ec4899); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:13px;">' + (o.customerName || o.name || 'ع').charAt(0) + '</div>' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:12px; color:#1a1a2e; font-weight:800;">' + (o.customerName || o.name || 'عميل') + '</div>' +
+            (o.phone || o.customerPhone ? '<div style="font-size:10px; color:#6b7280;">📱 ' + (o.phone || o.customerPhone) + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    // المنتجات
+    var itemsHtml = '';
+    var items = o.items || [];
+    if (Array.isArray(items) && items.length) {
+      itemsHtml = '<div style="padding:8px 0; background:#fff;">';
+      items.forEach(function(item) {
+        var product = (state.products || []).find(function(p) { return String(p.id) === String(item.id); }) || {};
+        var prodName = product.name || item.name || 'منتج';
+        var prodImg = product.img || (product.images && product.images[0]) || item.img || '';
+        var prodPrice = Number(product.price || item.price) || 0;
+        var qty = item.qty || 1;
+        var size = item.size || '';
+        var color = item.color || '';
+        
+        itemsHtml += '<div style="display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid #f9fafb;">' +
+          '<div style="width:70px; height:70px; border-radius:10px; overflow:hidden; background:#f4f6fa; flex-shrink:0; border:1px solid #f3f4f6;">' +
+            (prodImg ? '<img src="' + prodImg + '" style="width:100%; height:100%; object-fit:cover;">' : '<div style="display:flex; align-items:center; justify-content:center; height:100%; font-size:24px; opacity:0.3;">📦</div>') +
+          '</div>' +
+          '<div style="flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center;">' +
+            '<div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + prodName + '</div>' +
+            '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">' +
+              (size ? '<span style="font-size:10px; font-weight:800; color:#C5A059; background:rgba(197,160,89,0.1); padding:2px 8px; border-radius:6px; border:1px solid rgba(197,160,89,0.3);">📏 ' + size + '</span>' : '') +
+              (color ? '<span style="font-size:10px; font-weight:800; color:#a855f7; background:rgba(168,85,247,0.1); padding:2px 8px; border-radius:6px; border:1px solid rgba(168,85,247,0.3);">🎨 ' + color + '</span>' : '') +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+              '<span style="font-size:11px; color:#6b7280;">' + prodPrice.toFixed(0) + ' × ' + qty + '</span>' +
+              '<span style="font-size:13px; font-weight:900; color:#ec4899;">' + (prodPrice * qty).toFixed(0) + ' ر.ي</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      });
+      itemsHtml += '</div>';
+    }
+
+    // الإجمالي + أزرار
+    var footerHtml = 
+      '<div style="padding:12px 16px; background:#f9fafb; border-top:1px solid #e5e7eb; border-radius:0 0 14px 14px;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:' + (isPending ? '10px' : '0') + ';">' +
+          '<div>' +
+            '<div style="font-size:10px; color:#6b7280; font-weight:700;">الإجمالي</div>' +
+            '<div style="font-size:18px; color:#ec4899; font-weight:900;">' + total.toFixed(0) + ' <span style="font-size:11px;">ر.ي</span></div>' +
+          '</div>' +
+        '</div>' +
+        (isPending ? 
+          '<div style="display:flex; gap:8px;">' +
+            '<button onclick="confirmOrder(\'' + o.id + '\')" style="flex:1; padding:12px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">✅ تأكيد التوفر</button>' +
+            '<button onclick="rejectOrder(\'' + o.id + '\')" style="flex:1; padding:12px; background:#fff; color:#ef4444; border:1.5px solid #ef4444; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer;">❌ رفض</button>' +
+          '</div>'
+          : '') +
+      '</div>';
+
+    return '<div style="background:#fff; border-radius:14px; margin-bottom:14px; box-shadow:0 4px 20px rgba(0,0,0,0.08); overflow:hidden; border:1px solid #f3f4f6;">' +
+      headerHtml + customerHtml + itemsHtml + footerHtml +
+    '</div>';
+  }).join('');
+}
+
+async function confirmOrder(id) {
+  if (!confirm('تأكيد توفر منتجات هذا الطلب؟')) return;
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'confirmed',
+      confirmedBy: state.user ? state.user.email : '',
+      confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('✅ تم تأكيد الطلب');
+    await loadOrders();
+    renderOrdersList();
+    renderStats();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function rejectOrder(id) {
+  var reason = prompt('سبب الرفض:');
+  if (!reason) return;
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'rejected',
+      rejectReason: reason,
+      rejectedBy: state.user ? state.user.email : '',
+      rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('✅ تم رفض الطلب');
+    await loadOrders();
+    renderOrdersList();
+    renderStats();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+
+// ═══ معاينة المنتج ═══
+function previewProduct() {
+  try {
+    if (typeof _colors === 'undefined') window._colors = [];
+    if (typeof _sizes === 'undefined') window._sizes = [];
+    if (typeof _formImages === 'undefined') window._formImages = [];
+    if (typeof _rates === 'undefined') window._rates = { sarSouth: 350, usdSouth: 1300, sarNorth: 500, usdNorth: 2000 };
+    
+    var name = (document.getElementById('pf-name')||{}).value || '';
+    name = name.trim();
+    if (!name) { alert('❌ أدخل اسم المنتج أولاً'); return; }
+    
+    var brand = (document.getElementById('pf-brand')||{}).value || '';
+    var desc = (document.getElementById('pf-desc')||{}).value || '';
+    var price = parseFloat((document.getElementById('pf-price')||{}).value) || 0;
+    var currency = (document.getElementById('pf-currency')||{}).value || 'YER';
+    var oldPrice = parseFloat((document.getElementById('pf-oldprice')||{}).value) || 0;
+    var stock = parseInt((document.getElementById('pf-stock')||{}).value) || 0;
+    var minorder = parseInt((document.getElementById('pf-minorder')||{}).value) || 1;
+    
+    // حساب السعر بالعملات
+    var priceYER = price;
+    if (currency === 'SAR') priceYER = price * (_rates.sarSouth || 350);
+    else if (currency === 'USD') priceYER = price * (_rates.usdSouth || 1300);
+    
+    var priceSAR = _rates.sarSouth > 0 ? (priceYER / _rates.sarSouth) : 0;
+    var priceUSD = _rates.usdSouth > 0 ? (priceYER / _rates.usdSouth) : 0;
+    
+    // شريط الصور المصغرة
+    var thumbsHtml = '';
+    if (_formImages.length) {
+      thumbsHtml = '<div style="display:flex; gap:8px; overflow-x:auto; padding:0 16px 16px; scrollbar-width:none;">';
+      _formImages.forEach(function(img, idx) {
+        var isMain = idx === 0;
+        thumbsHtml += '<div style="flex:0 0 auto; position:relative; width:80px; height:80px; border-radius:14px; overflow:hidden; border:2.5px solid ' + (isMain ? '#ec4899' : 'rgba(255,255,255,0.1)') + '; box-shadow:' + (isMain ? '0 0 15px rgba(236,72,153,0.5)' : 'none') + ';">' +
+          '<img src="' + img + '" style="width:100%; height:100%; object-fit:cover;">' +
+          (isMain ? '<div style="position:absolute; top:2px; right:2px; background:#ec4899; color:#fff; font-size:8px; font-weight:900; padding:2px 4px; border-radius:4px;">⭐</div>' : '') +
+          '<button onclick="setMainImageFromPreview(' + idx + ')" style="position:absolute; bottom:2px; left:2px; right:2px; background:rgba(0,0,0,0.7); color:#fff; border:none; font-size:9px; font-weight:900; padding:3px; border-radius:4px; cursor:pointer;">' + (isMain ? '⭐ رئيسية' : '⭐ تعيين') + '</button>' +
+        '</div>';
+      });
+      thumbsHtml += '</div>';
+    }
+    
+    // المميزات (أول 4 أسطر من الوصف)
+    var featuresHtml = '';
+    if (desc) {
+      var lines = desc.split('\n').filter(function(l) { return l.trim(); }).slice(0, 4);
+      if (lines.length) {
+        featuresHtml = '<div style="background:rgba(197,160,89,0.08); border:1px solid rgba(197,160,89,0.25); border-radius:16px; padding:16px; margin:16px;">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+            '<span style="font-size:14px; font-weight:900; color:#C5A059;">✨ المميزات</span>' +
+          '</div>' +
+          lines.map(function(l) { return '<div style="font-size:13px; color:#9ca3af; padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.05);">• ' + l.trim() + '</div>'; }).join('') +
+        '</div>';
+      }
+    }
+    
+    // المقاسات
+    var sizesHtml = '';
+    if (_sizes.length) {
+      sizesHtml = '<div style="margin:16px;">' +
+        '<div style="font-size:14px; font-weight:900; color:#F2E3C6; margin-bottom:10px;">📏 المقاسات:</div>' +
+        '<div style="display:flex; flex-wrap:wrap; gap:8px;">' +
+        _sizes.map(function(s) { return '<span style="padding:8px 18px; background:rgba(197,160,89,0.15); border:1.5px solid #C5A059; border-radius:10px; color:#C5A059; font-weight:900; font-size:13px;">' + s + '</span>'; }).join('') +
+        '</div></div>';
+    }
+    
+    // الألوان
+    var colorsHtml = '';
+    if (_colors.length) {
+      colorsHtml = '<div style="margin:16px;">' +
+        '<div style="font-size:14px; font-weight:900; color:#F2E3C6; margin-bottom:10px;">🎨 الألوان:</div>' +
+        '<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
+        _colors.map(function(c) { return '<div style="display:flex; align-items:center; gap:8px; padding:8px 14px; background:rgba(0,0,0,0.3); border-radius:10px; border:1px solid rgba(255,255,255,0.1);"><div style="width:22px; height:22px; border-radius:50%; background:' + c.hex + '; border:2px solid #fff;"></div><span style="font-size:13px; color:#F2E3C6; font-weight:700;">' + c.name + '</span></div>'; }).join('') +
+        '</div></div>';
+    }
+    
+    // المخزون
+    var stockHtml = '';
+    if (stock > 0) {
+      stockHtml = '<div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:14px; padding:14px; margin:16px; text-align:center; font-size:13px; color:#10b981; font-weight:900;">✅ متوفر — ' + stock + ' قطعة</div>';
+    }
+    // إذا كان المخزون = 0، لا نعرض شيئاً (فارغ)
+    
+    // بناء المحتوى
+    var html = '<div style="background:#0a0418; min-height:100vh; padding-bottom:100px;">';
+    
+    // شريط الصور
+    html += thumbsHtml;
+    
+    // ماركة
+    if (brand) {
+      html += '<div style="padding:0 16px;"><div style="font-size:13px; color:#a855f7; font-weight:900; margin-bottom:6px;">' + brand + '</div></div>';
+    }
+    
+    // اسم المنتج
+    html += '<h1 style="padding:0 16px; font-size:22px; color:#F2E3C6; font-weight:900; margin-bottom:10px; line-height:1.4;">' + name + '</h1>';
+    
+    // تقييم
+    html += '<div style="padding:0 16px; display:flex; align-items:center; gap:8px; margin-bottom:16px;">' +
+      '<span style="color:#fbbf24; font-size:14px;">⭐⭐⭐⭐⭐</span>' +
+      '<span style="font-size:12px; color:#9ca3af; font-weight:700;">4.5 (151)</span>' +
+    '</div>';
+    
+    // السعر (فقط إذا > 0)
+    if (priceYER > 0) {
+      html += '<div style="padding:0 16px; margin-bottom:16px;">';
+      if (oldPrice > 0 && oldPrice > price) {
+        html += '<div style="display:flex; align-items:center; gap:10px;">';
+        html += '<span style="font-size:28px; font-weight:900; color:#ec4899;">' + Math.round(priceYER).toLocaleString() + '</span>';
+        html += '<span style="font-size:13px; color:#9ca3af;">ر.ي</span>';
+        html += '<span style="font-size:15px; color:#6b7280; text-decoration:line-through; margin-right:auto;">' + Math.round(oldPrice).toLocaleString() + ' ر.ي</span>';
+        html += '</div>';
+      } else {
+        html += '<span style="font-size:28px; font-weight:900; color:#ec4899;">' + Math.round(priceYER).toLocaleString() + '</span>';
+        html += '<span style="font-size:13px; color:#9ca3af;"> ر.ي</span>';
+      }
+      html += '</div>';
+    }
+    
+    // العملات الأخرى (فقط إذا السعر > 0)
+    if (priceYER > 0) {
+      html += '<div style="padding:0 16px; display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">';
+      html += '<div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:12px; text-align:center;"><div style="font-size:10px; color:#9ca3af;">🇸🇦 سعودي</div><div style="font-size:16px; color:#F2E3C6; font-weight:900; margin-top:4px;">' + priceSAR.toFixed(2) + '</div></div>';
+      html += '<div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:12px; text-align:center;"><div style="font-size:10px; color:#9ca3af;">🇺🇸 دولار</div><div style="font-size:16px; color:#F2E3C6; font-weight:900; margin-top:4px;">' + priceUSD.toFixed(2) + '</div></div>';
+      html += '</div>';
+    }
+    
+    // المخزون
+    html += stockHtml;
+    
+    // المميزات
+    html += featuresHtml;
+    
+    // المقاسات
+    html += sizesHtml;
+    
+    // الألوان
+    html += colorsHtml;
+    
+    // محدد الكمية
+    html += '<div style="padding:0 16px; margin:16px 0;">' +
+      '<div style="background:rgba(26,35,64,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:14px; display:flex; align-items:center; justify-content:space-between;">' +
+        '<div style="display:flex; align-items:center; gap:12px;">' +
+          '<button style="width:36px; height:36px; border-radius:50%; background:#ec4899; color:#fff; border:none; font-size:18px; font-weight:900; cursor:not-allowed;">−</button>' +
+          '<span style="font-size:18px; font-weight:900; color:#F2E3C6;">1</span>' +
+          '<button style="width:36px; height:36px; border-radius:50%; background:#ec4899; color:#fff; border:none; font-size:18px; font-weight:900; cursor:not-allowed;">+</button>' +
+        '</div>' +
+        '<div style="font-size:14px; color:#9ca3af; font-weight:800;">الكمية</div>' +
+      '</div>' +
+    '</div>';
+    
+    // زر أضف للسلة
+    html += '<div style="padding:0 16px;">' +
+      '<button style="width:100%; padding:16px; background:linear-gradient(135deg,#ec4899,#a855f7); color:#fff; border:none; border-radius:14px; font-weight:900; font-size:15px; cursor:not-allowed; opacity:0.8;">🛒 أضف للسلة (معاينة)</button>' +
+    '</div>';
+    
+    html += '</div>';
+    
+    var modalEl = document.getElementById('previewModal');
+    var contentEl = document.getElementById('previewContent');
+    contentEl.innerHTML = html;
+    contentEl.style.padding = '0';
+    modalEl.style.display = 'block';
+    
+  } catch(err) {
+    alert('❌ خطأ: ' + err.message);
+    console.error(err);
+  }
+}
+
+function closePreviewModal() {
+  document.getElementById('previewModal').style.display = 'none';
+}
+
+
+
+// ═══ تعيين الصورة الرئيسية من المعاينة ═══
+function setMainImageFromPreview(idx) {
+  if (idx <= 0 || idx >= _formImages.length) return;
+  var main = _formImages.splice(idx, 1)[0];
+  _formImages.unshift(main);
+  renderImagePreview();
+  // إعادة عرض المعاينة الخارجية
+  previewProduct();
+}
+
+
+// ═══ الإشعارات ═══
+async function openNotifModal() {
+  document.getElementById('notifModal').style.display = 'block';
+  var list = document.getElementById('notifList');
+  // عرض الطلبات من state.orders (المحملة مسبقاً)
+  if (state.orders && state.orders.length > 0) {
+    renderNotifList();
+    return;
+  }
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
+  
+  try {
+    // جلب الطلبات الجديدة (المعلقة) من Firestore
+    var snap = await db.collection('orders').where('category','==',state.cat).orderBy('createdAt','desc').limit(20).get().catch(function(){ 
+      return db.collection('orders').where('category','==',state.cat).limit(20).get(); 
+    });
+    
+    var notifs = [];
+    snap.forEach(function(d) {
+      var o = d.data();
+      o.id = d.id;
+      notifs.push(o);
+    });
+    
+    if (!notifs.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📭</div><b>لا توجد إشعارات</b></div>';
+      return;
+    }
+    
+    list.innerHTML = notifs.map(function(o) {
+      var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
+      var statusColor = isPending ? '#f59e0b' : '#10b981';
+      var statusLabel = isPending ? '⏳ معلق' : '✅ مؤكد';
+      var total = Number(o.total) || 0;
+      var timeAgo = '';
+      if (o.createdAt && o.createdAt.seconds) {
+        var diff = Math.floor((Date.now()/1000) - o.createdAt.seconds);
+        if (diff < 60) timeAgo = 'الآن';
+        else if (diff < 3600) timeAgo = Math.floor(diff/60) + ' د';
+        else if (diff < 86400) timeAgo = Math.floor(diff/3600) + ' س';
+        else timeAgo = Math.floor(diff/86400) + ' ي';
+      }
+      
+      return '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-right:4px solid ' + statusColor + ';">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
+          '<b style="color:#a855f7; font-size:12px;">#' + (o.id||'').substring(0,8) + '</b>' +
+          '<span style="font-size:10px; color:#9ca3af; font-weight:700;">' + timeAgo + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px; color:#1a1a2e; font-weight:800; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
+        '<div style="font-size:12px; color:#6b7280; margin-bottom:8px;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
+        '<div style="display:flex; gap:6px;">' +
+          '<span style="font-size:10px; color:' + statusColor + '; background:rgba(245,158,11,0.1); padding:2px 8px; border-radius:6px; font-weight:800;">' + statusLabel + '</span>' +
+          '<button onclick="openOrderDetail(\'' + o.id + '\')" style="background:rgba(59,130,246,0.1); color:#3b82f6; border:none; padding:2px 10px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">عرض</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ ' + e.message + '</div>';
+  }
+}
+
+function closeNotifModal() {
+  document.getElementById('notifModal').style.display = 'none';
+}
+
+function openOrderDetail(id) {
+  alert('تفاصيل الطلب: ' + id.substring(0,8));
+}
+
+
+// ═══ التقارير ═══
+async function openReportsModal() {
+  document.getElementById('reportsModal').style.display = 'block';
+  var c = document.getElementById('reportsContent');
+  c.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
+  
+  try {
+    var snap = await db.collection('orders').where('category','==',state.cat).limit(200).get();
+    var orders = [];
+    snap.forEach(function(d) { var o = d.data(); o.id = d.id; orders.push(o); });
+    
+    var totalRevenue = 0;
+    var totalOrders = orders.length;
+    var completedOrders = 0;
+    var pendingOrders = 0;
+    var todayRevenue = 0;
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    
+    orders.forEach(function(o) {
+      var total = Number(o.total) || 0;
+      var isCompleted = o.status === 'completed' || o.status === 'delivered';
+      var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
+      
+      if (isCompleted) { totalRevenue += total; completedOrders++; }
+      if (isPending) pendingOrders++;
+      
+      if (o.createdAt && o.createdAt.seconds) {
+        var orderDate = new Date(o.createdAt.seconds * 1000);
+        if (orderDate >= today) todayRevenue += total;
+      }
+    });
+    
+    // أعلى المنتجات مبيعاً (من products)
+    var pSnap = await db.collection('products').get();
+    var products = [];
+    pSnap.forEach(function(d) {
+      var p = d.data();
+      if (p.category === state.cat) {
+        products.push({ id: d.id, name: p.name, sold: Number(p.sold) || 0, price: Number(p.price) || 0 });
+      }
+    });
+    products.sort(function(a,b) { return b.sold - a.sold; });
+    products = products.slice(0, 5);
+    
+    var html = '';
+    
+    // الإحصائيات
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">';
+    html += '<div style="background:linear-gradient(135deg,#a855f7,#ec4899); padding:16px; border-radius:14px; color:#fff;">' +
+      '<div style="font-size:11px; opacity:0.9;">💰 إجمالي الإيرادات</div>' +
+      '<div style="font-size:22px; font-weight:900; margin-top:4px;">' + totalRevenue.toFixed(0) + ' ر.ي</div>' +
+    '</div>';
+    html += '<div style="background:linear-gradient(135deg,#3b82f6,#06b6d4); padding:16px; border-radius:14px; color:#fff;">' +
+      '<div style="font-size:11px; opacity:0.9;">📊 إيرادات اليوم</div>' +
+      '<div style="font-size:22px; font-weight:900; margin-top:4px;">' + todayRevenue.toFixed(0) + ' ر.ي</div>' +
+    '</div>';
+    html += '<div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); padding:16px; border-radius:14px; color:#10b981;">' +
+      '<div style="font-size:11px;">✅ طلبات مكتملة</div>' +
+      '<div style="font-size:22px; font-weight:900; margin-top:4px;">' + completedOrders + '</div>' +
+    '</div>';
+    html += '<div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); padding:16px; border-radius:14px; color:#f59e0b;">' +
+      '<div style="font-size:11px;">⏳ طلبات معلقة</div>' +
+      '<div style="font-size:22px; font-weight:900; margin-top:4px;">' + pendingOrders + '</div>' +
+    '</div>';
+    html += '</div>';
+    
+    // أعلى المنتجات
+    if (products.length) {
+      html += '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:16px;">';
+      html += '<div style="font-size:14px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">🏆 أعلى المنتجات مبيعاً</div>';
+      products.forEach(function(p, i) {
+        html += '<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f3f4f6;">' +
+          '<div style="width:24px; height:24px; border-radius:50%; background:' + (i===0?'#fbbf24':(i===1?'#9ca3af':(i===2?'#d97706':'#e5e7eb'))) + '; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900;">' + (i+1) + '</div>' +
+          '<div style="flex:1; font-size:12px; color:#1a1a2e; font-weight:700;">' + (p.name||'—') + '</div>' +
+          '<div style="font-size:12px; color:#10b981; font-weight:900;">' + p.sold + ' مبيع</div>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
+    
+    // إجمالي الطلبات
+    html += '<div style="background:#fff; border-radius:14px; padding:14px; text-align:center;">' +
+      '<div style="font-size:12px; color:#6b7280;">إجمالي الطلبات</div>' +
+      '<div style="font-size:28px; font-weight:900; color:#a855f7;">' + totalOrders + '</div>' +
+    '</div>';
+    
+    c.innerHTML = html;
+    
+  } catch(e) {
+    c.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ ' + e.message + '</div>';
+  }
+}
+
+function closeReportsModal() {
+  document.getElementById('reportsModal').style.display = 'none';
+}
+
+// ═══ الإعدادات ═══
+async function openSettingsModal() {
+  document.getElementById('settingsModal').style.display = 'block';
+  var c = document.getElementById('settingsContent');
+  c.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
+  
+  try {
+    var doc = await db.collection('users').doc(state.user.uid).get();
+    var userData = doc.exists ? doc.data() : {};
+    
+    var html = '';
+    html += '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:12px;">' +
+      '<div style="font-size:14px; font-weight:900; color:#1a1a2e; margin-bottom:12px;">👤 بياناتي</div>' +
+      '<div style="margin-bottom:10px;">' +
+        '<label style="font-size:12px; color:#6b7280; font-weight:700;">الاسم</label>' +
+        '<input id="set-name" type="text" value="' + (userData.name||'') + '" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; margin-top:4px; font-size:14px; box-sizing:border-box;">' +
+      '</div>' +
+      '<div style="margin-bottom:10px;">' +
+        '<label style="font-size:12px; color:#6b7280; font-weight:700;">البريد الإلكتروني</label>' +
+        '<input type="text" value="' + (state.user.email||'') + '" disabled style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; margin-top:4px; font-size:14px; box-sizing:border-box; background:#f9fafb; color:#9ca3af;">' +
+      '</div>' +
+      '<div style="margin-bottom:10px;">' +
+        '<label style="font-size:12px; color:#6b7280; font-weight:700;">رقم الهاتف</label>' +
+        '<input id="set-phone" type="tel" value="' + (userData.phone||'') + '" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; margin-top:4px; font-size:14px; box-sizing:border-box;">' +
+      '</div>' +
+      '<div style="margin-bottom:10px;">' +
+        '<label style="font-size:12px; color:#6b7280; font-weight:700;">القسم</label>' +
+        '<input type="text" value="' + catLabel(state.cat) + '" disabled style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; margin-top:4px; font-size:14px; box-sizing:border-box; background:#f9fafb; color:#9ca3af;">' +
+      '</div>' +
+      '<button onclick="saveSettings()" style="width:100%; padding:14px; background:linear-gradient(135deg,#a855f7,#ec4899); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:14px; cursor:pointer; font-family:inherit; margin-top:10px;">💾 حفظ البيانات</button>' +
+    '</div>';
+    
+    // إعدادات إضافية
+    html += '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:12px;">' +
+      '<div style="font-size:14px; font-weight:900; color:#1a1a2e; margin-bottom:12px;">🔔 الإشعارات</div>' +
+      '<label style="display:flex; align-items:center; gap:10px; padding:10px 0; cursor:pointer;">' +
+        '<input type="checkbox" id="set-notif-orders" ' + (userData.notifOrders !== false ? 'checked' : '') + ' style="width:18px; height:18px; accent-color:#a855f7;">' +
+        '<span style="font-size:13px; font-weight:700;">إشعارات الطلبات الجديدة</span>' +
+      '</label>' +
+    '</div>';
+    
+    // زر الخروج
+    html += '<button onclick="logoutManager()" style="width:100%; padding:14px; background:rgba(239,68,68,0.1); color:#ef4444; border:1.5px solid #ef4444; border-radius:12px; font-weight:900; font-size:14px; cursor:pointer; font-family:inherit;">🚪 تسجيل الخروج</button>';
+    
+    c.innerHTML = html;
+    
+  } catch(e) {
+    c.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ ' + e.message + '</div>';
+  }
+}
+
+function closeSettingsModal() {
+  document.getElementById('settingsModal').style.display = 'none';
+}
+
+async function saveSettings() {
+  var name = document.getElementById('set-name').value.trim();
+  var phone = document.getElementById('set-phone').value.trim();
+  try {
+    await db.collection('users').doc(state.user.uid).update({
+      name: name,
+      phone: phone,
+      notifOrders: document.getElementById('set-notif-orders').checked
+    });
+    alert('✅ تم حفظ الإعدادات');
+    closeSettingsModal();
+  } catch(e) {
+    alert('❌ ' + e.message);
+  }
+}
+
+function logoutManager() {
+  if (!confirm('تسجيل الخروج؟')) return;
+  auth.signOut().then(function() {
+    location.href = 'cat-login-new.html';
+  });
+}
+
+
+function renderNotifList() {
+  var list = document.getElementById('notifList');
+  if (!list) return;
+  var notifs = (state.orders || []).slice(0, 20);
+  if (!notifs.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📭</div><b>لا توجد إشعارات</b></div>';
+    return;
+  }
+  list.innerHTML = notifs.map(function(o) {
+    var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
+    var statusColor = isPending ? '#f59e0b' : '#10b981';
+    var statusLabel = isPending ? '⏳ معلق' : '✅ مؤكد';
+    var total = Number(o.total) || 0;
+    return '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-right:4px solid ' + statusColor + ';">' +
+      '<div style="display:flex; justify-content:space-between; margin-bottom:6px;">' +
+        '<b style="color:#a855f7; font-size:12px;">#' + (o.id||'').substring(0,8) + '</b>' +
+      '</div>' +
+      '<div style="font-size:13px; color:#1a1a2e; font-weight:800; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
+      '<div style="font-size:12px; color:#6b7280; margin-bottom:8px;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
+      '<span style="font-size:10px; color:' + statusColor + '; background:rgba(245,158,11,0.1); padding:2px 8px; border-radius:6px; font-weight:800;">' + statusLabel + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+
+// ═══ إغلاق الصفحة الحالية ═══
+function closeCurrentPage() {
+  ['notifModal', 'reportsModal', 'settingsModal', 'ordersModal', 'productsViewModal', 'productModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el.style.display === 'block') {
+      el.style.display = 'none';
+    }
+  });
+}
+
+// ═══ الوضع الليلي ═══
+function toggleDarkMode() {
+  var isDark = document.body.classList.toggle('dark-mode');
+  localStorage.setItem('chz_admin_dark', isDark ? '1' : '0');
+  updateDarkIcon();
+}
+
+function updateDarkIcon() {
+  var btn = document.getElementById('darkModeBtn');
+  if (!btn) return;
+  var isDark = document.body.classList.contains('dark-mode');
+  btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+function initDarkMode() {
+  var saved = localStorage.getItem('chz_admin_dark');
+  if (saved === '1') {
+    document.body.classList.add('dark-mode');
+  }
+  updateDarkIcon();
+}
+
+
+// تهيئة الوضع الليلي عند التحميل
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDarkMode);
+} else {
+  setTimeout(initDarkMode, 100);
+}
+
+
+// ═══ تصدير CSV ═══
+function exportProductsCSV() {
+  if (!_allProducts.length) {
+    alert('⚠️ لا توجد منتجات للتصدير');
+    return;
+  }
+  
+  var headers = ['الاسم', 'الماركة', 'SKU', 'الوصف', 'السعر (يمني)', 'السعر (سعودي)', 'السعر (دولار)', 'المخزون', 'الحالة', 'المقاسات', 'الألوان'];
+  var rows = _allProducts.map(function(p) {
+    var rates = window._chzRates || { sarSouth: 350, usdSouth: 1300 };
+    var priceYER = Number(p.price) || 0;
+    var priceSAR = (priceYER / rates.sarSouth).toFixed(2);
+    var priceUSD = (priceYER / rates.usdSouth).toFixed(2);
+    var status = (p.status === 'live' || p.active === true) ? 'منشور' : 'مراجعة';
+    var sizes = Array.isArray(p.sizes) ? p.sizes.join(' | ') : '';
+    var colors = Array.isArray(p.colors) ? p.colors.map(function(c){return c.name;}).join(' | ') : '';
+    
+    return [
+      p.name || '',
+      p.brand || '',
+      p.sku || '',
+      (p.description || '').replace(/\n/g, ' '),
+      priceYER,
+      priceSAR,
+      priceUSD,
+      p.stock || 0,
+      status,
+      sizes,
+      colors
+    ];
+  });
+  
+  // بناء CSV
+  var csv = '\ufeff'; // BOM للعربية
+  csv += headers.join(',') + '\n';
+  rows.forEach(function(row) {
+    csv += row.map(function(cell) {
+      var str = String(cell || '');
+      if (str.indexOf(',') !== -1 || str.indexOf('"') !== -1 || str.indexOf('\n') !== -1) {
+        str = '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }).join(',') + '\n';
+  });
+  
+  // تنزيل
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var link = document.createElement('a');
+  var url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'CHIZEN_Products_' + new Date().toISOString().slice(0,10) + '.csv');
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  alert('✅ تم تصدير ' + _allProducts.length + ' منتج إلى ملف CSV');
+}
+
+console.log('[CAT-MANAGER-NEW v2] loaded');
+</script>
+
+<!-- Modal إضافة منتج -->
+<div id="productModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#fff; max-width:520px; margin:20px auto; border-radius:20px; padding:20px; min-height:90vh;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #f3f4f6;">
+      <h2 id="formTitle" style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">➕ إضافة منتج جديد</h2>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+    </div>
+
+    <!-- المعلومات الأساسية -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">📝 المعلومات الأساسية</div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">اسم المنتج *</label>
+        <input id="pf-name" type="text" placeholder="مثال: سماعات لاسلكية" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الماركة</label>
+          <select id="pf-brand" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+            <option value="">اختر الماركة...</option>
+            <option value="Samsung">Samsung</option>
+            <option value="Apple">Apple</option>
+            <option value="Sony">Sony</option>
+            <option value="Huawei">Huawei</option>
+            <option value="Xiaomi">Xiaomi</option>
+            <option value="LG">LG</option>
+            <option value="Nike">Nike</option>
+            <option value="Adidas">Adidas</option>
+            <option value="Zara">Zara</option>
+            <option value="H&M">H&M</option>
+            <option value="Gucci">Gucci</option>
+            <option value="Prada">Prada</option>
+            <option value="Chanel">Chanel</option>
+            <option value="Dior">Dior</option>
+            <option value="Other">أخرى</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">SKU / الباركود</label>
+          <input id="pf-sku" type="text" placeholder="SKU-001" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الوصف التفصيلي</label>
+        <textarea id="pf-desc" placeholder="وصف كامل للمنتج..." style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; min-height:90px; box-sizing:border-box; font-family:inherit;"></textarea>
+      </div>
+    </div>
+
+    <!-- التسعير -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">💰 التسعير</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">العملة</label>
+          <select id="pf-currency" onchange="calculateAutoRates()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+            <option value="YER">🇾🇪 يمني</option>
+            <option value="SAR">🇸🇦 سعودي</option>
+            <option value="USD">🇺🇸 دولار</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر *</label>
+          <input id="pf-price" type="number" placeholder="0" oninput="calculateAutoRates()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">المخزون *</label>
+          <input id="pf-stock" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر قبل الخصم</label>
+          <input id="pf-oldprice" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">سعر الجملة</label>
+          <input id="pf-wholesale" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">سعر التكلفة</label>
+          <input id="pf-cost" type="number" placeholder="0" oninput="calcProfit()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الحد الأدنى للطلب</label>
+          <input id="pf-minorder" type="number" placeholder="1" value="1" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">حد التنبيه</label>
+          <input id="pf-threshold" type="number" placeholder="5" value="5" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الوزن (كجم)</label>
+          <input id="pf-weight" type="number" step="0.1" placeholder="0.5" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:10px; margin-top:10px; text-align:center;">
+        <div style="font-size:11px; color:#6b7280; font-weight:700;">📊 هامش الربح المتوقع</div>
+        <div id="profit-display" style="font-size:18px; font-weight:900; color:#10b981; margin-top:4px;">—</div>
+      </div>
+    </div>
+
+    <!-- الحقول التلقائية للصرف -->
+    <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; margin-bottom:16px;">
+      <div style="font-size:12px; font-weight:900; color:#3b82f6; margin-bottom:10px;">💱 السعر المحول تلقائياً</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+        <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+          <div style="font-size:10px; color:#6b7280; font-weight:700;">🇾🇪 يمني</div>
+          <div id="rate-yer" style="font-size:15px; font-weight:900; color:#10b981; margin-top:2px;">—</div>
+        </div>
+        <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+          <div style="font-size:10px; color:#6b7280; font-weight:700;">🇸🇦 سعودي</div>
+          <div id="rate-sar" style="font-size:15px; font-weight:900; color:#f59e0b; margin-top:2px;">—</div>
+        </div>
+        <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+          <div style="font-size:10px; color:#6b7280; font-weight:700;">🇺🇸 دولار</div>
+          <div id="rate-usd" style="font-size:15px; font-weight:900; color:#3b82f6; margin-top:2px;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- المقاسات -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">📏 المقاسات المتوفرة</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px;">
+        <button type="button" onclick="toggleSize(this,'XS')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XS</button>
+        <button type="button" onclick="toggleSize(this,'S')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">S</button>
+        <button type="button" onclick="toggleSize(this,'M')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">M</button>
+        <button type="button" onclick="toggleSize(this,'L')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">L</button>
+        <button type="button" onclick="toggleSize(this,'XL')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XL</button>
+        <button type="button" onclick="toggleSize(this,'XXL')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XXL</button>
+      </div>
+    </div>
+
+    <!-- الألوان -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">🎨 الألوان المتوفرة</div>
+      <div style="display:flex; gap:6px; margin-bottom:10px;">
+        <input id="color-name" type="text" placeholder="اسم اللون" style="flex:1; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:13px;">
+        <input id="color-hex" type="color" value="#ff0000" style="width:50px; padding:4px; border:1.5px solid #e5e7eb; border-radius:8px; cursor:pointer;">
+        <button type="button" onclick="addColor()" style="padding:10px 16px; background:#a855f7; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:14px; cursor:pointer;">+</button>
+      </div>
+      <div id="colorsList" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+    </div>
+
+    <!-- الصور -->
+    <div style="margin-bottom:16px;">
+      <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">📸 الصور (حتى 5 صور)</label>
+      <input type="file" id="pf-images-input" accept="image/*" multiple style="display:none;">
+      <button onclick="document.getElementById('pf-images-input').click()" style="width:100%; padding:14px; background:#f3f4f6; border:2px dashed #d1d5db; border-radius:10px; cursor:pointer; font-size:13px; font-weight:800; color:#6b7280;">📸 اضغط لرفع الصور</button>
+      <div id="pf-images-preview" style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:10px;"></div>
+    </div>
+
+    <!-- العرض الخاطف -->
+    <div style="background:rgba(245,158,11,0.08); padding:14px; border-radius:12px; margin-bottom:16px; border:1px solid rgba(245,158,11,0.3);">
+      <div style="font-size:13px; font-weight:900; color:#f59e0b; margin-bottom:10px;">⚡ العرض الخاطف (Flash Sale)</div>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:10px;">
+        <input type="checkbox" id="pf-flash-enabled" style="width:18px; height:18px; accent-color:#f59e0b;" onchange="document.getElementById('pf-flash-fields').style.display = this.checked ? 'block' : 'none';">
+        <span style="font-size:13px; font-weight:800;">تفعيل العرض الخاطف (سعر خاص لفترة محدودة)</span>
+      </label>
+      <div id="pf-flash-fields" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+          <div>
+            <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">سعر العرض *</label>
+            <input id="pf-flash-price" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">ينتهي في *</label>
+            <input id="pf-flash-end" type="datetime-local" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+          </div>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">عنوان العرض (اختياري)</label>
+          <input id="pf-flash-title" type="text" placeholder="مثال: خصم 50% لمدة 24 ساعة" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div style="font-size:11px; color:#f59e0b; margin-top:8px; text-align:center; font-weight:700;">
+          ⚡ سيظهر المنتج في قسم "العروض الخاطفة" بالصفحة الرئيسية.
+        </div>
+      </div>
+    </div>
+
+    <!-- خيارات إضافية -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">⚙️ خيارات إضافية</div>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:8px;">
+        <input type="checkbox" id="pf-featured" style="width:18px; height:18px; accent-color:#a855f7;">
+        <span style="font-size:13px; font-weight:700;">⭐ إبراز في الصفحة الرئيسية</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="pf-free-ship" style="width:18px; height:18px; accent-color:#10b981;">
+        <span style="font-size:13px; font-weight:700;">🚚 شحن مجاني</span>
+      </label>
+    </div>
+
+    <!-- أزرار -->
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button onclick="closeProductModal()" style="flex:1; padding:14px; background:#f3f4f6; color:#6b7280; border:none; border-radius:12px; font-weight:900; font-size:13px; cursor:pointer; font-family:inherit;">إلغاء</button>
+      <button onclick="previewProduct()" style="flex:1; padding:14px; background:#3b82f6; color:#fff; border:none; border-radius:12px; font-weight:900; font-size:13px; cursor:pointer; font-family:inherit;">👁️ معاينة</button>
+      <button onclick="saveProduct()" id="saveBtn" style="flex:2; padding:14px; background:linear-gradient(135deg,#a855f7,#ec4899); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:13px; cursor:pointer; font-family:inherit;">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal الطلبات -->
+<div id="ordersModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">📦 الطلبات</h2>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+    </div>
+    
+    <div style="display:flex; gap:6px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
+      <button onclick="setOrderFilter('all')" data-filter="all" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #a855f7; background:rgba(168,85,247,0.1); color:#a855f7; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">الكل</button>
+      <button onclick="setOrderFilter('pending')" data-filter="pending" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">⏳ معلق</button>
+      <button onclick="setOrderFilter('confirmed')" data-filter="confirmed" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">✅ مؤكد</button>
+      <button onclick="setOrderFilter('completed')" data-filter="completed" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">🏁 مكتمل</button>
+    </div>
+    
+    <div id="ordersModalList"></div>
+  </div>
+</div>
+
+<!-- Modal الطلبات -->
+<div id="ordersModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">📦 الطلبات</h2>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+    </div>
+    
+    <div style="display:flex; gap:6px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
+      <button onclick="setOrderFilter('all')" data-filter="all" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #a855f7; background:rgba(168,85,247,0.1); color:#a855f7; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">الكل</button>
+      <button onclick="setOrderFilter('pending')" data-filter="pending" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">⏳ معلق</button>
+      <button onclick="setOrderFilter('confirmed')" data-filter="confirmed" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">✅ مؤكد</button>
+      <button onclick="setOrderFilter('completed')" data-filter="completed" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">🏁 مكتمل</button>
+    </div>
+    
+    <div id="ordersModalList"></div>
+  </div>
+</div>
+
+<!-- Modal عرض المنتجات -->
+<div id="productsViewModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">👁️ منتجاتي</h2>
+      <button onclick="closeProductsView()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <input id="prodSearch" placeholder="🔍 ابحث بالاسم، الماركة، SKU، السعر..." oninput="filterProductsView()" style="width:100%; padding:14px 16px; border:1.5px solid #e5e7eb; border-radius:12px; font-size:14px; box-sizing:border-box; font-family:inherit; transition:border-color 0.2s;">
+    </div>
+
+    <div id="productsViewGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
+  </div>
+</div>
+
+<!-- Modal معاينة المنتج (كما سيظهر للعميل) -->
+<div id="previewModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:99999; overflow-y:auto; direction:rtl;">
+  <div style="background:#0a0418; max-width:500px; margin:20px auto; border-radius:20px; padding:0; min-height:90vh; overflow:hidden;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid rgba(255,255,255,0.1); position:sticky; top:0; background:#0a0418; z-index:10;">
+      <h2 style="margin:0; font-size:16px; font-weight:900; color:#C5A059;">👁️ معاينة المنتج (كما سيظهر للعميل)</h2>
+      <button onclick="closePreviewModal()" style="background:rgba(239,68,68,0.2); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    
+    <div id="previewContent" style="padding:16px;"></div>
+  </div>
+</div>
+
+<!-- Modal إضافة منتج -->
+<div id="productModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#fff; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #f3f4f6;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">➕ إضافة منتج جديد</h2>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+    </div>
+
+    <!-- المعلومات الأساسية -->
+    <div style="margin-bottom:16px;">
+      <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">اسم المنتج *</label>
+      <input id="pf-name" type="text" placeholder="مثال: سماعات لاسلكية" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+      <div>
+        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الماركة</label>
+        <input id="pf-brand" type="text" placeholder="Samsung" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">SKU</label>
+        <input id="pf-sku" type="text" placeholder="SKU-001" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الوصف</label>
+      <textarea id="pf-desc" placeholder="وصف تفصيلي..." style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; min-height:80px; box-sizing:border-box; font-family:inherit;"></textarea>
+    </div>
+
+    <!-- التسعير -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">💰 التسعير</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">العملة</label>
+          <select id="pf-currency" onchange="calculateAutoRates()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+            <option value="YER">🇾🇪 يمني</option>
+            <option value="SAR">🇸🇦 سعودي</option>
+            <option value="USD">🇺🇸 دولار</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر *</label>
+          <input id="pf-price" type="number" placeholder="0" oninput="calculateAutoRates()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">المخزون *</label>
+          <input id="pf-stock" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- الحقول التلقائية للصرف -->
+      <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; margin-bottom:16px;">
+        <div style="font-size:12px; font-weight:900; color:#3b82f6; margin-bottom:10px;">💱 السعر المحول تلقائياً (حسب صرف الإدارة)</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇾🇪 يمني</div>
+            <div id="rate-yer" style="font-size:15px; font-weight:900; color:#10b981; margin-top:2px;">—</div>
+          </div>
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇸🇦 سعودي</div>
+            <div id="rate-sar" style="font-size:15px; font-weight:900; color:#f59e0b; margin-top:2px;">—</div>
+          </div>
+          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇺🇸 دولار</div>
+            <div id="rate-usd" style="font-size:15px; font-weight:900; color:#3b82f6; margin-top:2px;">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- المقاسات -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">📏 المقاسات المتوفرة</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px;" id="sizesContainer">
+        <button type="button" onclick="toggleSize(this,'XS')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XS</button>
+        <button type="button" onclick="toggleSize(this,'S')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">S</button>
+        <button type="button" onclick="toggleSize(this,'M')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">M</button>
+        <button type="button" onclick="toggleSize(this,'L')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">L</button>
+        <button type="button" onclick="toggleSize(this,'XL')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XL</button>
+        <button type="button" onclick="toggleSize(this,'XXL')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XXL</button>
+      </div>
+    </div>
+
+    <!-- الصور -->
+    <div style="margin-bottom:16px;">
+      <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">📸 الصور (حتى 5 صور)</label>
+      <input type="file" id="pf-images-input" accept="image/*" multiple style="display:none;">
+      <button onclick="document.getElementById('pf-images-input').click()" style="width:100%; padding:14px; background:#f3f4f6; border:2px dashed #d1d5db; border-radius:10px; cursor:pointer; font-size:13px; font-weight:800; color:#6b7280;">📸 اضغط لرفع الصور</button>
+      <div id="pf-images-preview" style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:10px;"></div>
+    </div>
+
+    <!-- أزرار -->
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button onclick="closeProductModal()" style="flex:1; padding:14px; background:#f3f4f6; color:#6b7280; border:none; border-radius:12px; font-weight:900; font-size:13px; cursor:pointer; font-family:inherit;">إلغاء</button>
+      <button onclick="previewProduct()" style="flex:1; padding:14px; background:#3b82f6; color:#fff; border:none; border-radius:12px; font-weight:900; font-size:13px; cursor:pointer; font-family:inherit;">👁️ معاينة</button>
+      <button onclick="saveProduct()" id="saveBtn" style="flex:2; padding:14px; background:linear-gradient(135deg,#a855f7,#ec4899); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:13px; cursor:pointer; font-family:inherit;">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal عرض المنتجات -->
+<div id="productsViewModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">👁️ منتجاتي</h2>
+      <button onclick="closeProductsView()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <input id="prodSearch" placeholder="🔍 ابحث بالاسم، الماركة، SKU، السعر..." oninput="filterProductsView()" style="width:100%; padding:14px 16px; border:1.5px solid #e5e7eb; border-radius:12px; font-size:14px; box-sizing:border-box; font-family:inherit; transition:border-color 0.2s;">
+    </div>
+
+    <div id="productsViewGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
+  </div>
+</div>
+
+<!-- Modal معاينة المنتج (كما سيظهر للعميل) -->
+<div id="previewModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:99999; overflow-y:auto; direction:rtl;">
+  <div style="background:#0a0418; max-width:500px; margin:20px auto; border-radius:20px; padding:0; min-height:90vh; overflow:hidden;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid rgba(255,255,255,0.1); position:sticky; top:0; background:#0a0418; z-index:10;">
+      <h2 style="margin:0; font-size:16px; font-weight:900; color:#C5A059;">👁️ معاينة المنتج (كما سيظهر للعميل)</h2>
+      <button onclick="closePreviewModal()" style="background:rgba(239,68,68,0.2); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    
+    <div id="previewContent" style="padding:16px;"></div>
+  </div>
+</div>
+
+<!-- Modal الإشعارات -->
+<div id="notifModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">🔔 الإشعارات</h2>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+    </div>
+    <div id="notifList"></div>
+  </div>
+</div>
+
+<!-- Modal التقارير -->
+<div id="reportsModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">📊 التقارير</h2>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+    </div>
+    <div id="reportsContent"></div>
+  </div>
+</div>
+
+<!-- Modal الإعدادات -->
+<div id="settingsModal" style="display:none; position:fixed; inset:0; background:#f4f6fb; z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">⚙️ الإعدادات</h2>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+    </div>
+    <div id="settingsContent"></div>
+  </div>
+</div>
+</body>
+</html>

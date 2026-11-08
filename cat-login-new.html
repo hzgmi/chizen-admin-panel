@@ -266,7 +266,7 @@ async function doLogin() {
     
     // التوجيه إلى اللوحة الجديدة
     setTimeout(function() {
-      window.location.href = 'cat-manager-new.html';
+      window.location.href = 'cat-manager-final.html';
     }, 500);
     
   } catch(e) {
@@ -294,7 +294,7 @@ auth.onAuthStateChanged(async function(user) {
       var udoc = await db.collection('users').doc(user.uid).get();
       var userData = udoc.exists ? udoc.data() : {};
       if (userData.category || userData.cat) {
-        window.location.href = 'cat-manager-new.html';
+        window.location.href = 'cat-manager-final.html';
       }
     } catch(e) {}
   }
