@@ -100,6 +100,122 @@ body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e
 
 /* ═══ Loading ═══ */
 .loading { text-align:center; padding:60px 20px; color:#9ca3af; font-size:14px; }
+
+/* ═══ الوضع الليلي ═══ */
+body.dark-mode {
+  background: #0a0418 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode .header {
+  background: linear-gradient(135deg, #2d1b4e, #1a2340);
+}
+body.dark-mode .stat-card {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode .stat-card .value {
+  color: #C5A059 !important;
+}
+body.dark-mode .stat-card .label {
+  color: #9ca3af !important;
+}
+body.dark-mode .action-btn.add {
+  background: linear-gradient(135deg, #a855f7, #ec4899) !important;
+}
+body.dark-mode .action-btn.view {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4) !important;
+}
+body.dark-mode .section-title h3 {
+  color: #F2E3C6 !important;
+}
+body.dark-mode .card {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode .order-info .name {
+  color: #F2E3C6 !important;
+}
+body.dark-mode .order-info .id {
+  color: #9ca3af !important;
+}
+body.dark-mode .bottom-nav {
+  background: #1A2340 !important;
+}
+body.dark-mode .nav-item .label {
+  color: #9ca3af !important;
+}
+body.dark-mode .nav-item.active .label {
+  color: #C5A059 !important;
+}
+body.dark-mode #productModal > div,
+body.dark-mode #productsViewModal > div,
+body.dark-mode #ordersModal > div,
+body.dark-mode #notifModal > div,
+body.dark-mode #reportsModal > div,
+body.dark-mode #settingsModal > div {
+  background: #0a0418 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode #productModal h2,
+body.dark-mode #productsViewModal h2,
+body.dark-mode #ordersModal h2,
+body.dark-mode #notifModal h2,
+body.dark-mode #reportsModal h2,
+body.dark-mode #settingsModal h2 {
+  color: #C5A059 !important;
+}
+body.dark-mode .form-group input,
+body.dark-mode .form-group textarea,
+body.dark-mode .form-group select {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+  border-color: rgba(197,160,89,0.3) !important;
+}
+body.dark-mode .chz-fake-select-final {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode #productModal div[style*="background:#f9fafb"],
+body.dark-mode #productModal div[style*="background: #f9fafb"] {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+}
+body.dark-mode #productModal label {
+  color: #C5A059 !important;
+}
+body.dark-mode #productModal input,
+body.dark-mode #productModal textarea,
+body.dark-mode #productModal select {
+  background: #0f172a !important;
+  color: #F2E3C6 !important;
+  border-color: rgba(197,160,89,0.3) !important;
+}
+body.dark-mode .size-btn {
+  background: #1A2340 !important;
+  color: #F2E3C6 !important;
+  border-color: rgba(197,160,89,0.3) !important;
+}
+
+/* ═══ تحسينات مرئية ═══ */
+.card {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.card:active {
+  transform: scale(0.99);
+}
+.stat-card {
+  transition: transform 0.15s;
+}
+.stat-card:active {
+  transform: scale(0.97);
+}
+.action-btn {
+  transition: all 0.2s;
+}
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
 </style>
 </head>
 <body>
@@ -108,6 +224,7 @@ body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e
 <div class="header">
   <div class="logo"><span>🛒</span> CHIZEN</div>
   <div class="profile">
+    <button id="darkModeBtn" onclick="toggleDarkMode()" style="background:rgba(255,255,255,0.2); color:#fff; border:none; width:36px; height:36px; border-radius:50%; font-size:16px; cursor:pointer; margin-left:8px;">🌙</button>
     <div class="info">
       <div class="title">لوحة مدير القسم</div>
       <div class="subtitle" id="catName">جاري التحميل...</div>
@@ -1565,6 +1682,47 @@ function renderNotifList() {
   }).join('');
 }
 
+
+// ═══ إغلاق الصفحة الحالية ═══
+function closeCurrentPage() {
+  ['notifModal', 'reportsModal', 'settingsModal', 'ordersModal', 'productsViewModal', 'productModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el.style.display === 'block') {
+      el.style.display = 'none';
+    }
+  });
+}
+
+// ═══ الوضع الليلي ═══
+function toggleDarkMode() {
+  var isDark = document.body.classList.toggle('dark-mode');
+  localStorage.setItem('chz_admin_dark', isDark ? '1' : '0');
+  updateDarkIcon();
+}
+
+function updateDarkIcon() {
+  var btn = document.getElementById('darkModeBtn');
+  if (!btn) return;
+  var isDark = document.body.classList.contains('dark-mode');
+  btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+function initDarkMode() {
+  var saved = localStorage.getItem('chz_admin_dark');
+  if (saved === '1') {
+    document.body.classList.add('dark-mode');
+  }
+  updateDarkIcon();
+}
+
+
+// تهيئة الوضع الليلي عند التحميل
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDarkMode);
+} else {
+  setTimeout(initDarkMode, 100);
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
@@ -1573,7 +1731,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
   <div style="background:#fff; max-width:520px; margin:20px auto; border-radius:20px; padding:20px; min-height:90vh;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #f3f4f6;">
       <h2 id="formTitle" style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">➕ إضافة منتج جديد</h2>
-      <button onclick="history.back()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
     </div>
 
     <!-- المعلومات الأساسية -->
@@ -1779,7 +1937,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
   <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
       <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">📦 الطلبات</h2>
-      <button onclick="history.back()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
     </div>
     
     <div style="display:flex; gap:6px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
@@ -1798,7 +1956,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
   <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
       <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">📦 الطلبات</h2>
-      <button onclick="history.back()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
     </div>
     
     <div style="display:flex; gap:6px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
@@ -1845,7 +2003,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
   <div style="background:#fff; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #f3f4f6;">
       <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">➕ إضافة منتج جديد</h2>
-      <button onclick="history.back()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
     </div>
 
     <!-- المعلومات الأساسية -->
@@ -1975,7 +2133,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
   <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
       <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">🔔 الإشعارات</h2>
-      <button onclick="history.back()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
     </div>
     <div id="notifList"></div>
   </div>
@@ -1986,7 +2144,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
   <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
       <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">📊 التقارير</h2>
-      <button onclick="history.back()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
     </div>
     <div id="reportsContent"></div>
   </div>
@@ -1997,7 +2155,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
   <div style="background:#f4f6fb; width:100%; min-height:100vh; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
       <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">⚙️ الإعدادات</h2>
-      <button onclick="history.back()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
+      <button onclick="closeCurrentPage()" style="background:rgba(0,0,0,0.05); color:#1a1a2e; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">←</button>
     </div>
     <div id="settingsContent"></div>
   </div>
