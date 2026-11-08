@@ -999,13 +999,7 @@ async function verifyPayment(orderId){
       console.log("[push_queue] notification sent to customer");
     } catch(ne) { console.warn("[push_queue] failed:", ne.message); }
     
-    // إعادة تحميل الطلبات (ليختفي الطلب من القائمة)
-    if (typeof loadOrders === 'function') {
-      await loadOrders();
-    }
-    if (typeof render === 'function') {
-      render();
-    }
+    // (تم تعطيل إعادة التحميل — لأنها تمسح صفحة المدفوعات المؤكدة)
 
     // ═══ Write financial record to payments collection ═══
     try {
@@ -1060,7 +1054,7 @@ async function verifyPayment(orderId){
     }
     if (window.__chizenToast) window.__chizenToast("✅ تم تأكيد الدفع", "success");
     else alert("✅ تم تأكيد الدفع");
-    await reloadData();
+    // (تم تعطيل reloadData — لأنها تمسح صفحة المدفوعات المؤكدة)
   } catch(e){ 
     if (window.__chizenToast) window.__chizenToast("❌ " + e.message, "error");
     else alert("❌ " + e.message);
