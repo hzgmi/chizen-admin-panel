@@ -165,7 +165,7 @@ body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e
 <div class="section">
   <div class="section-title">
     <h3>📋 آخر الطلبات</h3>
-    <a href="#" onclick="alert('عرض الكل (قيد التطوير)')">عرض الكل ←</a>
+    <a href="#" onclick="openOrdersModal(); return false;">عرض الكل ←</a>
   </div>
   <div class="card" id="ordersContainer">
     <div class="loading">⏳ جاري التحميل...</div>
@@ -869,6 +869,214 @@ function calcProfit() {
   }
 }
 
+
+// ═══ إدارة الطلبات ═══
+var _orderFilter = 'all';
+
+function openOrdersModal() {
+  document.getElementById('ordersModal').style.display = 'block';
+  renderOrdersList();
+}
+
+function closeOrdersModal() {
+  document.getElementById('ordersModal').style.display = 'none';
+}
+
+function setOrderFilter(f) {
+  _orderFilter = f;
+  document.querySelectorAll('.order-filter-btn').forEach(function(b) {
+    if (b.getAttribute('data-filter') === f) {
+      b.style.background = 'rgba(168,85,247,0.1)';
+      b.style.color = '#a855f7';
+      b.style.borderColor = '#a855f7';
+    } else {
+      b.style.background = '#fff';
+      b.style.color = '#6b7280';
+      b.style.borderColor = '#e5e7eb';
+    }
+  });
+  renderOrdersList();
+}
+
+function renderOrdersList() {
+  var el = document.getElementById('ordersModalList');
+  if (!el) return;
+  
+  var arr = (state.orders || []).slice();
+  if (_orderFilter === 'pending') arr = arr.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; });
+  else if (_orderFilter === 'confirmed') arr = arr.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; });
+  else if (_orderFilter === 'completed') arr = arr.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; });
+  
+  if (!arr.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📭</div><b>لا توجد طلبات</b></div>';
+    return;
+  }
+  
+  el.innerHTML = arr.map(function(o) {
+    var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
+    var isDone = o.status === 'completed' || o.status === 'delivered';
+    var statusClass = isPending ? 'pending' : (isDone ? 'completed' : 'confirmed');
+    var statusLabel = isPending ? '⏳ معلق' : (isDone ? '🏁 مكتمل' : '✅ مؤكد');
+    var total = Number(o.total) || 0;
+    var orderId = (o.id || '').substring(0, 8);
+    
+    var actionsHtml = '';
+    if (isPending) {
+      actionsHtml = '<div style="display:flex; gap:6px; margin-top:10px;">' +
+        '<button onclick="confirmOrder(\'' + o.id + '\')" style="flex:1; padding:10px; background:#10b981; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer;">✅ تأكيد</button>' +
+        '<button onclick="rejectOrder(\'' + o.id + '\')" style="flex:1; padding:10px; background:#ef4444; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer;">❌ رفض</button>' +
+      '</div>';
+    }
+    
+    return '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 2px 12px rgba(0,0,0,0.06);">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+        '<b style="color:#a855f7; font-size:13px;">#' + orderId + '</b>' +
+        '<span style="font-size:10px; padding:2px 8px; border-radius:6px; font-weight:800; background:' + (isPending ? 'rgba(245,158,11,0.15)' : (isDone ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)')) + '; color:' + (isPending ? '#f59e0b' : (isDone ? '#3b82f6' : '#10b981')) + ';">' + statusLabel + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
+      '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">📱 ' + (o.phone || o.customerPhone || '—') + '</div>' +
+      '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
+      actionsHtml +
+    '</div>';
+  }).join('');
+}
+
+async function confirmOrder(id) {
+  if (!confirm('تأكيد توفر منتجات هذا الطلب؟')) return;
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'confirmed',
+      confirmedBy: state.user ? state.user.email : '',
+      confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('✅ تم تأكيد الطلب');
+    await loadOrders();
+    renderOrdersList();
+    renderStats();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function rejectOrder(id) {
+  var reason = prompt('سبب الرفض:');
+  if (!reason) return;
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'rejected',
+      rejectReason: reason,
+      rejectedBy: state.user ? state.user.email : '',
+      rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('✅ تم رفض الطلب');
+    await loadOrders();
+    renderOrdersList();
+    renderStats();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+
+// ═══ إدارة الطلبات ═══
+var _orderFilter = 'all';
+
+function openOrdersModal() {
+  document.getElementById('ordersModal').style.display = 'block';
+  renderOrdersList();
+}
+
+function closeOrdersModal() {
+  document.getElementById('ordersModal').style.display = 'none';
+}
+
+function setOrderFilter(f) {
+  _orderFilter = f;
+  document.querySelectorAll('.order-filter-btn').forEach(function(b) {
+    if (b.getAttribute('data-filter') === f) {
+      b.style.background = 'rgba(168,85,247,0.1)';
+      b.style.color = '#a855f7';
+      b.style.borderColor = '#a855f7';
+    } else {
+      b.style.background = '#fff';
+      b.style.color = '#6b7280';
+      b.style.borderColor = '#e5e7eb';
+    }
+  });
+  renderOrdersList();
+}
+
+function renderOrdersList() {
+  var el = document.getElementById('ordersModalList');
+  if (!el) return;
+  
+  var arr = (state.orders || []).slice();
+  if (_orderFilter === 'pending') arr = arr.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; });
+  else if (_orderFilter === 'confirmed') arr = arr.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; });
+  else if (_orderFilter === 'completed') arr = arr.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; });
+  
+  if (!arr.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📭</div><b>لا توجد طلبات</b></div>';
+    return;
+  }
+  
+  el.innerHTML = arr.map(function(o) {
+    var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
+    var isDone = o.status === 'completed' || o.status === 'delivered';
+    var statusClass = isPending ? 'pending' : (isDone ? 'completed' : 'confirmed');
+    var statusLabel = isPending ? '⏳ معلق' : (isDone ? '🏁 مكتمل' : '✅ مؤكد');
+    var total = Number(o.total) || 0;
+    var orderId = (o.id || '').substring(0, 8);
+    
+    var actionsHtml = '';
+    if (isPending) {
+      actionsHtml = '<div style="display:flex; gap:6px; margin-top:10px;">' +
+        '<button onclick="confirmOrder(\'' + o.id + '\')" style="flex:1; padding:10px; background:#10b981; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer;">✅ تأكيد</button>' +
+        '<button onclick="rejectOrder(\'' + o.id + '\')" style="flex:1; padding:10px; background:#ef4444; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer;">❌ رفض</button>' +
+      '</div>';
+    }
+    
+    return '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 2px 12px rgba(0,0,0,0.06);">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+        '<b style="color:#a855f7; font-size:13px;">#' + orderId + '</b>' +
+        '<span style="font-size:10px; padding:2px 8px; border-radius:6px; font-weight:800; background:' + (isPending ? 'rgba(245,158,11,0.15)' : (isDone ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)')) + '; color:' + (isPending ? '#f59e0b' : (isDone ? '#3b82f6' : '#10b981')) + ';">' + statusLabel + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
+      '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">📱 ' + (o.phone || o.customerPhone || '—') + '</div>' +
+      '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
+      actionsHtml +
+    '</div>';
+  }).join('');
+}
+
+async function confirmOrder(id) {
+  if (!confirm('تأكيد توفر منتجات هذا الطلب؟')) return;
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'confirmed',
+      confirmedBy: state.user ? state.user.email : '',
+      confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('✅ تم تأكيد الطلب');
+    await loadOrders();
+    renderOrdersList();
+    renderStats();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function rejectOrder(id) {
+  var reason = prompt('سبب الرفض:');
+  if (!reason) return;
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'rejected',
+      rejectReason: reason,
+      rejectedBy: state.user ? state.user.email : '',
+      rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('✅ تم رفض الطلب');
+    await loadOrders();
+    renderOrdersList();
+    renderStats();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
@@ -1074,6 +1282,44 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
       <button onclick="closeProductModal()" style="flex:1; padding:14px; background:#f3f4f6; color:#6b7280; border:none; border-radius:12px; font-weight:900; font-size:14px; cursor:pointer; font-family:inherit;">إلغاء</button>
       <button onclick="saveProduct()" id="saveBtn" style="flex:2; padding:14px; background:linear-gradient(135deg,#a855f7,#ec4899); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:14px; cursor:pointer; font-family:inherit;">💾 حفظ المنتج</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal الطلبات -->
+<div id="ordersModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; max-width:500px; margin:20px auto; border-radius:20px; padding:20px; min-height:90vh;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">📦 الطلبات</h2>
+      <button onclick="closeOrdersModal()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    
+    <div style="display:flex; gap:6px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
+      <button onclick="setOrderFilter('all')" data-filter="all" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #a855f7; background:rgba(168,85,247,0.1); color:#a855f7; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">الكل</button>
+      <button onclick="setOrderFilter('pending')" data-filter="pending" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">⏳ معلق</button>
+      <button onclick="setOrderFilter('confirmed')" data-filter="confirmed" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">✅ مؤكد</button>
+      <button onclick="setOrderFilter('completed')" data-filter="completed" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">🏁 مكتمل</button>
+    </div>
+    
+    <div id="ordersModalList"></div>
+  </div>
+</div>
+
+<!-- Modal الطلبات -->
+<div id="ordersModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; max-width:500px; margin:20px auto; border-radius:20px; padding:20px; min-height:90vh;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">📦 الطلبات</h2>
+      <button onclick="closeOrdersModal()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    
+    <div style="display:flex; gap:6px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
+      <button onclick="setOrderFilter('all')" data-filter="all" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #a855f7; background:rgba(168,85,247,0.1); color:#a855f7; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">الكل</button>
+      <button onclick="setOrderFilter('pending')" data-filter="pending" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">⏳ معلق</button>
+      <button onclick="setOrderFilter('confirmed')" data-filter="confirmed" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">✅ مؤكد</button>
+      <button onclick="setOrderFilter('completed')" data-filter="completed" class="order-filter-btn" style="padding:8px 14px; border-radius:10px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;">🏁 مكتمل</button>
+    </div>
+    
+    <div id="ordersModalList"></div>
   </div>
 </div>
 
