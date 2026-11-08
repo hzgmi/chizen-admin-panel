@@ -833,7 +833,11 @@ function renderProductsView() {
   var arr = _allProducts.slice();
   if (q) {
     arr = arr.filter(function(p) {
-      return (p.name||'').toLowerCase().indexOf(q) !== -1 || (p.brand||'').toLowerCase().indexOf(q) !== -1;
+      return (p.name||'').toLowerCase().indexOf(q) !== -1 
+        || (p.brand||'').toLowerCase().indexOf(q) !== -1
+        || (p.sku||'').toLowerCase().indexOf(q) !== -1
+        || (p.description||'').toLowerCase().indexOf(q) !== -1
+        || String(p.price||'').indexOf(q) !== -1;
     });
   }
   
@@ -1723,6 +1727,66 @@ if (document.readyState === 'loading') {
   setTimeout(initDarkMode, 100);
 }
 
+
+// ═══ تصدير CSV ═══
+function exportProductsCSV() {
+  if (!_allProducts.length) {
+    alert('⚠️ لا توجد منتجات للتصدير');
+    return;
+  }
+  
+  var headers = ['الاسم', 'الماركة', 'SKU', 'الوصف', 'السعر (يمني)', 'السعر (سعودي)', 'السعر (دولار)', 'المخزون', 'الحالة', 'المقاسات', 'الألوان'];
+  var rows = _allProducts.map(function(p) {
+    var rates = window._chzRates || { sarSouth: 350, usdSouth: 1300 };
+    var priceYER = Number(p.price) || 0;
+    var priceSAR = (priceYER / rates.sarSouth).toFixed(2);
+    var priceUSD = (priceYER / rates.usdSouth).toFixed(2);
+    var status = (p.status === 'live' || p.active === true) ? 'منشور' : 'مراجعة';
+    var sizes = Array.isArray(p.sizes) ? p.sizes.join(' | ') : '';
+    var colors = Array.isArray(p.colors) ? p.colors.map(function(c){return c.name;}).join(' | ') : '';
+    
+    return [
+      p.name || '',
+      p.brand || '',
+      p.sku || '',
+      (p.description || '').replace(/\n/g, ' '),
+      priceYER,
+      priceSAR,
+      priceUSD,
+      p.stock || 0,
+      status,
+      sizes,
+      colors
+    ];
+  });
+  
+  // بناء CSV
+  var csv = '\ufeff'; // BOM للعربية
+  csv += headers.join(',') + '\n';
+  rows.forEach(function(row) {
+    csv += row.map(function(cell) {
+      var str = String(cell || '');
+      if (str.indexOf(',') !== -1 || str.indexOf('"') !== -1 || str.indexOf('\n') !== -1) {
+        str = '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }).join(',') + '\n';
+  });
+  
+  // تنزيل
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var link = document.createElement('a');
+  var url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'CHIZEN_Products_' + new Date().toISOString().slice(0,10) + '.csv');
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  alert('✅ تم تصدير ' + _allProducts.length + ' منتج إلى ملف CSV');
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
@@ -1979,7 +2043,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
     </div>
 
     <div style="margin-bottom:16px;">
-      <input id="prodSearch" placeholder="🔍 ابحث في منتجاتك..." oninput="filterProductsView()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:12px; font-size:14px; box-sizing:border-box;">
+      <input id="prodSearch" placeholder="🔍 ابحث بالاسم، الماركة، SKU، السعر..." oninput="filterProductsView()" style="width:100%; padding:14px 16px; border:1.5px solid #e5e7eb; border-radius:12px; font-size:14px; box-sizing:border-box; font-family:inherit; transition:border-color 0.2s;">
     </div>
 
     <div id="productsViewGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
@@ -2109,7 +2173,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
     </div>
 
     <div style="margin-bottom:16px;">
-      <input id="prodSearch" placeholder="🔍 ابحث في منتجاتك..." oninput="filterProductsView()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:12px; font-size:14px; box-sizing:border-box;">
+      <input id="prodSearch" placeholder="🔍 ابحث بالاسم، الماركة، SKU، السعر..." oninput="filterProductsView()" style="width:100%; padding:14px 16px; border:1.5px solid #e5e7eb; border-radius:12px; font-size:14px; box-sizing:border-box; font-family:inherit; transition:border-color 0.2s;">
     </div>
 
     <div id="productsViewGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
