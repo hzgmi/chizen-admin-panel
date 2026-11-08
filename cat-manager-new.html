@@ -1080,7 +1080,19 @@ async function rejectOrder(id) {
 
 // ═══ معاينة المنتج ═══
 function previewProduct() {
-  var name = document.getElementById('pf-name').value.trim();
+  try {
+    alert('🔍 بدء المعاينة...');
+    
+    var nameEl = document.getElementById('pf-name');
+    if (!nameEl) { alert('❌ pf-name غير موجود'); return; }
+    var name = nameEl.value.trim();
+    
+    var modalEl = document.getElementById('previewModal');
+    if (!modalEl) { alert('❌ previewModal غير موجود في الصفحة!'); return; }
+    var contentEl = document.getElementById('previewContent');
+    if (!contentEl) { alert('❌ previewContent غير موجود!'); return; }
+    
+    alert('✅ العناصر موجودة، جاري بناء المعاينة...');
   var brand = document.getElementById('pf-brand').value;
   var desc = document.getElementById('pf-desc').value.trim();
   var price = parseFloat(document.getElementById('pf-price').value) || 0;
@@ -1176,8 +1188,14 @@ function previewProduct() {
   // زر "أضف للسلة" (للعرض فقط)
   html += '<button style="width:100%; padding:16px; background:linear-gradient(135deg,#C5A059,#9A7B4F); color:#1A2340; border:none; border-radius:14px; font-weight:900; font-size:15px; cursor:not-allowed; margin-top:16px; opacity:0.7;">🛒 أضف للسلة (معاينة)</button>';
   
-  document.getElementById('previewContent').innerHTML = html;
-  document.getElementById('previewModal').style.display = 'block';
+  contentEl.innerHTML = html;
+  modalEl.style.display = 'block';
+  alert('✅ تم عرض المعاينة!');
+  
+  } catch(err) {
+    alert('❌ خطأ في المعاينة: ' + err.message);
+    console.error(err);
+  }
 }
 
 function closePreviewModal() {
