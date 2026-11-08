@@ -592,9 +592,19 @@ async function saveProduct() {
   
   try {
     var currency = document.getElementById('pf-currency').value || 'YER';
+    // جلب بيانات المورد
+    var supplierId = document.getElementById('pf-supplier') ? document.getElementById('pf-supplier').value : '';
+    var supplier = null;
+    if (supplierId && state.suppliers) {
+      supplier = state.suppliers.find(function(s) { return String(s.id) === String(supplierId); });
+    }
+    
     var data = {
       name: name,
       brand: document.getElementById('pf-brand').value.trim(),
+      supplierId: supplierId || null,
+      supplierName: supplier ? (supplier.name || '') : '',
+      supplierPhone: supplier ? (supplier.phone || '') : '',
       sku: document.getElementById('pf-sku').value.trim(),
       description: document.getElementById('pf-desc').value.trim(),
       price: price,
@@ -740,9 +750,19 @@ async function saveProduct() {
   
   try {
     var currency = document.getElementById('pf-currency').value || 'YER';
+    // جلب بيانات المورد
+    var supplierId = document.getElementById('pf-supplier') ? document.getElementById('pf-supplier').value : '';
+    var supplier = null;
+    if (supplierId && state.suppliers) {
+      supplier = state.suppliers.find(function(s) { return String(s.id) === String(supplierId); });
+    }
+    
     var data = {
       name: name,
       brand: document.getElementById('pf-brand').value.trim(),
+      supplierId: supplierId || null,
+      supplierName: supplier ? (supplier.name || '') : '',
+      supplierPhone: supplier ? (supplier.phone || '') : '',
       sku: document.getElementById('pf-sku').value.trim(),
       description: document.getElementById('pf-desc').value.trim(),
       price: price,
