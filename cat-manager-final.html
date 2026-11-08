@@ -1273,11 +1273,11 @@ function filterOrdersList() {
 async function confirmOrder(id) {
   if (!confirm('تأكيد توفر منتجات هذا الطلب؟')) return;
   try {
-    await db.collection('orders').doc(id).update({
+    await db.collection('orders').doc(id).set({
       status: 'confirmed',
       confirmedBy: state.user ? state.user.email : '',
       confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    }, { merge: true });
     alert('✅ تم تأكيد الطلب');
     await loadOrders();
     renderOrdersList();
@@ -1289,12 +1289,12 @@ async function rejectOrder(id) {
   var reason = prompt('سبب الرفض:');
   if (!reason) return;
   try {
-    await db.collection('orders').doc(id).update({
+    await db.collection('orders').doc(id).set({
       status: 'rejected',
       rejectReason: reason,
       rejectedBy: state.user ? state.user.email : '',
       rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    }, { merge: true });
     alert('✅ تم رفض الطلب');
     await loadOrders();
     renderOrdersList();
