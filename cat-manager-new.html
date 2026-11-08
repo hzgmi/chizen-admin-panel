@@ -294,7 +294,7 @@ body.dark-mode .size-btn {
   <div class="nav-item" onclick="openNotifModal()" style="position:relative;">
     <div class="icon">🔔</div>
     <div class="label">الإشعارات</div>
-    <span class="nav-badge">2</span>
+    <span class="nav-badge" id="notifBadge" style="display:none;">0</span>
   </div>
   <div class="nav-item active home">
     <div class="icon">🏠</div>
@@ -399,6 +399,9 @@ function renderStats() {
   document.getElementById('statNew').textContent = newOrders;
   document.getElementById('statDone').textContent = doneOrders;
   document.getElementById('statPrep').textContent = prepOrders;
+  
+  // تحديث شارة الإشعارات
+  updateNotifBadge(newOrders);
   
   console.log('[stats] new=' + newOrders + ' done=' + doneOrders + ' prep=' + prepOrders);
 }
@@ -1567,12 +1570,23 @@ async function openReportsModal() {
     }
     
     // إجمالي الطلبات
-    html += '<div style="background:#fff; border-radius:14px; padding:14px; text-align:center;">' +
+    html += '<div style="background:#fff; border-radius:14px; padding:14px; text-align:center; margin-bottom:16px;">' +
       '<div style="font-size:12px; color:#6b7280;">إجمالي الطلبات</div>' +
       '<div style="font-size:28px; font-weight:900; color:#a855f7;">' + totalOrders + '</div>' +
     '</div>';
     
+    // الرسم البياني (آخر 7 أيام)
+    html += '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:16px;">' +
+      '<div style="font-size:14px; font-weight:900; color:#1a1a2e; margin-bottom:12px;">📈 المبيعات (آخر 7 أيام)</div>' +
+      '<canvas id="salesChart" style="max-height:200px;"></canvas>' +
+    '</div>';
+    
     c.innerHTML = html;
+    
+    // رسم الرسم البياني
+    setTimeout(function() {
+      renderSalesChart(orders);
+    }, 100);
     
   } catch(e) {
     c.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ ' + e.message + '</div>';
@@ -1785,6 +1799,90 @@ function exportProductsCSV() {
   document.body.removeChild(link);
   
   alert('✅ تم تصدير ' + _allProducts.length + ' منتج إلى ملف CSV');
+}
+
+
+// ═══ الرسم البياني ═══
+function renderSalesChart(orders) {
+  var canvas = document.getElementById('salesChart');
+  if (!canvas) return;
+  
+  // تجميع المبيعات حسب اليوم (آخر 7 أيام)
+  var days = [];
+  var sales = [];
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    days.push(d);
+    sales.push(0);
+  }
+  
+  orders.forEach(function(o) {
+    if (!o.createdAt || !o.createdAt.seconds) return;
+    var orderDate = new Date(o.createdAt.seconds * 1000);
+    orderDate.setHours(0, 0, 0, 0);
+    for (var i = 0; i < days.length; i++) {
+      if (orderDate.getTime() === days[i].getTime()) {
+        sales[i] += Number(o.total) || 0;
+        break;
+      }
+    }
+  });
+  
+  var labels = days.map(function(d) {
+    var dayNames = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+    return dayNames[d.getDay()];
+  });
+  
+  // رسم بسيط بـ Canvas
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width = canvas.offsetWidth;
+  var h = canvas.height = 200;
+  var padding = 40;
+  var chartW = w - padding * 2;
+  var chartH = h - padding * 2;
+  var maxVal = Math.max.apply(null, sales) || 1;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  // الرسم
+  var barWidth = chartW / sales.length * 0.6;
+  var gap = chartW / sales.length;
+  
+  for (var i = 0; i < sales.length; i++) {
+    var barH = (sales[i] / maxVal) * chartH;
+    var x = padding + i * gap + (gap - barWidth) / 2;
+    var y = h - padding - barH;
+    
+    // عمود متدرج
+    var grad = ctx.createLinearGradient(0, y, 0, h - padding);
+    grad.addColorStop(0, '#a855f7');
+    grad.addColorStop(1, '#ec4899');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, barWidth, barH);
+    
+    // التسمية
+    ctx.fillStyle = '#6b7280';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], x + barWidth / 2, h - padding + 15);
+    
+    // القيمة
+    if (sales[i] > 0) {
+      ctx.fillStyle = '#a855f7';
+      ctx.font = 'bold 9px system-ui';
+      ctx.fillText(Math.round(sales[i]).toLocaleString(), x + barWidth / 2, y - 5);
+    }
+  }
+  
+  // خط الأساس
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, h - padding);
+  ctx.lineTo(w - padding, h - padding);
+  ctx.stroke();
 }
 
 console.log('[CAT-MANAGER-NEW v2] loaded');
