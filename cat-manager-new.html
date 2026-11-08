@@ -850,37 +850,74 @@ async function deleteProduct(id) {
   } catch(e) { alert('❌ ' + e.message); }
 }
 
+
+// ═══ هامش الربح ═══
+function calcProfit() {
+  var price = parseFloat((document.getElementById('pf-price')||{}).value) || 0;
+  var cost = parseFloat((document.getElementById('pf-cost')||{}).value) || 0;
+  var el = document.getElementById('profit-display');
+  if (!el) return;
+  if (price <= 0 || cost <= 0) { el.textContent = '—'; el.style.color = '#6b7280'; return; }
+  var profit = price - cost;
+  var margin = ((profit / price) * 100).toFixed(1);
+  if (profit > 0) {
+    el.textContent = profit.toLocaleString() + ' (' + margin + '%)';
+    el.style.color = margin > 30 ? '#10b981' : (margin > 15 ? '#f59e0b' : '#ef4444');
+  } else {
+    el.textContent = '⚠️ خسارة!';
+    el.style.color = '#ef4444';
+  }
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
 <!-- Modal إضافة منتج -->
 <div id="productModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; overflow-y:auto; direction:rtl;">
-  <div style="background:#fff; max-width:500px; margin:20px auto; border-radius:20px; padding:20px; min-height:90vh;">
+  <div style="background:#fff; max-width:520px; margin:20px auto; border-radius:20px; padding:20px; min-height:90vh;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #f3f4f6;">
-      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">➕ إضافة منتج جديد</h2>
+      <h2 id="formTitle" style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">➕ إضافة منتج جديد</h2>
       <button onclick="closeProductModal()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
     </div>
 
     <!-- المعلومات الأساسية -->
-    <div style="margin-bottom:16px;">
-      <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">اسم المنتج *</label>
-      <input id="pf-name" type="text" placeholder="مثال: سماعات لاسلكية" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
-    </div>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
-      <div>
-        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الماركة</label>
-        <input id="pf-brand" type="text" placeholder="Samsung" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">📝 المعلومات الأساسية</div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">اسم المنتج *</label>
+        <input id="pf-name" type="text" placeholder="مثال: سماعات لاسلكية" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الماركة</label>
+          <select id="pf-brand" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+            <option value="">اختر الماركة...</option>
+            <option value="Samsung">Samsung</option>
+            <option value="Apple">Apple</option>
+            <option value="Sony">Sony</option>
+            <option value="Huawei">Huawei</option>
+            <option value="Xiaomi">Xiaomi</option>
+            <option value="LG">LG</option>
+            <option value="Nike">Nike</option>
+            <option value="Adidas">Adidas</option>
+            <option value="Zara">Zara</option>
+            <option value="H&M">H&M</option>
+            <option value="Gucci">Gucci</option>
+            <option value="Prada">Prada</option>
+            <option value="Chanel">Chanel</option>
+            <option value="Dior">Dior</option>
+            <option value="Other">أخرى</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">SKU / الباركود</label>
+          <input id="pf-sku" type="text" placeholder="SKU-001" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
       </div>
       <div>
-        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">SKU</label>
-        <input id="pf-sku" type="text" placeholder="SKU-001" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الوصف التفصيلي</label>
+        <textarea id="pf-desc" placeholder="وصف كامل للمنتج..." style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; min-height:90px; box-sizing:border-box; font-family:inherit;"></textarea>
       </div>
-    </div>
-
-    <div style="margin-bottom:16px;">
-      <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الوصف</label>
-      <textarea id="pf-desc" placeholder="وصف تفصيلي..." style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; min-height:80px; box-sizing:border-box; font-family:inherit;"></textarea>
     </div>
 
     <!-- التسعير -->
@@ -904,23 +941,57 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
           <input id="pf-stock" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
         </div>
       </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">السعر قبل الخصم</label>
+          <input id="pf-oldprice" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">سعر الجملة</label>
+          <input id="pf-wholesale" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">سعر التكلفة</label>
+          <input id="pf-cost" type="number" placeholder="0" oninput="calcProfit()" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الحد الأدنى للطلب</label>
+          <input id="pf-minorder" type="number" placeholder="1" value="1" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">حد التنبيه</label>
+          <input id="pf-threshold" type="number" placeholder="5" value="5" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الوزن (كجم)</label>
+          <input id="pf-weight" type="number" step="0.1" placeholder="0.5" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:10px; margin-top:10px; text-align:center;">
+        <div style="font-size:11px; color:#6b7280; font-weight:700;">📊 هامش الربح المتوقع</div>
+        <div id="profit-display" style="font-size:18px; font-weight:900; color:#10b981; margin-top:4px;">—</div>
+      </div>
+    </div>
 
-      <!-- الحقول التلقائية للصرف -->
-      <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; margin-bottom:16px;">
-        <div style="font-size:12px; font-weight:900; color:#3b82f6; margin-bottom:10px;">💱 السعر المحول تلقائياً (حسب صرف الإدارة)</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
-            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇾🇪 يمني</div>
-            <div id="rate-yer" style="font-size:15px; font-weight:900; color:#10b981; margin-top:2px;">—</div>
-          </div>
-          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
-            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇸🇦 سعودي</div>
-            <div id="rate-sar" style="font-size:15px; font-weight:900; color:#f59e0b; margin-top:2px;">—</div>
-          </div>
-          <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
-            <div style="font-size:10px; color:#6b7280; font-weight:700;">🇺🇸 دولار</div>
-            <div id="rate-usd" style="font-size:15px; font-weight:900; color:#3b82f6; margin-top:2px;">—</div>
-          </div>
+    <!-- الحقول التلقائية للصرف -->
+    <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; margin-bottom:16px;">
+      <div style="font-size:12px; font-weight:900; color:#3b82f6; margin-bottom:10px;">💱 السعر المحول تلقائياً</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+        <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+          <div style="font-size:10px; color:#6b7280; font-weight:700;">🇾🇪 يمني</div>
+          <div id="rate-yer" style="font-size:15px; font-weight:900; color:#10b981; margin-top:2px;">—</div>
+        </div>
+        <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+          <div style="font-size:10px; color:#6b7280; font-weight:700;">🇸🇦 سعودي</div>
+          <div id="rate-sar" style="font-size:15px; font-weight:900; color:#f59e0b; margin-top:2px;">—</div>
+        </div>
+        <div style="text-align:center; padding:8px; background:#fff; border-radius:8px;">
+          <div style="font-size:10px; color:#6b7280; font-weight:700;">🇺🇸 دولار</div>
+          <div id="rate-usd" style="font-size:15px; font-weight:900; color:#3b82f6; margin-top:2px;">—</div>
         </div>
       </div>
     </div>
@@ -928,7 +999,7 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
     <!-- المقاسات -->
     <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
       <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">📏 المقاسات المتوفرة</div>
-      <div style="display:flex; flex-wrap:wrap; gap:6px;" id="sizesContainer">
+      <div style="display:flex; flex-wrap:wrap; gap:6px;">
         <button type="button" onclick="toggleSize(this,'XS')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">XS</button>
         <button type="button" onclick="toggleSize(this,'S')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">S</button>
         <button type="button" onclick="toggleSize(this,'M')" class="size-btn" style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; font-weight:800; font-size:12px; cursor:pointer;">M</button>
@@ -938,12 +1009,36 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
       </div>
     </div>
 
+    <!-- الألوان -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">🎨 الألوان المتوفرة</div>
+      <div style="display:flex; gap:6px; margin-bottom:10px;">
+        <input id="color-name" type="text" placeholder="اسم اللون" style="flex:1; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:13px;">
+        <input id="color-hex" type="color" value="#ff0000" style="width:50px; padding:4px; border:1.5px solid #e5e7eb; border-radius:8px; cursor:pointer;">
+        <button type="button" onclick="addColor()" style="padding:10px 16px; background:#a855f7; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:14px; cursor:pointer;">+</button>
+      </div>
+      <div id="colorsList" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+    </div>
+
     <!-- الصور -->
     <div style="margin-bottom:16px;">
       <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">📸 الصور (حتى 5 صور)</label>
       <input type="file" id="pf-images-input" accept="image/*" multiple style="display:none;">
       <button onclick="document.getElementById('pf-images-input').click()" style="width:100%; padding:14px; background:#f3f4f6; border:2px dashed #d1d5db; border-radius:10px; cursor:pointer; font-size:13px; font-weight:800; color:#6b7280;">📸 اضغط لرفع الصور</button>
       <div id="pf-images-preview" style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:10px;"></div>
+    </div>
+
+    <!-- خيارات إضافية -->
+    <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">⚙️ خيارات إضافية</div>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:8px;">
+        <input type="checkbox" id="pf-featured" style="width:18px; height:18px; accent-color:#a855f7;">
+        <span style="font-size:13px; font-weight:700;">⭐ إبراز في الصفحة الرئيسية</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="pf-free-ship" style="width:18px; height:18px; accent-color:#10b981;">
+        <span style="font-size:13px; font-weight:700;">🚚 شحن مجاني</span>
+      </label>
     </div>
 
     <!-- أزرار -->
