@@ -955,6 +955,19 @@ async function verifyPayment(orderId){
     }
     await db.collection("orders").doc(orderId).set(updates, { merge: true });
     
+    // الانتقال التلقائي إلى "المدفوعات المؤكدة" بعد لحظات
+    setTimeout(function() {
+      if (typeof showVerifiedPayments === 'function') {
+        showVerifiedPayments();
+        // تحديث التبويب النشط
+        var moreBtn = document.querySelector('[data-tab="more"]');
+        if (moreBtn) {
+          document.querySelectorAll('.vtab').forEach(function(b){ b.classList.remove('active'); });
+          moreBtn.classList.add('active');
+        }
+      }
+    }, 1500);
+    
     // إعادة تحميل الطلبات مباشرة (لإخفاء الطلب من القائمة)
     try {
       var snap = await db.collection('orders').limit(500).get();
