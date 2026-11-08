@@ -1892,6 +1892,86 @@ function sendToSupplier(orderId, supplierPhone, supplierName) {
   window.open(url, '_blank');
 }
 
+
+// ═══ المستمع الحي للطلبات ═══
+var _ordersUnsub = null;
+var _lastOrderCount = 0;
+
+function startOrdersListener() {
+  if (_ordersUnsub) _ordersUnsub();
+  if (!state.cat) return;
+  
+  _ordersUnsub = db.collection('orders').where('category','==',state.cat).onSnapshot(function(snap) {
+    var orders = [];
+    snap.forEach(function(d) { var o = d.data(); o.id = d.id; orders.push(o); });
+    
+    orders.sort(function(a, b) {
+      var ta = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+      var tb = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+      return tb - ta;
+    });
+    
+    var newCount = orders.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; }).length;
+    
+    // إذا زادت الطلبات المعلقة، أظهر تنبيهاً
+    if (_lastOrderCount > 0 && newCount > _lastOrderCount) {
+      showNewOrderAlert(newCount - _lastOrderCount);
+    }
+    
+    _lastOrderCount = newCount;
+    state.orders = orders;
+    
+    renderStats();
+    renderLatestOrders();
+    updateNotifBadge(newCount);
+    
+    // إذا كانت صفحة الطلبات مفتوحة، حدّثها
+    if (document.getElementById('ordersModal').style.display === 'block') {
+      renderOrdersList();
+    }
+  }, function(err) {
+    console.warn('[orders listener]', err);
+  });
+}
+
+function showNewOrderAlert(count) {
+  // تنبيه صوتي
+  try {
+    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  } catch(e) {}
+  
+  // اهتزاز
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  
+  // إشعار مرئي
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#a855f7,#ec4899); color:#fff; padding:16px 24px; border-radius:14px; font-size:14px; font-weight:900; z-index:99999; box-shadow:0 10px 40px rgba(168,85,247,0.5); animation:slideDown 0.3s ease;';
+  toast.innerHTML = '🔔 طلب جديد! (' + count + ')';
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 5000);
+}
+
+function updateNotifBadge(count) {
+  var badge = document.getElementById('notifBadge');
+  if (!badge) {
+    badge = document.querySelector('.nav-badge');
+  }
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'block' : 'none';
+  }
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
