@@ -1225,7 +1225,7 @@ function renderOrdersList() {
       itemsHtml += '</div>';
     }
     
-    // الإجمالي + الأزرار
+    // زر واتساب (يظهر دائماً)
     var supplierPhone = '';
     var supplierName = '';
     for (var i = 0; i < items.length; i++) {
@@ -1237,8 +1237,12 @@ function renderOrdersList() {
       }
     }
     
-    var whatsappBtn = supplierPhone ? 
-      '<button onclick="event.stopPropagation();sendToSupplier(\'' + o.id + '\',\'' + supplierPhone + '\',\'' + supplierName.replace(/'/g, '') + '\')" style="width:100%; padding:10px; background:#25D366; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:8px;">📱 إرسال للمورد' + (supplierName ? ' (' + supplierName + ')' : '') + '</button>' : '';
+    // إذا لم يوجد مورد، استخدم رقم افتراضي
+    var DEFAULT_PHONE = '967772311040';
+    var targetPhone = supplierPhone || DEFAULT_PHONE;
+    var btnLabel = supplierPhone ? ('📱 إرسال للمورد ' + (supplierName ? '(' + supplierName + ')' : '')) : '📱 إرسال (رقم افتراضي)';
+    
+    var whatsappBtn = '<button onclick="event.stopPropagation();sendToSupplier(\'' + o.id + '\',\'' + targetPhone + '\',\'' + (supplierName || 'المورد').replace(/'/g, '') + '\')" style="width:100%; padding:10px; background:#25D366; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:8px;">' + btnLabel + '</button>';
     
     var actionsHtml = isPending ? 
       '<div style="display:flex; gap:8px;">' +
@@ -1264,6 +1268,10 @@ function renderOrdersList() {
       customerHtml + itemsHtml + footerHtml +
     '</div>';
   }).join('');
+}
+
+function filterOrdersList() {
+  renderOrdersList();
 }
 
 function filterOrdersList() {
