@@ -1081,7 +1081,11 @@ async function rejectOrder(id) {
 // ═══ معاينة المنتج ═══
 function previewProduct() {
   try {
-    alert('🔍 بدء المعاينة...');
+    // تعريف احتياطي للمتغيرات (في حال لم تُعرَّف بعد)
+    if (typeof _colors === 'undefined') window._colors = [];
+    if (typeof _sizes === 'undefined') window._sizes = [];
+    if (typeof _formImages === 'undefined') window._formImages = [];
+    if (typeof _rates === 'undefined') window._rates = { sarSouth: 350, usdSouth: 1300, sarNorth: 500, usdNorth: 2000 };
     
     var nameEl = document.getElementById('pf-name');
     if (!nameEl) { alert('❌ pf-name غير موجود'); return; }
@@ -1091,8 +1095,6 @@ function previewProduct() {
     if (!modalEl) { alert('❌ previewModal غير موجود في الصفحة!'); return; }
     var contentEl = document.getElementById('previewContent');
     if (!contentEl) { alert('❌ previewContent غير موجود!'); return; }
-    
-    alert('✅ العناصر موجودة، جاري بناء المعاينة...');
   var brand = document.getElementById('pf-brand').value;
   var desc = document.getElementById('pf-desc').value.trim();
   var price = parseFloat(document.getElementById('pf-price').value) || 0;
@@ -1190,7 +1192,6 @@ function previewProduct() {
   
   contentEl.innerHTML = html;
   modalEl.style.display = 'block';
-  alert('✅ تم عرض المعاينة!');
   
   } catch(err) {
     alert('❌ خطأ في المعاينة: ' + err.message);
