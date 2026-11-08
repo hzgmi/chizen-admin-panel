@@ -1060,6 +1060,31 @@ function renderOrdersList() {
     var total = Number(o.total) || 0;
     var orderId = (o.id || '').substring(0, 8);
     
+    // زر واتساب للمورد
+    var supplierBtn = '';
+    (function() {
+      var items = o.items || [];
+      var supplierPhone = '';
+      var supplierName = '';
+      for (var i = 0; i < items.length; i++) {
+        var prod = (state.products || []).find(function(p) { return String(p.id) === String(items[i].id); });
+        if (prod && prod.supplierPhone) {
+          supplierPhone = prod.supplierPhone;
+          supplierName = prod.supplierName || '';
+          break;
+        }
+      }
+      // إذا لم نجد في المنتجات، نبحث في الطلب نفسه
+      if (!supplierPhone && o.supplierPhone) {
+        supplierPhone = o.supplierPhone;
+        supplierName = o.supplierName || '';
+      }
+      
+      if (supplierPhone) {
+        supplierBtn = '<button onclick="event.stopPropagation();sendToSupplier(\'' + o.id + '\',\'' + (supplierPhone || '') + '\',\'' + (supplierName || '').replace(/'/g, '') + '\')" style="width:100%; margin-top:8px; padding:10px; background:#25D366; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">📱 إرسال للمورد ' + (supplierName ? '(' + supplierName + ')' : '') + '</button>';
+      }
+    })();
+
     var actionsHtml = '';
     if (isPending) {
       actionsHtml = '<div style="display:flex; gap:6px; margin-top:10px;">' +
@@ -1076,6 +1101,7 @@ function renderOrdersList() {
       '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
       '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">📱 ' + (o.phone || o.customerPhone || '—') + '</div>' +
       '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
+      supplierBtn +
       actionsHtml +
     '</div>';
   }).join('');
@@ -1172,6 +1198,31 @@ function renderOrdersList() {
     var total = Number(o.total) || 0;
     var orderId = (o.id || '').substring(0, 8);
     
+    // زر واتساب للمورد
+    var supplierBtn = '';
+    (function() {
+      var items = o.items || [];
+      var supplierPhone = '';
+      var supplierName = '';
+      for (var i = 0; i < items.length; i++) {
+        var prod = (state.products || []).find(function(p) { return String(p.id) === String(items[i].id); });
+        if (prod && prod.supplierPhone) {
+          supplierPhone = prod.supplierPhone;
+          supplierName = prod.supplierName || '';
+          break;
+        }
+      }
+      // إذا لم نجد في المنتجات، نبحث في الطلب نفسه
+      if (!supplierPhone && o.supplierPhone) {
+        supplierPhone = o.supplierPhone;
+        supplierName = o.supplierName || '';
+      }
+      
+      if (supplierPhone) {
+        supplierBtn = '<button onclick="event.stopPropagation();sendToSupplier(\'' + o.id + '\',\'' + (supplierPhone || '') + '\',\'' + (supplierName || '').replace(/'/g, '') + '\')" style="width:100%; margin-top:8px; padding:10px; background:#25D366; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">📱 إرسال للمورد ' + (supplierName ? '(' + supplierName + ')' : '') + '</button>';
+      }
+    })();
+
     var actionsHtml = '';
     if (isPending) {
       actionsHtml = '<div style="display:flex; gap:6px; margin-top:10px;">' +
@@ -1188,6 +1239,7 @@ function renderOrdersList() {
       '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
       '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">📱 ' + (o.phone || o.customerPhone || '—') + '</div>' +
       '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
+      supplierBtn +
       actionsHtml +
     '</div>';
   }).join('');
@@ -1785,6 +1837,50 @@ function exportProductsCSV() {
   document.body.removeChild(link);
   
   alert('✅ تم تصدير ' + _allProducts.length + ' منتج إلى ملف CSV');
+}
+
+
+// ═══ إرسال رسالة واتساب للمورد ═══
+function sendToSupplier(orderId, supplierPhone, supplierName) {
+  if (!supplierPhone) {
+    alert('⚠️ لا يوجد رقم هاتف لهذا المورد');
+    return;
+  }
+  
+  // تنظيف رقم الهاتف
+  var phone = String(supplierPhone).replace(/[^0-9]/g, '');
+  if (phone.startsWith('0')) phone = '967' + phone.substring(1);
+  if (!phone.startsWith('967') && phone.length === 9) phone = '967' + phone;
+  
+  var order = (state.orders || []).find(function(x) { return String(x.id) === String(orderId); }) || {};
+  var orderShort = orderId.substring(0, 8);
+  var customerName = order.customerName || order.name || 'عميل';
+  
+  var message = '🔔 *طلب تجهيز - CHIZEN*\n\n';
+  message += '📋 *رقم الطلب:* #' + orderShort + '\n';
+  message += '👤 *العميل:* ' + customerName + '\n';
+  message += '💰 *الإجمالي:* ' + (Number(order.total) || 0).toFixed(0) + ' ر.ي\n\n';
+  
+  // إضافة المنتجات إذا كانت متوفرة
+  var items = order.items || [];
+  if (items.length) {
+    message += '📦 *المنتجات المطلوبة:*\n';
+    items.forEach(function(item, idx) {
+      var prod = (state.products || []).find(function(p) { return String(p.id) === String(item.id); }) || {};
+      var name = prod.name || item.name || 'منتج';
+      message += (idx + 1) + '. ' + name;
+      if (item.size) message += ' - مقاس: ' + item.size;
+      if (item.color) message += ' - لون: ' + item.color;
+      message += ' - كمية: ' + (item.qty || 1) + '\n';
+    });
+    message += '\n';
+  }
+  
+  message += '⚠️ يرجى تجهيز الطلب وتأكيده في أقرب وقت.\n';
+  message += 'شكراً لتعاملكم مع CHIZEN 🙏';
+  
+  var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
+  window.open(url, '_blank');
 }
 
 console.log('[CAT-MANAGER-NEW v2] loaded');
