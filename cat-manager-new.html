@@ -676,7 +676,12 @@ function renderProductsView() {
         (p.brand ? '<div style="font-size:10px; color:#a855f7; font-weight:800; margin-bottom:2px;">' + p.brand + '</div>' : '') +
         '<div style="font-size:12px; color:#1a1a2e; font-weight:800; margin-bottom:6px; line-height:1.4; height:34px; overflow:hidden;">' + (p.name || '—') + '</div>' +
         '<div style="font-size:15px; font-weight:900; color:#a855f7; margin-bottom:4px;">' + (Number(p.price) || 0).toFixed(0) + ' <span style="font-size:11px;">ر.ي</span></div>' +
-        '<div style="font-size:10px; color:' + stockColor + '; font-weight:800;">' + stock + ' متبقي</div>' +
+        '<div style="font-size:10px; color:' + stockColor + '; font-weight:800; margin-bottom:8px;">' + stock + ' متبقي</div>' +
+        '<div style="display:flex; gap:4px;">' +
+          '<button onclick="editProduct(\'' + p.id + '\')" style="flex:1; padding:6px; background:rgba(59,130,246,0.15); color:#3b82f6; border:none; border-radius:6px; font-size:13px; font-weight:900; cursor:pointer;">✏️</button>' +
+          '<button onclick="toggleProduct(\'' + p.id + '\')" style="flex:1; padding:6px; background:' + (isLive ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)') + '; color:' + (isLive ? '#f59e0b' : '#10b981') + '; border:none; border-radius:6px; font-size:13px; font-weight:900; cursor:pointer;">' + (isLive ? '👁' : '✅') + '</button>' +
+          '<button onclick="deleteProduct(\'' + p.id + '\')" style="flex:1; padding:6px; background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:6px; font-size:13px; font-weight:900; cursor:pointer;">🗑</button>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -749,6 +754,40 @@ function calculateAutoRates() {
   if (yerEl) yerEl.textContent = Math.round(priceYER).toLocaleString();
   if (sarEl) sarEl.textContent = priceSAR.toLocaleString();
   if (usdEl) usdEl.textContent = priceUSD.toLocaleString();
+}
+
+
+// ═══ أزرار الإجراءات ═══
+async function editProduct(id) {
+  alert('✏️ تعديل المنتج (قريباً) — ID: ' + id.substring(0,8));
+}
+
+async function toggleProduct(id) {
+  try {
+    var doc = await db.collection('products').doc(id).get();
+    if (!doc.exists) { alert('المنتج غير موجود'); return; }
+    var p = doc.data();
+    var isLive = p.status === 'live' || p.active === true;
+    var newState = !isLive;
+    await db.collection('products').doc(id).update({
+      active: newState,
+      isActive: newState,
+      status: newState ? 'live' : 'pending_review'
+    });
+    alert(newState ? '✅ تم إظهار المنتج' : '👁️ تم إخفاء المنتج');
+    await loadProductsList();
+    renderProductsView();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('⚠️ حذف المنتج نهائياً؟ لا يمكن التراجع.')) return;
+  try {
+    await db.collection('products').doc(id).delete();
+    alert('🗑️ تم حذف المنتج');
+    await loadProductsList();
+    renderProductsView();
+  } catch(e) { alert('❌ ' + e.message); }
 }
 
 console.log('[CAT-MANAGER-NEW v2] loaded');
