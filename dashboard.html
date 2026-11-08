@@ -792,7 +792,46 @@ function renderPayments(){
   
   if (!pending.length) {
     return '<div class="vst">💳 تأكيد الدفع</div><div class="vempty"><div class="vempty-icon">✨</div><div class="vempty-txt">لا توجد طلبات بانتظار تأكيد الدفع</div></div>';
+ 
+
+// ═══ التحديث اللحظي لقسم تأكيد الدفع ═══
+var _paymentUnsub = null;
+function startPaymentListener() {
+  if (_paymentUnsub) _paymentUnsub();
+  if (!db) return;
+  
+  _paymentUnsub = db.collection('orders')
+    .where('workflowStatus', '==', 'awaiting_verification')
+    .onSnapshot(function(snap) {
+      console.log('[payment review] live update:', snap.size, 'orders');
+      
+      // إعادة عرض قسم "تأكيد الدفع"
+      if (typeof renderPaymentReview === 'function') {
+        renderPaymentReview();
+      } else if (typeof renderPaymentReviewSection === 'function') {
+        renderPaymentReviewSection();
+      }
+      
+      // تحديث الشارة (badge) إذا وجدت
+      var badge = document.querySelector('[data-tab="payments"] .nav-badge');
+      if (badge) {
+        badge.textContent = snap.size;
+        badge.style.display = snap.size > 0 ? 'block' : 'none';
+      }
+    }, function(err) {
+      console.warn('[payment listener]', err);
+    });
+}
+
+// بدء المستمع عند تحميل الصفحة
+setTimeout(function() {
+  if (typeof db !== 'undefined' && db) {
+    startPaymentListener();
+  } else {
+    setTimeout(arguments.callee, 1000);
   }
+}, 2000);
+ }
   
   var html = pending.map(function(o){
     var receiptUrl = (o.payment && o.payment.receiptUrl) || o.receiptUrl || o.sanadUrl || '';
