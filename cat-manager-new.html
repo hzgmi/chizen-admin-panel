@@ -294,7 +294,7 @@ body.dark-mode .size-btn {
   <div class="nav-item" onclick="openNotifModal()" style="position:relative;">
     <div class="icon">🔔</div>
     <div class="label">الإشعارات</div>
-    <span class="nav-badge" id="notifBadge" style="display:none;">0</span>
+    <span class="nav-badge">2</span>
   </div>
   <div class="nav-item active home">
     <div class="icon">🏠</div>
@@ -391,17 +391,6 @@ async function loadProducts() {
   } catch(e) { console.error('[products]', e); }
 }
 
-function updateNotifBadge(count) {
-  var badge = document.getElementById('notifBadge');
-  if (!badge) {
-    badge = document.querySelector('.nav-badge');
-  }
-  if (badge) {
-    badge.textContent = count;
-    badge.style.display = count > 0 ? 'block' : 'none';
-  }
-}
-
 function renderStats() {
   var newOrders = state.orders.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; }).length;
   var doneOrders = state.orders.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; }).length;
@@ -410,9 +399,6 @@ function renderStats() {
   document.getElementById('statNew').textContent = newOrders;
   document.getElementById('statDone').textContent = doneOrders;
   document.getElementById('statPrep').textContent = prepOrders;
-  
-  // تحديث شارة الإشعارات
-  updateNotifBadge(newOrders);
   
   console.log('[stats] new=' + newOrders + ' done=' + doneOrders + ' prep=' + prepOrders);
 }
@@ -1055,154 +1041,102 @@ function setOrderFilter(f) {
 function renderOrdersList() {
   var el = document.getElementById('ordersModalList');
   if (!el) return;
-  
+
   var arr = (state.orders || []).slice();
   if (_orderFilter === 'pending') arr = arr.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; });
   else if (_orderFilter === 'confirmed') arr = arr.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; });
   else if (_orderFilter === 'completed') arr = arr.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; });
-  
+
   if (!arr.length) {
     el.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📭</div><b>لا توجد طلبات</b></div>';
     return;
   }
-  
+
   el.innerHTML = arr.map(function(o) {
     var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
     var isDone = o.status === 'completed' || o.status === 'delivered';
-    var statusClass = isPending ? 'pending' : (isDone ? 'completed' : 'confirmed');
     var statusLabel = isPending ? '⏳ معلق' : (isDone ? '🏁 مكتمل' : '✅ مؤكد');
     var total = Number(o.total) || 0;
     var orderId = (o.id || '').substring(0, 8);
-    
-    var actionsHtml = '';
-    if (isPending) {
-      actionsHtml = '<div style="display:flex; gap:6px; margin-top:10px;">' +
-        '<button onclick="confirmOrder(\'' + o.id + '\')" style="flex:1; padding:10px; background:#10b981; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer;">✅ تأكيد</button>' +
-        '<button onclick="rejectOrder(\'' + o.id + '\')" style="flex:1; padding:10px; background:#ef4444; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer;">❌ رفض</button>' +
+
+    // رأس الطلب
+    var headerHtml = 
+      '<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:#f9fafb; border-bottom:1px solid #e5e7eb; border-radius:14px 14px 0 0;">' +
+        '<div>' +
+          '<div style="font-size:11px; color:#6b7280; font-weight:700;">رقم الطلب</div>' +
+          '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">#' + orderId + '</div>' +
+        '</div>' +
+        '<div style="text-align:left;">' +
+          '<div style="display:inline-block; padding:4px 10px; border-radius:20px; background:' + (isPending ? 'rgba(245,158,11,0.1)' : (isDone ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)')) + '; color:' + (isPending ? '#f59e0b' : (isDone ? '#3b82f6' : '#10b981')) + '; font-size:10px; font-weight:900;">' + statusLabel + '</div>' +
+          '<div style="font-size:11px; color:#6b7280; margin-top:4px;">' + (o.items ? o.items.length : 0) + ' منتج</div>' +
+        '</div>' +
       '</div>';
-    }
-    
-    return '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 2px 12px rgba(0,0,0,0.06);">' +
-      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
-        '<b style="color:#a855f7; font-size:13px;">#' + orderId + '</b>' +
-        '<span style="font-size:10px; padding:2px 8px; border-radius:6px; font-weight:800; background:' + (isPending ? 'rgba(245,158,11,0.15)' : (isDone ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)')) + '; color:' + (isPending ? '#f59e0b' : (isDone ? '#3b82f6' : '#10b981')) + ';">' + statusLabel + '</span>' +
-      '</div>' +
-      '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
-      '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">📱 ' + (o.phone || o.customerPhone || '—') + '</div>' +
-      '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
-      actionsHtml +
-    '</div>';
-  }).join('');
-}
 
-async function confirmOrder(id) {
-  if (!confirm('تأكيد توفر منتجات هذا الطلب؟')) return;
-  try {
-    await db.collection('orders').doc(id).update({
-      status: 'confirmed',
-      confirmedBy: state.user ? state.user.email : '',
-      confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    alert('✅ تم تأكيد الطلب');
-    await loadOrders();
-    renderOrdersList();
-    renderStats();
-  } catch(e) { alert('❌ ' + e.message); }
-}
-
-async function rejectOrder(id) {
-  var reason = prompt('سبب الرفض:');
-  if (!reason) return;
-  try {
-    await db.collection('orders').doc(id).update({
-      status: 'rejected',
-      rejectReason: reason,
-      rejectedBy: state.user ? state.user.email : '',
-      rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    alert('✅ تم رفض الطلب');
-    await loadOrders();
-    renderOrdersList();
-    renderStats();
-  } catch(e) { alert('❌ ' + e.message); }
-}
-
-
-// ═══ إدارة الطلبات ═══
-var _orderFilter = 'all';
-
-function openOrdersModal() {
-  document.getElementById('ordersModal').style.display = 'block';
-  // إذا كانت الطلبات محملة، اعرضها فوراً
-  if (state.orders && state.orders.length > 0) {
-    renderOrdersList();
-    return;
-  }
-  document.getElementById('ordersModalList').innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
-  loadOrders().then(function() {
-    renderOrdersList();
-  });
-}
-
-function closeOrdersModal() {
-  document.getElementById('ordersModal').style.display = 'none';
-}
-
-function setOrderFilter(f) {
-  _orderFilter = f;
-  document.querySelectorAll('.order-filter-btn').forEach(function(b) {
-    if (b.getAttribute('data-filter') === f) {
-      b.style.background = 'rgba(168,85,247,0.1)';
-      b.style.color = '#a855f7';
-      b.style.borderColor = '#a855f7';
-    } else {
-      b.style.background = '#fff';
-      b.style.color = '#6b7280';
-      b.style.borderColor = '#e5e7eb';
-    }
-  });
-  renderOrdersList();
-}
-
-function renderOrdersList() {
-  var el = document.getElementById('ordersModalList');
-  if (!el) return;
-  
-  var arr = (state.orders || []).slice();
-  if (_orderFilter === 'pending') arr = arr.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; });
-  else if (_orderFilter === 'confirmed') arr = arr.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; });
-  else if (_orderFilter === 'completed') arr = arr.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; });
-  
-  if (!arr.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📭</div><b>لا توجد طلبات</b></div>';
-    return;
-  }
-  
-  el.innerHTML = arr.map(function(o) {
-    var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
-    var isDone = o.status === 'completed' || o.status === 'delivered';
-    var statusClass = isPending ? 'pending' : (isDone ? 'completed' : 'confirmed');
-    var statusLabel = isPending ? '⏳ معلق' : (isDone ? '🏁 مكتمل' : '✅ مؤكد');
-    var total = Number(o.total) || 0;
-    var orderId = (o.id || '').substring(0, 8);
-    
-    var actionsHtml = '';
-    if (isPending) {
-      actionsHtml = '<div style="display:flex; gap:6px; margin-top:10px;">' +
-        '<button onclick="confirmOrder(\'' + o.id + '\')" style="flex:1; padding:10px; background:#10b981; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer;">✅ تأكيد</button>' +
-        '<button onclick="rejectOrder(\'' + o.id + '\')" style="flex:1; padding:10px; background:#ef4444; color:#fff; border:none; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer;">❌ رفض</button>' +
+    // بيانات العميل
+    var customerHtml = 
+      '<div style="padding:12px 16px; border-bottom:1px solid #f3f4f6; background:#fff;">' +
+        '<div style="display:flex; align-items:center; gap:8px;">' +
+          '<div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#a855f7,#ec4899); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:13px;">' + (o.customerName || o.name || 'ع').charAt(0) + '</div>' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:12px; color:#1a1a2e; font-weight:800;">' + (o.customerName || o.name || 'عميل') + '</div>' +
+            (o.phone || o.customerPhone ? '<div style="font-size:10px; color:#6b7280;">📱 ' + (o.phone || o.customerPhone) + '</div>' : '') +
+          '</div>' +
+        '</div>' +
       '</div>';
+
+    // المنتجات
+    var itemsHtml = '';
+    var items = o.items || [];
+    if (Array.isArray(items) && items.length) {
+      itemsHtml = '<div style="padding:8px 0; background:#fff;">';
+      items.forEach(function(item) {
+        var product = (state.products || []).find(function(p) { return String(p.id) === String(item.id); }) || {};
+        var prodName = product.name || item.name || 'منتج';
+        var prodImg = product.img || (product.images && product.images[0]) || item.img || '';
+        var prodPrice = Number(product.price || item.price) || 0;
+        var qty = item.qty || 1;
+        var size = item.size || '';
+        var color = item.color || '';
+        
+        itemsHtml += '<div style="display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid #f9fafb;">' +
+          '<div style="width:70px; height:70px; border-radius:10px; overflow:hidden; background:#f4f6fa; flex-shrink:0; border:1px solid #f3f4f6;">' +
+            (prodImg ? '<img src="' + prodImg + '" style="width:100%; height:100%; object-fit:cover;">' : '<div style="display:flex; align-items:center; justify-content:center; height:100%; font-size:24px; opacity:0.3;">📦</div>') +
+          '</div>' +
+          '<div style="flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center;">' +
+            '<div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + prodName + '</div>' +
+            '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">' +
+              (size ? '<span style="font-size:10px; font-weight:800; color:#C5A059; background:rgba(197,160,89,0.1); padding:2px 8px; border-radius:6px; border:1px solid rgba(197,160,89,0.3);">📏 ' + size + '</span>' : '') +
+              (color ? '<span style="font-size:10px; font-weight:800; color:#a855f7; background:rgba(168,85,247,0.1); padding:2px 8px; border-radius:6px; border:1px solid rgba(168,85,247,0.3);">🎨 ' + color + '</span>' : '') +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+              '<span style="font-size:11px; color:#6b7280;">' + prodPrice.toFixed(0) + ' × ' + qty + '</span>' +
+              '<span style="font-size:13px; font-weight:900; color:#ec4899;">' + (prodPrice * qty).toFixed(0) + ' ر.ي</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      });
+      itemsHtml += '</div>';
     }
-    
-    return '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 2px 12px rgba(0,0,0,0.06);">' +
-      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
-        '<b style="color:#a855f7; font-size:13px;">#' + orderId + '</b>' +
-        '<span style="font-size:10px; padding:2px 8px; border-radius:6px; font-weight:800; background:' + (isPending ? 'rgba(245,158,11,0.15)' : (isDone ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)')) + '; color:' + (isPending ? '#f59e0b' : (isDone ? '#3b82f6' : '#10b981')) + ';">' + statusLabel + '</span>' +
-      '</div>' +
-      '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
-      '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">📱 ' + (o.phone || o.customerPhone || '—') + '</div>' +
-      '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
-      actionsHtml +
+
+    // الإجمالي + أزرار
+    var footerHtml = 
+      '<div style="padding:12px 16px; background:#f9fafb; border-top:1px solid #e5e7eb; border-radius:0 0 14px 14px;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:' + (isPending ? '10px' : '0') + ';">' +
+          '<div>' +
+            '<div style="font-size:10px; color:#6b7280; font-weight:700;">الإجمالي</div>' +
+            '<div style="font-size:18px; color:#ec4899; font-weight:900;">' + total.toFixed(0) + ' <span style="font-size:11px;">ر.ي</span></div>' +
+          '</div>' +
+        '</div>' +
+        (isPending ? 
+          '<div style="display:flex; gap:8px;">' +
+            '<button onclick="confirmOrder(\'' + o.id + '\')" style="flex:1; padding:12px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">✅ تأكيد التوفر</button>' +
+            '<button onclick="rejectOrder(\'' + o.id + '\')" style="flex:1; padding:12px; background:#fff; color:#ef4444; border:1.5px solid #ef4444; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer;">❌ رفض</button>' +
+          '</div>'
+          : '') +
+      '</div>';
+
+    return '<div style="background:#fff; border-radius:14px; margin-bottom:14px; box-shadow:0 4px 20px rgba(0,0,0,0.08); overflow:hidden; border:1px solid #f3f4f6;">' +
+      headerHtml + customerHtml + itemsHtml + footerHtml +
     '</div>';
   }).join('');
 }
@@ -1581,23 +1515,12 @@ async function openReportsModal() {
     }
     
     // إجمالي الطلبات
-    html += '<div style="background:#fff; border-radius:14px; padding:14px; text-align:center; margin-bottom:16px;">' +
+    html += '<div style="background:#fff; border-radius:14px; padding:14px; text-align:center;">' +
       '<div style="font-size:12px; color:#6b7280;">إجمالي الطلبات</div>' +
       '<div style="font-size:28px; font-weight:900; color:#a855f7;">' + totalOrders + '</div>' +
     '</div>';
     
-    // الرسم البياني (آخر 7 أيام)
-    html += '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:16px;">' +
-      '<div style="font-size:14px; font-weight:900; color:#1a1a2e; margin-bottom:12px;">📈 المبيعات (آخر 7 أيام)</div>' +
-      '<canvas id="salesChart" style="max-height:200px;"></canvas>' +
-    '</div>';
-    
     c.innerHTML = html;
-    
-    // رسم الرسم البياني
-    setTimeout(function() {
-      renderSalesChart(orders);
-    }, 100);
     
   } catch(e) {
     c.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ ' + e.message + '</div>';
@@ -1810,90 +1733,6 @@ function exportProductsCSV() {
   document.body.removeChild(link);
   
   alert('✅ تم تصدير ' + _allProducts.length + ' منتج إلى ملف CSV');
-}
-
-
-// ═══ الرسم البياني ═══
-function renderSalesChart(orders) {
-  var canvas = document.getElementById('salesChart');
-  if (!canvas) return;
-  
-  // تجميع المبيعات حسب اليوم (آخر 7 أيام)
-  var days = [];
-  var sales = [];
-  for (var i = 6; i >= 0; i--) {
-    var d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    days.push(d);
-    sales.push(0);
-  }
-  
-  orders.forEach(function(o) {
-    if (!o.createdAt || !o.createdAt.seconds) return;
-    var orderDate = new Date(o.createdAt.seconds * 1000);
-    orderDate.setHours(0, 0, 0, 0);
-    for (var i = 0; i < days.length; i++) {
-      if (orderDate.getTime() === days[i].getTime()) {
-        sales[i] += Number(o.total) || 0;
-        break;
-      }
-    }
-  });
-  
-  var labels = days.map(function(d) {
-    var dayNames = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
-    return dayNames[d.getDay()];
-  });
-  
-  // رسم بسيط بـ Canvas
-  var ctx = canvas.getContext('2d');
-  var w = canvas.width = canvas.offsetWidth;
-  var h = canvas.height = 200;
-  var padding = 40;
-  var chartW = w - padding * 2;
-  var chartH = h - padding * 2;
-  var maxVal = Math.max.apply(null, sales) || 1;
-  
-  ctx.clearRect(0, 0, w, h);
-  
-  // الرسم
-  var barWidth = chartW / sales.length * 0.6;
-  var gap = chartW / sales.length;
-  
-  for (var i = 0; i < sales.length; i++) {
-    var barH = (sales[i] / maxVal) * chartH;
-    var x = padding + i * gap + (gap - barWidth) / 2;
-    var y = h - padding - barH;
-    
-    // عمود متدرج
-    var grad = ctx.createLinearGradient(0, y, 0, h - padding);
-    grad.addColorStop(0, '#a855f7');
-    grad.addColorStop(1, '#ec4899');
-    ctx.fillStyle = grad;
-    ctx.fillRect(x, y, barWidth, barH);
-    
-    // التسمية
-    ctx.fillStyle = '#6b7280';
-    ctx.font = 'bold 10px system-ui';
-    ctx.textAlign = 'center';
-    ctx.fillText(labels[i], x + barWidth / 2, h - padding + 15);
-    
-    // القيمة
-    if (sales[i] > 0) {
-      ctx.fillStyle = '#a855f7';
-      ctx.font = 'bold 9px system-ui';
-      ctx.fillText(Math.round(sales[i]).toLocaleString(), x + barWidth / 2, y - 5);
-    }
-  }
-  
-  // خط الأساس
-  ctx.strokeStyle = '#e5e7eb';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(padding, h - padding);
-  ctx.lineTo(w - padding, h - padding);
-  ctx.stroke();
 }
 
 console.log('[CAT-MANAGER-NEW v2] loaded');
