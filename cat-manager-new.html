@@ -1097,6 +1097,104 @@ function renderOrdersList() {
         var qty = item.qty || 1;
         var size = item.size || '';
         var color = item.color || '';
+        var supplierPhone = product.supplierPhone || '';
+        var supplierName = product.supplierName || '';
+        
+        // زر واتساب للمورد
+        var whatsappBtn = '';
+        if (supplierPhone) {
+          whatsappBtn = '<button onclick="event.stopPropagation();sendToSupplier(\'' + orderId + '\',\'' + (prodName.replace(/'/g, "\\'")) + '\',\'' + size + '\',\'' + color + '\',' + qty + ',\'' + supplierPhone + '\',\'' + (supplierName.replace(/'/g, "\\'")) + '\')" style="margin-top:6px; background:#25D366; color:#fff; border:none; padding:6px 10px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📱 واتساب المورد</button>';
+        }
+        
+        itemsHtml += '<div style="display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid #f9fafb;">' +
+          '<div style="width:70px; height:70px; border-radius:10px; overflow:hidden; background:#f4f6fa; flex-shrink:0; border:1px solid #f3f4f6;">' +
+            (prodImg ? '<img src="' + prodImg + '" style="width:100%; height:100%; object-fit:cover;">' : '<div style="display:flex; align-items:center; justify-content:center; height:100%; font-size:24px; opacity:0.3;">📦</div>') +
+          '</div>' +
+          '<div style="flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center;">' +
+            '<div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + prodName + '</div>' +
+            '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">' +
+              (size ? '<span style="font-size:10px; font-weight:800; color:#C5A059; background:rgba(197,160,89,0.1); padding:2px 8px; border-radius:6px; border:1px solid rgba(197,160,89,0.3);">📏 ' + size + '</span>' : '') +
+              (color ? '<span style="font-size:10px; font-weight:800; color:#a855f7; background:rgba(168,85,247,0.1); padding:2px 8px; border-radius:6px; border:1px solid rgba(168,85,247,0.3);">🎨 ' + color + '</span>' : '') +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+              '<span style="font-size:11px; color:#6b7280;">' + prodPrice.toFixed(0) + ' × ' + qty + '</span>' +
+              '<span style="font-size:13px; font-weight:900; color:#ec4899;">' + (prodPrice * qty).toFixed(0) + ' ر.ي</span>' +
+            '</div>' +
+            whatsappBtn +
+          '</div>' +
+        '</div>';
+      });
+      itemsHtml += '</div>';
+    }
+
+    // الإجمالي + أزرار
+    var footerHtml = 
+      '<div style="padding:12px 16px; background:#f9fafb; border-top:1px solid #e5e7eb; border-radius:0 0 14px 14px;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:' + (isPending ? '10px' : '0') + ';">' +
+          '<div>' +
+            '<div style="font-size:10px; color:#6b7280; font-weight:700;">الإجمالي</div>' +
+            '<div style="font-size:18px; color:#ec4899; font-weight:900;">' + total.toFixed(0) + ' <span style="font-size:11px;">ر.ي</span></div>' +
+          '</div>' +
+        '</div>' +
+        (isPending ? 
+          '<div style="display:flex; gap:8px;">' +
+            '<button onclick="confirmOrder(\'' + o.id + '\')" style="flex:1; padding:12px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">✅ تأكيد التوفر</button>' +
+            '<button onclick="rejectOrder(\'' + o.id + '\')" style="flex:1; padding:12px; background:#fff; color:#ef4444; border:1.5px solid #ef4444; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer;">❌ رفض</button>' +
+          '</div>'
+          : '') +
+      '</div>';
+
+    return '<div style="background:#fff; border-radius:14px; margin-bottom:14px; box-shadow:0 4px 20px rgba(0,0,0,0.08); overflow:hidden; border:1px solid #f3f4f6;">' +
+      headerHtml + customerHtml + itemsHtml + footerHtml +
+    '</div>';
+  }).join('');
+}
+
+  el.innerHTML = arr.map(function(o) {
+    var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
+    var isDone = o.status === 'completed' || o.status === 'delivered';
+    var statusLabel = isPending ? '⏳ معلق' : (isDone ? '🏁 مكتمل' : '✅ مؤكد');
+    var total = Number(o.total) || 0;
+    var orderId = (o.id || '').substring(0, 8);
+
+    // رأس الطلب
+    var headerHtml = 
+      '<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:#f9fafb; border-bottom:1px solid #e5e7eb; border-radius:14px 14px 0 0;">' +
+        '<div>' +
+          '<div style="font-size:11px; color:#6b7280; font-weight:700;">رقم الطلب</div>' +
+          '<div style="font-size:14px; color:#1a1a2e; font-weight:900;">#' + orderId + '</div>' +
+        '</div>' +
+        '<div style="text-align:left;">' +
+          '<div style="display:inline-block; padding:4px 10px; border-radius:20px; background:' + (isPending ? 'rgba(245,158,11,0.1)' : (isDone ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)')) + '; color:' + (isPending ? '#f59e0b' : (isDone ? '#3b82f6' : '#10b981')) + '; font-size:10px; font-weight:900;">' + statusLabel + '</div>' +
+          '<div style="font-size:11px; color:#6b7280; margin-top:4px;">' + (o.items ? o.items.length : 0) + ' منتج</div>' +
+        '</div>' +
+      '</div>';
+
+    // بيانات العميل
+    var customerHtml = 
+      '<div style="padding:12px 16px; border-bottom:1px solid #f3f4f6; background:#fff;">' +
+        '<div style="display:flex; align-items:center; gap:8px;">' +
+          '<div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#a855f7,#ec4899); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:13px;">' + (o.customerName || o.name || 'ع').charAt(0) + '</div>' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:12px; color:#1a1a2e; font-weight:800;">' + (o.customerName || o.name || 'عميل') + '</div>' +
+            (o.phone || o.customerPhone ? '<div style="font-size:10px; color:#6b7280;">📱 ' + (o.phone || o.customerPhone) + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    // المنتجات
+    var itemsHtml = '';
+    var items = o.items || [];
+    if (Array.isArray(items) && items.length) {
+      itemsHtml = '<div style="padding:8px 0; background:#fff;">';
+      items.forEach(function(item) {
+        var product = (state.products || []).find(function(p) { return String(p.id) === String(item.id); }) || {};
+        var prodName = product.name || item.name || 'منتج';
+        var prodImg = product.img || (product.images && product.images[0]) || item.img || '';
+        var prodPrice = Number(product.price || item.price) || 0;
+        var qty = item.qty || 1;
+        var size = item.size || '';
+        var color = item.color || '';
         
         itemsHtml += '<div style="display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid #f9fafb;">' +
           '<div style="width:70px; height:70px; border-radius:10px; overflow:hidden; background:#f4f6fa; flex-shrink:0; border:1px solid #f3f4f6;">' +
@@ -1750,6 +1848,32 @@ function exportProductsCSV() {
   document.body.removeChild(link);
   
   alert('✅ تم تصدير ' + _allProducts.length + ' منتج إلى ملف CSV');
+}
+
+
+// ═══ إرسال رسالة واتساب للمورد ═══
+function sendToSupplier(orderId, productName, size, color, qty, supplierPhone, supplierName) {
+  if (!supplierPhone) {
+    alert('⚠️ لا يوجد رقم هاتف لهذا المورد');
+    return;
+  }
+  
+  // تنظيف رقم الهاتف
+  var phone = String(supplierPhone).replace(/[^0-9]/g, '');
+  if (phone.startsWith('0')) phone = '967' + phone.substring(1);
+  if (!phone.startsWith('967') && phone.length === 9) phone = '967' + phone;
+  
+  var message = '🔔 *طلب تجهيز منتجات - CHIZEN*\n\n';
+  message += '📋 *رقم الطلب:* #' + orderId + '\n';
+  message += '📦 *المنتج:* ' + productName + '\n';
+  if (size) message += '📏 *المقاس:* ' + size + '\n';
+  if (color) message += '🎨 *اللون:* ' + color + '\n';
+  message += '🔢 *الكمية:* ' + qty + '\n\n';
+  message += '⚠️ يرجى تجهيز الطلب وتأكيده في أقرب وقت.\n';
+  message += 'شكراً لتعاملكم مع CHIZEN 🙏';
+  
+  var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
+  window.open(url, '_blank');
 }
 
 console.log('[CAT-MANAGER-NEW v2] loaded');
