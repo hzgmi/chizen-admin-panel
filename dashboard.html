@@ -952,6 +952,23 @@ async function verifyPayment(orderId){
       return;
     }
     await db.collection("orders").doc(orderId).set(updates, { merge: true });
+    
+    // إعادة تحميل الطلبات مباشرة (لإخفاء الطلب من القائمة)
+    try {
+      var snap = await db.collection('orders').limit(500).get();
+      state.orders = [];
+      snap.forEach(function(d) { var o = d.data(); o.id = d.id; state.orders.push(o); });
+      
+      // إعادة عرض قسم تأكيد الدفع
+      if (typeof renderPaymentReview === 'function') {
+        renderPaymentReview();
+      } else if (typeof render === 'function') {
+        render();
+      }
+      console.log('[verifyPayment] orders reloaded:', state.orders.length);
+    } catch(re) {
+      console.warn('[verifyPayment] reload failed:', re);
+    }
 
     // ═══ إشعار العميل بتأكيد الدفع ═══
     try {
