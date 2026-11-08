@@ -811,8 +811,8 @@ function calculateAutoRates() {
   var priceUSD = _rates.usdSouth > 0 ? Math.round(priceYER / _rates.usdSouth) : 0;
   
   if (yerEl) yerEl.textContent = Math.round(priceYER).toLocaleString();
-  if (sarEl) sarEl.textContent = priceSAR.toLocaleString();
-  if (usdEl) usdEl.textContent = priceUSD.toLocaleString();
+  if (sarEl) sarEl.textContent = priceSAR.toFixed(2);
+  if (usdEl) usdEl.textContent = priceUSD.toFixed(2);
 }
 
 
@@ -1109,8 +1109,8 @@ function previewProduct() {
     if (currency === 'SAR') priceYER = price * (_rates.sarSouth || 350);
     else if (currency === 'USD') priceYER = price * (_rates.usdSouth || 1300);
     
-    var priceSAR = _rates.sarSouth > 0 ? Math.round(priceYER / _rates.sarSouth) : 0;
-    var priceUSD = _rates.usdSouth > 0 ? Math.round(priceYER / _rates.usdSouth) : 0;
+    var priceSAR = _rates.sarSouth > 0 ? (priceYER / _rates.sarSouth) : 0;
+    var priceUSD = _rates.usdSouth > 0 ? (priceYER / _rates.usdSouth) : 0;
     
     // شريط الصور المصغرة
     var thumbsHtml = '';
@@ -1207,8 +1207,8 @@ function previewProduct() {
     // العملات الأخرى (فقط إذا السعر > 0)
     if (priceYER > 0) {
       html += '<div style="padding:0 16px; display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">';
-      html += '<div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:12px; text-align:center;"><div style="font-size:10px; color:#9ca3af;">🇸🇦 سعودي</div><div style="font-size:16px; color:#F2E3C6; font-weight:900; margin-top:4px;">' + priceSAR.toLocaleString() + '</div></div>';
-      html += '<div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:12px; text-align:center;"><div style="font-size:10px; color:#9ca3af;">🇺🇸 دولار</div><div style="font-size:16px; color:#F2E3C6; font-weight:900; margin-top:4px;">' + priceUSD.toLocaleString() + '</div></div>';
+      html += '<div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:12px; text-align:center;"><div style="font-size:10px; color:#9ca3af;">🇸🇦 سعودي</div><div style="font-size:16px; color:#F2E3C6; font-weight:900; margin-top:4px;">' + priceSAR.toFixed(2) + '</div></div>';
+      html += '<div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:12px; text-align:center;"><div style="font-size:10px; color:#9ca3af;">🇺🇸 دولار</div><div style="font-size:16px; color:#F2E3C6; font-weight:900; margin-top:4px;">' + priceUSD.toFixed(2) + '</div></div>';
       html += '</div>';
     }
     
