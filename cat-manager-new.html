@@ -174,7 +174,7 @@ body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e
 
 <!-- Bottom Nav -->
 <div class="bottom-nav">
-  <div class="nav-item" onclick="alert('الإشعارات (قيد التطوير)')" style="position:relative;">
+  <div class="nav-item" onclick="openNotifModal()" style="position:relative;">
     <div class="icon">🔔</div>
     <div class="label">الإشعارات</div>
     <span class="nav-badge">2</span>
@@ -1271,6 +1271,72 @@ function setMainImageFromPreview(idx) {
   previewProduct();
 }
 
+
+// ═══ الإشعارات ═══
+async function openNotifModal() {
+  document.getElementById('notifModal').style.display = 'block';
+  var list = document.getElementById('notifList');
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
+  
+  try {
+    // جلب الطلبات الجديدة (المعلقة) من Firestore
+    var snap = await db.collection('orders').where('category','==',state.cat).orderBy('createdAt','desc').limit(20).get().catch(function(){ 
+      return db.collection('orders').where('category','==',state.cat).limit(20).get(); 
+    });
+    
+    var notifs = [];
+    snap.forEach(function(d) {
+      var o = d.data();
+      o.id = d.id;
+      notifs.push(o);
+    });
+    
+    if (!notifs.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:48px;margin-bottom:12px;">📭</div><b>لا توجد إشعارات</b></div>';
+      return;
+    }
+    
+    list.innerHTML = notifs.map(function(o) {
+      var isPending = o.status === 'pending' || o.status === 'awaiting_verification';
+      var statusColor = isPending ? '#f59e0b' : '#10b981';
+      var statusLabel = isPending ? '⏳ معلق' : '✅ مؤكد';
+      var total = Number(o.total) || 0;
+      var timeAgo = '';
+      if (o.createdAt && o.createdAt.seconds) {
+        var diff = Math.floor((Date.now()/1000) - o.createdAt.seconds);
+        if (diff < 60) timeAgo = 'الآن';
+        else if (diff < 3600) timeAgo = Math.floor(diff/60) + ' د';
+        else if (diff < 86400) timeAgo = Math.floor(diff/3600) + ' س';
+        else timeAgo = Math.floor(diff/86400) + ' ي';
+      }
+      
+      return '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-right:4px solid ' + statusColor + ';">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
+          '<b style="color:#a855f7; font-size:12px;">#' + (o.id||'').substring(0,8) + '</b>' +
+          '<span style="font-size:10px; color:#9ca3af; font-weight:700;">' + timeAgo + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px; color:#1a1a2e; font-weight:800; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
+        '<div style="font-size:12px; color:#6b7280; margin-bottom:8px;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
+        '<div style="display:flex; gap:6px;">' +
+          '<span style="font-size:10px; color:' + statusColor + '; background:rgba(245,158,11,0.1); padding:2px 8px; border-radius:6px; font-weight:800;">' + statusLabel + '</span>' +
+          '<button onclick="openOrderDetail(\'' + o.id + '\')" style="background:rgba(59,130,246,0.1); color:#3b82f6; border:none; padding:2px 10px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">عرض</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ ' + e.message + '</div>';
+  }
+}
+
+function closeNotifModal() {
+  document.getElementById('notifModal').style.display = 'none';
+}
+
+function openOrderDetail(id) {
+  alert('تفاصيل الطلب: ' + id.substring(0,8));
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
@@ -1673,6 +1739,17 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
     </div>
     
     <div id="previewContent" style="padding:16px;"></div>
+  </div>
+</div>
+
+<!-- Modal الإشعارات -->
+<div id="notifModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; overflow-y:auto; direction:rtl;">
+  <div style="background:#f4f6fb; max-width:500px; margin:20px auto; border-radius:20px; padding:20px; min-height:90vh;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #e5e7eb;">
+      <h2 style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">🔔 الإشعارات</h2>
+      <button onclick="closeNotifModal()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <div id="notifList"></div>
   </div>
 </div>
 </body>
