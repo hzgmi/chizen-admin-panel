@@ -812,6 +812,8 @@ function startPaymentListener() {
         renderPaymentReview();
       } else if (typeof renderPaymentReviewSection === 'function') {
         renderPaymentReviewSection();
+      } else if (state.activeTab === 'payments' && typeof renderTab === 'function') {
+        renderTab('payments');
       }
       
       // تحديث الشارة (badge) إذا وجدت
@@ -957,8 +959,10 @@ async function verifyPayment(orderId){
     try {
       await db.collection("orders").doc(orderId).update(updates);
     } catch(err) {
-      // إذا فشل update (الوثيقة غير موجودة)، نستخدم set
-      await db.collection("orders").doc(orderId).set(updates, { merge: true });
+      console.error('[verifyPayment] update failed:', err);
+      if (window.__chizenToast) window.__chizenToast("❌ فشل تأكيد الدفع", "error", err.message || "تحقق من الاتصال");
+      else alert("فشل تأكيد الدفع: " + (err.message || "خطأ غير معروف"));
+      return;
     }
     
     // الانتقال التلقائي إلى "المدفوعات المؤكدة" بعد لحظات
@@ -976,7 +980,7 @@ async function verifyPayment(orderId){
     
     // إعادة تحميل الطلبات مباشرة (لإخفاء الطلب من القائمة)
     try {
-      var snap = await db.collection('orders').limit(500).get();
+      var snap = await db.collection('orders').orderBy('createdAt','desc').limit(500).get();
       state.orders = [];
       snap.forEach(function(d) { var o = d.data(); o.id = d.id; state.orders.push(o); });
       
