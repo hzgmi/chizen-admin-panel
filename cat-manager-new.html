@@ -391,6 +391,17 @@ async function loadProducts() {
   } catch(e) { console.error('[products]', e); }
 }
 
+function updateNotifBadge(count) {
+  var badge = document.getElementById('notifBadge');
+  if (!badge) {
+    badge = document.querySelector('.nav-badge');
+  }
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'block' : 'none';
+  }
+}
+
 function renderStats() {
   var newOrders = state.orders.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; }).length;
   var doneOrders = state.orders.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; }).length;
