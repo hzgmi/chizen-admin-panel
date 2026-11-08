@@ -953,7 +953,13 @@ async function verifyPayment(orderId){
       else alert("معرف الطلب غير صالح");
       return;
     }
-    await db.collection("orders").doc(orderId).set(updates, { merge: true });
+    // استخدام update() مع dot notation (للتحديث الصحيح للحقول المتداخلة)
+    try {
+      await db.collection("orders").doc(orderId).update(updates);
+    } catch(err) {
+      // إذا فشل update (الوثيقة غير موجودة)، نستخدم set
+      await db.collection("orders").doc(orderId).set(updates, { merge: true });
+    }
     
     // الانتقال التلقائي إلى "المدفوعات المؤكدة" بعد لحظات
     setTimeout(function() {
