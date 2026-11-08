@@ -617,8 +617,8 @@ async function saveProduct() {
     // جلب بيانات المورد
     var supplierId = document.getElementById('pf-supplier') ? document.getElementById('pf-supplier').value : '';
     var supplier = null;
-    if (supplierId && state.suppliers) {
-      supplier = state.suppliers.find(function(s) { return String(s.id) === String(supplierId); });
+    if (supplierId && _suppliersList) {
+      supplier = _suppliersList.find(function(s) { return String(s.id) === String(supplierId); });
     }
     
     var data = {
@@ -797,8 +797,8 @@ async function saveProduct() {
     // جلب بيانات المورد
     var supplierId = document.getElementById('pf-supplier') ? document.getElementById('pf-supplier').value : '';
     var supplier = null;
-    if (supplierId && state.suppliers) {
-      supplier = state.suppliers.find(function(s) { return String(s.id) === String(supplierId); });
+    if (supplierId && _suppliersList) {
+      supplier = _suppliersList.find(function(s) { return String(s.id) === String(supplierId); });
     }
     
     var data = {
