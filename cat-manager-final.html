@@ -441,6 +441,9 @@ function renderLatestOrders() {
   }).join('');
 }
 
+// تحميل أسعار الصرف مرة واحدة عند بدء التطبيق
+setTimeout(function() { loadRates(); }, 500);
+
 auth.onAuthStateChanged(async function(user) {
   console.log('[AUTH] user:', user ? user.uid : 'null');
   if (!user) {
@@ -486,8 +489,8 @@ auth.onAuthStateChanged(async function(user) {
 var _formImages = [];
 var _editingId = null;
 
-async function openProductModal(productData) {
-  await loadRates();
+function openProductModal(productData) {
+  // فتح النموذج فوراً (بدون انتظار)
   _editingId = productData ? productData.id : null;
   
   var titleEl = document.querySelector('#productModal h2');
@@ -634,8 +637,8 @@ async function saveProduct() {
 // ═══ Modal إضافة منتج ═══
 var _formImages = [];
 
-async function openProductModal(productData) {
-  await loadRates();
+function openProductModal(productData) {
+  // فتح النموذج فوراً (بدون انتظار)
   _editingId = productData ? productData.id : null;
   
   var titleEl = document.querySelector('#productModal h2');
@@ -894,9 +897,10 @@ function toggleSize(btn, size) {
 // ═══ أسعار الصرف التلقائية ═══
 var _rates = { sarSouth: 350, usdSouth: 1300, sarNorth: 500, usdNorth: 2000 };
 
-async function loadRates() {
-  try {
-    var doc = await db.collection('config').doc('rates').get();
+var _ratesLoaded = false;
+function loadRates() {
+  if (_ratesLoaded) return; // تحميل مرة واحدة فقط
+  db.collection('config').doc('rates').get().then(function(doc) {
     if (doc.exists) {
       var d = doc.data();
       _rates = {
@@ -905,11 +909,16 @@ async function loadRates() {
         sarNorth: Number(d.sarNorth) || 500,
         usdNorth: Number(d.usdNorth) || 2000
       };
+      _ratesLoaded = true;
       console.log('[rates] loaded:', _rates);
+      // تحديث الحقول التلقائية إذا كان النموذج مفتوحاً
+      if (document.getElementById('productModal').style.display === 'block' && window.calculateAutoRates) {
+        calculateAutoRates();
+      }
     }
-  } catch(e) {
+  }).catch(function(e) {
     console.warn('[rates] failed:', e.message);
-  }
+  });
 }
 
 function calculateAutoRates() {
