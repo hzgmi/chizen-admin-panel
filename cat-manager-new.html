@@ -1028,6 +1028,34 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
       <div id="pf-images-preview" style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:10px;"></div>
     </div>
 
+    <!-- العرض الخاطف -->
+    <div style="background:rgba(245,158,11,0.08); padding:14px; border-radius:12px; margin-bottom:16px; border:1px solid rgba(245,158,11,0.3);">
+      <div style="font-size:13px; font-weight:900; color:#f59e0b; margin-bottom:10px;">⚡ العرض الخاطف (Flash Sale)</div>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:10px;">
+        <input type="checkbox" id="pf-flash-enabled" style="width:18px; height:18px; accent-color:#f59e0b;" onchange="document.getElementById('pf-flash-fields').style.display = this.checked ? 'block' : 'none';">
+        <span style="font-size:13px; font-weight:800;">تفعيل العرض الخاطف (سعر خاص لفترة محدودة)</span>
+      </label>
+      <div id="pf-flash-fields" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+          <div>
+            <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">سعر العرض *</label>
+            <input id="pf-flash-price" type="number" placeholder="0" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">ينتهي في *</label>
+            <input id="pf-flash-end" type="datetime-local" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+          </div>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">عنوان العرض (اختياري)</label>
+          <input id="pf-flash-title" type="text" placeholder="مثال: خصم 50% لمدة 24 ساعة" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div style="font-size:11px; color:#f59e0b; margin-top:8px; text-align:center; font-weight:700;">
+          ⚡ سيظهر المنتج في قسم "العروض الخاطفة" بالصفحة الرئيسية.
+        </div>
+      </div>
+    </div>
+
     <!-- خيارات إضافية -->
     <div style="background:#f9fafb; padding:14px; border-radius:12px; margin-bottom:16px;">
       <div style="font-size:13px; font-weight:900; color:#1a1a2e; margin-bottom:10px;">⚙️ خيارات إضافية</div>
