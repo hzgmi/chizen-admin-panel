@@ -403,6 +403,8 @@ async function openProductModal(productData) {
   renderImagePreview();
   attachImageInput();
   calculateAutoRates();
+  attachLivePreview();
+  updateLivePreview();
   document.getElementById('productModal').style.display = 'block';
 }
 
@@ -434,6 +436,7 @@ function attachImageInput() {
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           _formImages.push(canvas.toDataURL('image/jpeg', 0.8));
           renderImagePreview();
+          if (window.updateLivePreview) updateLivePreview();
         };
         img.src = ev.target.result;
       };
@@ -548,6 +551,8 @@ async function openProductModal(productData) {
   renderImagePreview();
   attachImageInput();
   calculateAutoRates();
+  attachLivePreview();
+  updateLivePreview();
   document.getElementById('productModal').style.display = 'block';
 }
 
@@ -579,6 +584,7 @@ function attachImageInput() {
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           _formImages.push(canvas.toDataURL('image/jpeg', 0.8));
           renderImagePreview();
+          if (window.updateLivePreview) updateLivePreview();
         };
         img.src = ev.target.result;
       };
@@ -1247,6 +1253,88 @@ function closePreviewModal() {
   document.getElementById('previewModal').style.display = 'none';
 }
 
+
+// ═══ المعاينة المباشرة ═══
+function updateLivePreview() {
+  var box = document.getElementById('livePreviewBox');
+  var content = document.getElementById('livePreviewContent');
+  if (!box || !content) return;
+  
+  var name = (document.getElementById('pf-name')||{}).value || '';
+  var brand = (document.getElementById('pf-brand')||{}).value || '';
+  var price = parseFloat((document.getElementById('pf-price')||{}).value) || 0;
+  var currency = (document.getElementById('pf-currency')||{}).value || 'YER';
+  var stock = parseInt((document.getElementById('pf-stock')||{}).value) || 0;
+  
+  // إذا لم يكن هناك اسم، أخفِ المعاينة
+  if (!name.trim()) {
+    box.style.display = 'none';
+    return;
+  }
+  
+  box.style.display = 'block';
+  
+  // حساب السعر
+  if (typeof _rates === 'undefined') window._rates = { sarSouth: 350, usdSouth: 1300 };
+  var priceYER = price;
+  if (currency === 'SAR') priceYER = price * (_rates.sarSouth || 350);
+  else if (currency === 'USD') priceYER = price * (_rates.usdSouth || 1300);
+  
+  var priceSAR = _rates.sarSouth > 0 ? Math.round(priceYER / _rates.sarSouth) : 0;
+  var priceUSD = _rates.usdSouth > 0 ? Math.round(priceYER / _rates.usdSouth) : 0;
+  
+  // الصورة الأولى
+  var img = (_formImages && _formImages[0]) || '';
+  
+  var html = '';
+  
+  // الصورة
+  if (img) {
+    html += '<div style="position:relative; padding-top:60%; border-radius:12px; overflow:hidden; margin-bottom:10px; background:#1A2340;">' +
+      '<img src="' + img + '" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">' +
+    '</div>';
+  } else {
+    html += '<div style="position:relative; padding-top:60%; border-radius:12px; background:#1A2340; display:flex; align-items:center; justify-content:center; font-size:40px; opacity:0.3; margin-bottom:10px;">📦</div>';
+  }
+  
+  // الماركة والاسم
+  if (brand) html += '<div style="font-size:11px; color:#a855f7; font-weight:900; margin-bottom:4px;">' + brand + '</div>';
+  html += '<div style="font-size:15px; color:#F2E3C6; font-weight:900; margin-bottom:8px; line-height:1.3;">' + name + '</div>';
+  
+  // السعر
+  html += '<div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">';
+  html += '<span style="font-size:22px; font-weight:900; color:#ec4899;">' + Math.round(priceYER).toLocaleString() + '</span>';
+  html += '<span style="font-size:11px; color:#9ca3af;">ر.ي</span>';
+  html += '</div>';
+  
+  // العملات الأخرى
+  html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">';
+  html += '<div style="background:rgba(0,0,0,0.4); padding:6px; border-radius:8px; text-align:center;"><div style="font-size:9px; color:#9ca3af;">🇸🇦</div><div style="font-size:13px; color:#F2E3C6; font-weight:900;">' + priceSAR.toLocaleString() + '</div></div>';
+  html += '<div style="background:rgba(0,0,0,0.4); padding:6px; border-radius:8px; text-align:center;"><div style="font-size:9px; color:#9ca3af;">🇺🇸</div><div style="font-size:13px; color:#F2E3C6; font-weight:900;">' + priceUSD.toLocaleString() + '</div></div>';
+  html += '</div>';
+  
+  // المخزون
+  if (stock > 0) {
+    html += '<div style="font-size:11px; color:#10b981; font-weight:900; text-align:center;">✅ متوفر (' + stock + ')</div>';
+  } else {
+    html += '<div style="font-size:11px; color:#ef4444; font-weight:900; text-align:center;">❌ غير متوفر</div>';
+  }
+  
+  content.innerHTML = html;
+}
+
+// ربط المعاينة بحقول الإدخال
+function attachLivePreview() {
+  ['pf-name', 'pf-brand', 'pf-price', 'pf-currency', 'pf-stock', 'pf-oldprice'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && !el._liveAttached) {
+      el._liveAttached = true;
+      el.addEventListener('input', updateLivePreview);
+      el.addEventListener('change', updateLivePreview);
+    }
+  });
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
@@ -1256,6 +1344,12 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #f3f4f6;">
       <h2 id="formTitle" style="margin:0; font-size:18px; font-weight:900; color:#1a1a2e;">➕ إضافة منتج جديد</h2>
       <button onclick="closeProductModal()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+
+    <!-- حاوية المعاينة الداخلية (جانبية) -->
+    <div id="livePreviewBox" style="display:none; background:linear-gradient(135deg,#0a0418,#1A2340); border-radius:16px; padding:12px; margin-bottom:16px; border:2px solid rgba(197,160,89,0.3);">
+      <div style="text-align:center; font-size:12px; font-weight:900; color:#C5A059; margin-bottom:8px;">👁️ معاينة مباشرة (تتحدث تلقائياً)</div>
+      <div id="livePreviewContent"></div>
     </div>
 
     <!-- المعلومات الأساسية -->
