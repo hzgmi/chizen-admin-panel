@@ -493,6 +493,9 @@ function openProductModal(productData) {
   // فتح النموذج فوراً (بدون انتظار)
   _editingId = productData ? productData.id : null;
   
+  // تحميل الموردين في الخلفية
+  loadSuppliersForForm();
+  
   var titleEl = document.querySelector('#productModal h2');
   if (titleEl) titleEl.textContent = productData ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد';
   
@@ -503,6 +506,25 @@ function openProductModal(productData) {
   document.getElementById('pf-price').value = productData ? (productData.inputPrice || productData.price || '') : '';
   document.getElementById('pf-currency').value = productData ? (productData.inputCurrency || 'YER') : 'YER';
   document.getElementById('pf-stock').value = productData ? (productData.stock || '') : '';
+  
+  // تحميل المورد المختار (إذا كان تعديل)
+  setTimeout(function() {
+    var supSel = document.getElementById('pf-supplier');
+    if (supSel && productData) {
+      var supId = productData.supplierId || '';
+      supSel.value = supId;
+      // إذا لم يكن موجوداً في القائمة، أضفه
+      if (supId && !Array.from(supSel.options).some(function(o) { return o.value === supId; })) {
+        var opt = document.createElement('option');
+        opt.value = supId;
+        opt.textContent = productData.supplierName || supId;
+        supSel.appendChild(opt);
+        supSel.value = supId;
+      }
+    } else if (supSel) {
+      supSel.value = '';
+    }
+  }, 300);
   
   _formImages = productData && Array.isArray(productData.images) ? productData.images.slice() : [];
   _sizes = productData && Array.isArray(productData.sizes) ? productData.sizes.slice() : [];
@@ -651,6 +673,9 @@ function openProductModal(productData) {
   // فتح النموذج فوراً (بدون انتظار)
   _editingId = productData ? productData.id : null;
   
+  // تحميل الموردين في الخلفية
+  loadSuppliersForForm();
+  
   var titleEl = document.querySelector('#productModal h2');
   if (titleEl) titleEl.textContent = productData ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد';
   
@@ -661,6 +686,25 @@ function openProductModal(productData) {
   document.getElementById('pf-price').value = productData ? (productData.inputPrice || productData.price || '') : '';
   document.getElementById('pf-currency').value = productData ? (productData.inputCurrency || 'YER') : 'YER';
   document.getElementById('pf-stock').value = productData ? (productData.stock || '') : '';
+  
+  // تحميل المورد المختار (إذا كان تعديل)
+  setTimeout(function() {
+    var supSel = document.getElementById('pf-supplier');
+    if (supSel && productData) {
+      var supId = productData.supplierId || '';
+      supSel.value = supId;
+      // إذا لم يكن موجوداً في القائمة، أضفه
+      if (supId && !Array.from(supSel.options).some(function(o) { return o.value === supId; })) {
+        var opt = document.createElement('option');
+        opt.value = supId;
+        opt.textContent = productData.supplierName || supId;
+        supSel.appendChild(opt);
+        supSel.value = supId;
+      }
+    } else if (supSel) {
+      supSel.value = '';
+    }
+  }, 300);
   
   _formImages = productData && Array.isArray(productData.images) ? productData.images.slice() : [];
   _sizes = productData && Array.isArray(productData.sizes) ? productData.sizes.slice() : [];
@@ -1944,6 +1988,80 @@ function updateNotifBadge(count) {
   }
 }
 
+
+// ═══ تحميل الموردين ═══
+var _suppliersLoaded = false;
+var _suppliersList = [];
+
+async function loadSuppliersForForm() {
+  if (_suppliersLoaded) {
+    populateSupplierSelect();
+    return;
+  }
+  
+  try {
+    var suppliers = [];
+    
+    // 1. من config/suppliers
+    try {
+      var cfgDoc = await db.collection('config').doc('suppliers').get();
+      if (cfgDoc.exists) {
+        var data = cfgDoc.data();
+        if (Array.isArray(data.list)) {
+          data.list.forEach(function(s) {
+            suppliers.push({
+              id: s.id || s.name,
+              name: s.name || 'مورد',
+              phone: s.phone || '',
+              source: 'config'
+            });
+          });
+        }
+      }
+    } catch(e) { console.warn('[cfg suppliers]', e); }
+    
+    // 2. من suppliers collection
+    try {
+      var snap = await db.collection('suppliers').get();
+      snap.forEach(function(d) {
+        var x = d.data();
+        if (!suppliers.some(function(s) { return s.phone === x.phone; })) {
+          suppliers.push({
+            id: d.id,
+            name: x.name || 'مورد',
+            phone: x.phone || '',
+            source: 'collection'
+          });
+        }
+      });
+    } catch(e) { console.warn('[suppliers collection]', e); }
+    
+    _suppliersList = suppliers;
+    _suppliersLoaded = true;
+    populateSupplierSelect();
+    console.log('[suppliers] loaded:', suppliers.length);
+    
+  } catch(e) {
+    console.warn('[suppliers] failed:', e);
+  }
+}
+
+function populateSupplierSelect() {
+  var sel = document.getElementById('pf-supplier');
+  if (!sel) return;
+  
+  var currentVal = sel.value;
+  sel.innerHTML = '<option value="">— بدون مورد —</option>';
+  
+  _suppliersList.forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name + (s.phone ? ' — ' + s.phone : '');
+    if (s.id === currentVal) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
 console.log('[CAT-MANAGER-NEW v2] loaded');
 </script>
 
@@ -1988,6 +2106,18 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
           <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">SKU / الباركود</label>
           <input id="pf-sku" type="text" placeholder="SKU-001" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box;">
         </div>
+      </div>
+      
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">🏪 المورد</label>
+        <select id="pf-supplier" style="width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; box-sizing:border-box; font-family:inherit;">
+          <option value="">— بدون مورد —</option>
+        </select>
+        <div style="font-size:10px; color:#9ca3af; margin-top:4px;">اختر المورد المسؤول عن توريد هذا المنتج</div>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div>
       </div>
       <div>
         <label style="display:block; font-size:12px; font-weight:800; color:#6b7280; margin-bottom:6px;">الوصف التفصيلي</label>
