@@ -1329,7 +1329,7 @@ function renderMore(){
     {icon:'📊', lbl:'تقارير', tool:'reports'},
     {icon:'👤', lbl:'حسابي', tool:'profile'},
     {icon:'⚙️', lbl:'إعدادات', tool:'settings'}
-  ];
+  , {tool:'verified_payments', icon:'✅', lbl:'المدفوعات المؤكدة'}];
   
   return '<div class="vst">➕ المزيد — أدوات الإدارة</div>'
     + '<div class="vmore-grid">'
@@ -1356,6 +1356,7 @@ document.addEventListener('click', async function(e){
   if (tool === 'transactions') return showTransactionsList();
   if (tool === 'notifications') return showNotificationManager();
   if (tool === 'payments') return showPaymentsManager();
+  if (tool === 'verified_payments') return showVerifiedPayments();
   if (tool === 'reports') return showReports();
   if (tool === 'profile') return showProfile();
   if (tool === 'settings') return window.__showSettingsFull ? window.__showSettingsFull() : showSettings();
@@ -3143,6 +3144,69 @@ async function __savePayments(list){
 
 function __genId(){
   return "pm_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
+}
+
+
+// ═══ المدفوعات المؤكدة ═══
+async function showVerifiedPayments() {
+  var c = document.getElementById('content');
+  if (!c) return;
+  
+  c.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
+  
+  try {
+    var snap = await db.collection('orders').limit(200).get();
+    
+    var verified = [];
+    snap.forEach(function(d) {
+      var o = d.data();
+      o.id = d.id;
+      var isVerified = (o.workflowStatus === 'awaiting_categories' || 
+                        o.workflowStatus === 'payment_confirmed' || 
+                        (o.payment && o.payment.status === 'verified'));
+      if (isVerified) verified.push(o);
+    });
+    
+    verified.sort(function(a, b) {
+      var ta = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+      var tb = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+      return tb - ta;
+    });
+    
+    var html = '<div class="vst">✅ المدفوعات المؤكدة (' + verified.length + ')</div>';
+    
+    if (!verified.length) {
+      html += '<div class="vempty"><div class="vempty-icon">💳</div><div class="vempty-txt">لا توجد مدفوعات مؤكدة</div></div>';
+      c.innerHTML = html;
+      return;
+    }
+    
+    html += '<div style="padding:0 4px;">';
+    verified.forEach(function(o) {
+      var total = Number(o.total) || 0;
+      var orderId = (o.id || '').substring(0, 8);
+      var dateStr = '';
+      if (o.createdAt && o.createdAt.seconds) {
+        var d = new Date(o.createdAt.seconds * 1000);
+        dateStr = d.toLocaleDateString('ar-YE', { month: 'short', day: 'numeric' });
+      }
+      html += '<div style="background:#fff; border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-right:4px solid #10b981;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+          '<b style="color:#10b981; font-size:13px;">#' + orderId + '</b>' +
+          '<span style="font-size:10px; padding:2px 8px; border-radius:6px; font-weight:800; background:rgba(16,185,129,0.1); color:#10b981;">✅ مؤكد</span>' +
+        '</div>' +
+        '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">👤 ' + (o.customerName || o.name || 'عميل') + '</div>' +
+        '<div style="font-size:12px; color:#6b7280; margin-bottom:4px;">📱 ' + (o.phone || o.customerPhone || '—') + '</div>' +
+        '<div style="font-size:14px; color:#10b981; font-weight:900;">💰 ' + total.toFixed(0) + ' ر.ي</div>' +
+        (dateStr ? '<div style="font-size:10px; color:#9ca3af; margin-top:4px;">' + dateStr + '</div>' : '') +
+      '</div>';
+    });
+    html += '</div>';
+    
+    c.innerHTML = html;
+  } catch(e) {
+    c.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ ' + e.message + '</div>';
+  }
 }
 
 async function showPaymentsManager(){
