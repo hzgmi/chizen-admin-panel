@@ -1885,34 +1885,40 @@ function sendToSupplier(orderId, supplierPhone, supplierName) {
   if (phone.startsWith('0')) phone = '967' + phone.substring(1);
   if (!phone.startsWith('967') && phone.length === 9) phone = '967' + phone;
   
+  // جلب الطلب
   var order = (state.orders || []).find(function(x) { return String(x.id) === String(orderId); }) || {};
-  var orderShort = orderId.substring(0, 8);
-  var customerName = order.customerName || order.name || 'عميل';
-  
-  var message = '🔔 *طلب تجهيز - CHIZEN*\n\n';
-  message += '📋 *رقم الطلب:* #' + orderShort + '\n';
-  message += '👤 *العميل:* ' + customerName + '\n';
-  message += '💰 *الإجمالي:* ' + (Number(order.total) || 0).toFixed(0) + ' ر.ي\n\n';
-  
-  // إضافة المنتجات إذا كانت متوفرة
   var items = order.items || [];
+  var orderShort = orderId.substring(0, 8);
+  
+  // بناء الرسالة (مرتبة وواضحة)
+  var msg = '🛒 *طلب تجهيز منتجات*\n';
+  msg += '━━━━━━━━━━━━━━━━━━\n';
+  msg += '📋 *رقم الطلب:* #' + orderShort + '\n';
+  msg += '━━━━━━━━━━━━━━━━━━\n\n';
+  
   if (items.length) {
-    message += '📦 *المنتجات المطلوبة:*\n';
+    msg += '📦 *المنتجات المطلوبة:*\n';
     items.forEach(function(item, idx) {
       var prod = (state.products || []).find(function(p) { return String(p.id) === String(item.id); }) || {};
       var name = prod.name || item.name || 'منتج';
-      message += (idx + 1) + '. ' + name;
-      if (item.size) message += ' - مقاس: ' + item.size;
-      if (item.color) message += ' - لون: ' + item.color;
-      message += ' - كمية: ' + (item.qty || 1) + '\n';
+      var qty = item.qty || 1;
+      var size = item.size || '';
+      var color = item.color || '';
+      var sku = prod.sku || '';
+      
+      msg += '\n' + (idx + 1) + '. *' + name + '*\n';
+      if (sku) msg += '   🔖 SKU: ' + sku + '\n';
+      if (size) msg += '   📏 المقاس: ' + size + '\n';
+      if (color) msg += '   🎨 اللون: ' + color + '\n';
+      msg += '   🔢 الكمية: ' + qty + '\n';
     });
-    message += '\n';
   }
   
-  message += '⚠️ يرجى تجهيز الطلب وتأكيده في أقرب وقت.\n';
-  message += 'شكراً لتعاملكم مع CHIZEN 🙏';
+  msg += '\n━━━━━━━━━━━━━━━━━━\n';
+  msg += '⚠️ يرجى تجهيز الطلب وتأكيده في أقرب وقت.\n';
+  msg += 'شكراً لتعاملكم مع CHIZEN 🙏';
   
-  var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
+  var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
   window.open(url, '_blank');
 }
 
