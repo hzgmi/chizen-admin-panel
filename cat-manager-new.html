@@ -367,25 +367,43 @@ auth.onAuthStateChanged(async function(user) {
 
 // ═══ Modal إضافة منتج ═══
 var _formImages = [];
+var _editingId = null;
 
-async function openProductModal() {
+async function openProductModal(productData) {
   await loadRates();
-  document.getElementById('productModal').style.display = 'block';
-  document.getElementById('pf-name').value = '';
-  document.getElementById('pf-brand').value = '';
-  document.getElementById('pf-sku').value = '';
-  document.getElementById('pf-desc').value = '';
-  document.getElementById('pf-price').value = '';
-  document.getElementById('pf-stock').value = '';
-  _formImages = [];
-  _sizes = [];
+  _editingId = productData ? productData.id : null;
+  
+  var titleEl = document.querySelector('#productModal h2');
+  if (titleEl) titleEl.textContent = productData ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد';
+  
+  document.getElementById('pf-name').value = productData ? (productData.name || '') : '';
+  document.getElementById('pf-brand').value = productData ? (productData.brand || '') : '';
+  document.getElementById('pf-sku').value = productData ? (productData.sku || '') : '';
+  document.getElementById('pf-desc').value = productData ? (productData.description || '') : '';
+  document.getElementById('pf-price').value = productData ? (productData.inputPrice || productData.price || '') : '';
+  document.getElementById('pf-currency').value = productData ? (productData.inputCurrency || 'YER') : 'YER';
+  document.getElementById('pf-stock').value = productData ? (productData.stock || '') : '';
+  
+  _formImages = productData && Array.isArray(productData.images) ? productData.images.slice() : [];
+  _sizes = productData && Array.isArray(productData.sizes) ? productData.sizes.slice() : [];
+  
   document.querySelectorAll('.size-btn').forEach(function(b) {
-    b.style.background = '#fff';
-    b.style.color = '#1a1a2e';
-    b.style.borderColor = '#e5e7eb';
+    var size = b.textContent;
+    if (_sizes.indexOf(size) !== -1) {
+      b.style.background = '#a855f7';
+      b.style.color = '#fff';
+      b.style.borderColor = '#a855f7';
+    } else {
+      b.style.background = '#fff';
+      b.style.color = '#1a1a2e';
+      b.style.borderColor = '#e5e7eb';
+    }
   });
+  
   renderImagePreview();
   attachImageInput();
+  calculateAutoRates();
+  document.getElementById('productModal').style.display = 'block';
 }
 
 function closeProductModal() {
@@ -471,10 +489,19 @@ async function saveProduct() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     
-    await db.collection('products').add(data);
-    alert('✅ تم إضافة المنتج بنجاح! بانتظار مراجعة الإدارة.');
+    if (_editingId) {
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('products').doc(_editingId).update(data);
+      alert('✅ تم تحديث المنتج بنجاح!');
+    } else {
+      await db.collection('products').add(data);
+      alert('✅ تم إضافة المنتج بنجاح! بانتظار مراجعة الإدارة.');
+    }
     closeProductModal();
-    await loadProducts();
+    await loadProductsList();
+    if (document.getElementById('productsViewModal').style.display !== 'none') {
+      renderProductsView();
+    }
   } catch(e) {
     alert('❌ خطأ: ' + e.message);
   } finally {
@@ -487,24 +514,41 @@ async function saveProduct() {
 // ═══ Modal إضافة منتج ═══
 var _formImages = [];
 
-async function openProductModal() {
+async function openProductModal(productData) {
   await loadRates();
-  document.getElementById('productModal').style.display = 'block';
-  document.getElementById('pf-name').value = '';
-  document.getElementById('pf-brand').value = '';
-  document.getElementById('pf-sku').value = '';
-  document.getElementById('pf-desc').value = '';
-  document.getElementById('pf-price').value = '';
-  document.getElementById('pf-stock').value = '';
-  _formImages = [];
-  _sizes = [];
+  _editingId = productData ? productData.id : null;
+  
+  var titleEl = document.querySelector('#productModal h2');
+  if (titleEl) titleEl.textContent = productData ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد';
+  
+  document.getElementById('pf-name').value = productData ? (productData.name || '') : '';
+  document.getElementById('pf-brand').value = productData ? (productData.brand || '') : '';
+  document.getElementById('pf-sku').value = productData ? (productData.sku || '') : '';
+  document.getElementById('pf-desc').value = productData ? (productData.description || '') : '';
+  document.getElementById('pf-price').value = productData ? (productData.inputPrice || productData.price || '') : '';
+  document.getElementById('pf-currency').value = productData ? (productData.inputCurrency || 'YER') : 'YER';
+  document.getElementById('pf-stock').value = productData ? (productData.stock || '') : '';
+  
+  _formImages = productData && Array.isArray(productData.images) ? productData.images.slice() : [];
+  _sizes = productData && Array.isArray(productData.sizes) ? productData.sizes.slice() : [];
+  
   document.querySelectorAll('.size-btn').forEach(function(b) {
-    b.style.background = '#fff';
-    b.style.color = '#1a1a2e';
-    b.style.borderColor = '#e5e7eb';
+    var size = b.textContent;
+    if (_sizes.indexOf(size) !== -1) {
+      b.style.background = '#a855f7';
+      b.style.color = '#fff';
+      b.style.borderColor = '#a855f7';
+    } else {
+      b.style.background = '#fff';
+      b.style.color = '#1a1a2e';
+      b.style.borderColor = '#e5e7eb';
+    }
   });
+  
   renderImagePreview();
   attachImageInput();
+  calculateAutoRates();
+  document.getElementById('productModal').style.display = 'block';
 }
 
 function closeProductModal() {
@@ -590,10 +634,19 @@ async function saveProduct() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     
-    await db.collection('products').add(data);
-    alert('✅ تم إضافة المنتج بنجاح! بانتظار مراجعة الإدارة.');
+    if (_editingId) {
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('products').doc(_editingId).update(data);
+      alert('✅ تم تحديث المنتج بنجاح!');
+    } else {
+      await db.collection('products').add(data);
+      alert('✅ تم إضافة المنتج بنجاح! بانتظار مراجعة الإدارة.');
+    }
     closeProductModal();
-    await loadProducts();
+    await loadProductsList();
+    if (document.getElementById('productsViewModal').style.display !== 'none') {
+      renderProductsView();
+    }
   } catch(e) {
     alert('❌ خطأ: ' + e.message);
   } finally {
@@ -759,7 +812,14 @@ function calculateAutoRates() {
 
 // ═══ أزرار الإجراءات ═══
 async function editProduct(id) {
-  alert('✏️ تعديل المنتج (قريباً) — ID: ' + id.substring(0,8));
+  try {
+    var doc = await db.collection('products').doc(id).get();
+    if (!doc.exists) { alert('المنتج غير موجود'); return; }
+    var p = doc.data();
+    p.id = doc.id;
+    closeProductsView();
+    await openProductModal(p);
+  } catch(e) { alert('❌ ' + e.message); }
 }
 
 async function toggleProduct(id) {
