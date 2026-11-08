@@ -905,7 +905,13 @@ async function verifyPayment(orderId){
         updates["categories." + cat + ".status"] = "pending";
       });
     }
-    await db.collection("orders").doc(orderId).update(updates);
+    // التحقق من orderId
+    if (!orderId) {
+      if (window.__chizenToast) window.__chizenToast("❌ خطأ", "error", "معرف الطلب غير صالح");
+      else alert("معرف الطلب غير صالح");
+      return;
+    }
+    await db.collection("orders").doc(orderId).set(updates, { merge: true });
 
     // ═══ Write financial record to payments collection ═══
     try {
@@ -973,13 +979,18 @@ async function rejectPayment(orderId, reason){
     var order = state.orders.find(function(o){ return o.id === orderId; });
     if (!order) return;
     
-    await db.collection('orders').doc(orderId).update({
+    if (!orderId) {
+      if (window.__chizenToast) window.__chizenToast("❌ خطأ", "error", "معرف الطلب غير صالح");
+      else alert("معرف الطلب غير صالح");
+      return;
+    }
+    await db.collection('orders').doc(orderId).set({
       workflowStatus: 'payment_rejected',
       'payment.status': 'rejected',
       'payment.rejectedReason': reason,
       'payment.rejectedBy': state.user.uid,
       'payment.rejectedAt': firebase.firestore.FieldValue.serverTimestamp()
-    });
+    }, { merge: true });
     
     var custId = order.customerId || order.userId;
     if (custId) {
