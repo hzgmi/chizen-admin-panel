@@ -935,6 +935,7 @@ async function verifyPayment(orderId){
   try {
     var updates = {
       workflowStatus: "awaiting_categories",
+      status: "payment_verified",
       "payment.status": "verified",
       "payment.verifiedBy": state.user.uid,
       "payment.verifiedAt": firebase.firestore.FieldValue.serverTimestamp()
@@ -951,6 +952,28 @@ async function verifyPayment(orderId){
       return;
     }
     await db.collection("orders").doc(orderId).set(updates, { merge: true });
+
+    // ═══ إشعار العميل بتأكيد الدفع ═══
+    try {
+      await db.collection("push_queue").add({
+        title: "✅ تم تأكيد دفعك",
+        body: "تم تأكيد دفعتك بنجاح. سيتم تجهيز طلبك قريباً.",
+        type: "order",
+        status: "pending",
+        userId: order.customerId || order.userId || "",
+        data: { orderId: orderId, event: "payment_verified" },
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("[push_queue] notification sent to customer");
+    } catch(ne) { console.warn("[push_queue] failed:", ne.message); }
+    
+    // إعادة تحميل الطلبات (ليختفي الطلب من القائمة)
+    if (typeof loadOrders === 'function') {
+      await loadOrders();
+    }
+    if (typeof render === 'function') {
+      render();
+    }
 
     // ═══ Write financial record to payments collection ═══
     try {
