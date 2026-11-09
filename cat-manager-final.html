@@ -876,14 +876,20 @@ async function loadProductsList() {
 
 async function openProductsView() {
   document.getElementById('productsViewModal').style.display = 'block';
-  // إذا كانت البيانات محملة، اعرضها فوراً
+  // 1) إذا كانت البيانات محملة، اعرضها فوراً + حدّث في الخلفية
   if (_allProducts.length > 0) {
     renderProductsView();
+    loadProductsList().then(function(){ renderProductsView(); }).catch(function(){});
     return;
   }
+  // 2) أول مرة: جلب + عرض
   document.getElementById('productsViewGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
-  await loadProductsList();
-  renderProductsView();
+  try {
+    await loadProductsList();
+    renderProductsView();
+  } catch(e) {
+    document.getElementById('productsViewGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ef4444;">❌ فشل التحميل: ' + (e.message || 'خطأ') + '</div>';
+  }
 }
 
 function closeProductsView() {
@@ -1084,14 +1090,18 @@ var _orderFilter = 'all';
 
 function openOrdersModal() {
   document.getElementById('ordersModal').style.display = 'block';
-  // إذا كانت الطلبات محملة، اعرضها فوراً
+  // 1) إذا كانت الطلبات محملة، اعرضها فوراً + حدّث في الخلفية
   if (state.orders && state.orders.length > 0) {
     renderOrdersList();
+    loadOrders().then(function(){ renderOrdersList(); }).catch(function(){});
     return;
   }
+  // 2) أول مرة: جلب + عرض
   document.getElementById('ordersModalList').innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
   loadOrders().then(function() {
     renderOrdersList();
+  }).catch(function(e) {
+    document.getElementById('ordersModalList').innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">❌ فشل التحميل: ' + (e.message || 'خطأ') + '</div>';
   });
 }
 
@@ -1506,6 +1516,7 @@ async function openNotifModal() {
   // عرض الطلبات من state.orders (المحملة مسبقاً)
   if (state.orders && state.orders.length > 0) {
     renderNotifList();
+    loadOrders().then(function(){ renderNotifList(); }).catch(function(){});
     return;
   }
   list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">⏳ جاري التحميل...</div>';
