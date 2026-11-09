@@ -1161,19 +1161,58 @@ async function loadSuppliers() {
 
 async function loadRates() {
   try {
-    var doc = await db.collection('config').doc('rates').get();
+    var doc = await db.collection('config').doc('settings').get();
     if (doc.exists) {
       var d = doc.data();
+      var rates = d.rates || {};
       state.exchangeRates = {
-        YER: d.YER || 1,
-        SAR: d.SAR || 135,
-        USD: d.USD || 505
+        YER: 1,
+        SAR: rates.sarSouth || d.sarSouth || 135,
+        USD: rates.usdSouth || d.usdSouth || 505,
+        SAR_NORTH: rates.sarNorth || d.sarNorth || 500,
+        USD_NORTH: rates.usdNorth || d.usdNorth || 2000
       };
-      console.log('[FIRESTORE] rates loaded:', state.exchangeRates);
+      console.log('[RATES] loaded:', state.exchangeRates);
     }
   } catch(e) {
-    console.warn('[FIRESTORE] rates error:', e);
+    console.warn('[RATES] error:', e);
   }
+}
+
+// ═══ تحديث لحظي للأسعار ═══
+function listenToRates() {
+  if (!db) return;
+  db.collection('config').doc('settings').onSnapshot(function(doc) {
+    if (!doc.exists) return;
+    var d = doc.data();
+    var rates = d.rates || {};
+    var newRates = {
+      YER: 1,
+      SAR: rates.sarSouth || d.sarSouth || 135,
+      USD: rates.usdSouth || d.usdSouth || 505,
+      SAR_NORTH: rates.sarNorth || d.sarNorth || 500,
+      USD_NORTH: rates.usdNorth || d.usdNorth || 2000
+    };
+
+    // التحقق: هل تغيرت؟
+    var changed = JSON.stringify(newRates) !== JSON.stringify(state.exchangeRates);
+    state.exchangeRates = newRates;
+
+    if (changed) {
+      console.log('[RATES] live update:', newRates);
+      try {
+        calculateAutoRates();
+        if (typeof showToast === 'function') {
+          showToast('💱 تم تحديث أسعار الصرف', 'success');
+        }
+      } catch(e) {
+        console.warn('[RATES] recalc error:', e);
+      }
+    }
+  }, function(err) {
+    console.warn('[RATES] listener error:', err.message);
+  });
+  console.log('[RATES] listener started');
 }
 
 async function loadOrders() {
@@ -1349,6 +1388,7 @@ async function initPanel(user, cat) {
   try {
     setProgress(10);
     await Promise.all([loadSuppliers(), loadRates()]);
+    listenToRates();  // ← تحديث لحظي
     setProgress(30);
   } catch(e) { console.warn('[INIT] suppliers/rates:', e); }
 
@@ -2402,12 +2442,28 @@ function calcProfit(){
 }
 
 function calculateAutoRates(){
-  const price = parseFloat(document.getElementById('pf-price').value) || 0;
-  const currency = document.getElementById('pf-currency').value;
-  const priceInYER = price * state.exchangeRates[currency];
-  document.getElementById('rate-yer').textContent = priceInYER.toFixed(0);
-  document.getElementById('rate-sar').textContent = (priceInYER / state.exchangeRates.SAR).toFixed(2);
-  document.getElementById('rate-usd').textContent = (priceInYER / state.exchangeRates.USD).toFixed(2);
+  var priceEl = document.getElementById('pf-price');
+  var currencyEl = document.getElementById('pf-currency');
+  if (!priceEl || !currencyEl) return;
+
+  var price = parseFloat(priceEl.value) || 0;
+  var currency = currencyEl.value;
+  var rates = state.exchangeRates;
+
+  // تحويل إلى اليمني
+  var priceInYER;
+  if (currency === 'YER') priceInYER = price;
+  else if (currency === 'SAR') priceInYER = price * (rates.SAR || 135);
+  else if (currency === 'USD') priceInYER = price * (rates.USD || 505);
+  else priceInYER = price;
+
+  var yerEl = document.getElementById('rate-yer');
+  var sarEl = document.getElementById('rate-sar');
+  var usdEl = document.getElementById('rate-usd');
+
+  if (yerEl) yerEl.textContent = priceInYER.toFixed(0);
+  if (sarEl) sarEl.textContent = (priceInYER / (rates.SAR || 135)).toFixed(2);
+  if (usdEl) usdEl.textContent = (priceInYER / (rates.USD || 505)).toFixed(2);
 }
 
 ['pf-price','pf-cost','pf-currency'].forEach(id => {
