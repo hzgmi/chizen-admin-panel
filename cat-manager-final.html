@@ -1571,13 +1571,20 @@ function renderOrders(){
 
     // الأزرار
     let actionsHtml = '';
+    var hasNoItems = noCount > 0;
+    var notifyBtn = '';
+    if (hasNoItems && st.card !== 'pending') {
+      // زر إبلاغ العميل — يظهر فقط إذا فيه أصناف غير متوفرة
+      notifyBtn = '<button class="btn btn-whatsapp" onclick="notifyCustomerUnavailable(\'' + o.id + '\')" style="width:100%; margin-bottom:6px;">📱 إبلاغ العميل عن الأصناف غير المتوفرة (' + noCount + ')</button>';
+    }
+
     if (st.card === 'pending') {
       actionsHtml = '<div class="order-actions">' +
         '<button class="btn btn-success" onclick="approveOrder(\'' + o.id + '\')">✅ تأكيد</button>' +
         '<button class="btn btn-danger" onclick="rejectOrder(\'' + o.id + '\')">❌ رفض</button>' +
         '</div>';
     } else {
-      actionsHtml = '<div class="order-actions">' +
+      actionsHtml = notifyBtn + '<div class="order-actions">' +
         '<button class="btn btn-outline" onclick="resetOrder(\'' + o.id + '\')">🔄 إرجاع للانتظار</button>' +
         '</div>';
     }
@@ -1604,6 +1611,74 @@ function renderOrders(){
       actionsHtml +
     '</div>';
   }).join('');
+}
+
+function notifyCustomerUnavailable(orderId){
+  const order = orders.find(o => o.id === orderId);
+  if(!order) return;
+
+  const items = getOrderItems(order);
+  const okItems = items.filter(i => getItemStatus(i) === 'ok');
+  const noItems = items.filter(i => getItemStatus(i) === 'no');
+
+  if (noItems.length === 0) {
+    showToast('⚠️ لا أصناف غير متوفرة في هذا الطلب', 'error');
+    return;
+  }
+
+  var phone = order.phone || order.customerPhone || order.userPhone || '';
+  if (!phone) {
+    showToast('⚠️ لا يوجد رقم هاتف للعميل', 'error');
+    return;
+  }
+
+  var customerName = order.customerName || order.name || order.customer || 'عزيزنا العميل';
+  var total = Number(order.total) || Number(order.subtotal) || 0;
+
+  // بناء الرسالة
+  var msg = 'مرحباً ' + customerName + ' 🌹\n\n';
+  msg += 'بخصوص طلبك #' + (order.id || '') + ':\n\n';
+
+  if (okItems.length > 0) {
+    msg += '✅ الأصناف المتوفرة:\n';
+    okItems.forEach(function(item, idx) {
+      msg += '   ' + (idx+1) + '. ' + (item.name || 'منتج');
+      if (item.brand) msg += ' (' + item.brand + ')';
+      msg += ' — الكمية: ' + (item.qty || 1) + '\n';
+    });
+    msg += '\n';
+  }
+
+  msg += '❌ الأصناف غير المتوفرة حالياً:\n';
+  noItems.forEach(function(item, idx) {
+    msg += '   ' + (idx+1) + '. ' + (item.name || 'منتج');
+    if (item.brand) msg += ' (' + item.brand + ')';
+    msg += ' — الكمية المطلوبة: ' + (item.qty || 1) + '\n';
+  });
+  msg += '\n';
+
+  msg += '──────────────────\n\n';
+  msg += 'نعتذر عن عدم توفر بعض الأصناف.\n\n';
+  msg += 'هل تريد:\n';
+  msg += '1️⃣ استبدال الصنف غير المتوفر بصنف آخر\n';
+  msg += '2️⃣ إلغاء الصنف غير المتوفر (استكمال الطلب بدونه)\n';
+  msg += '3️⃣ تأجيل الطلب حتى يتوفر الصنف\n\n';
+  msg += 'يرجى الرد برقم الخيار المناسب.\n\n';
+  msg += '💰 الإجمالي الحالي: ' + total.toFixed(0) + ' ر.س\n\n';
+  msg += 'شكراً لتفهمك 🌸\n';
+  msg += 'شيزن — خدمة العملاء';
+
+  var cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (cleanPhone.indexOf('0') === 0) {
+    cleanPhone = '967' + cleanPhone.substring(1);
+  } else if (cleanPhone.length === 9) {
+    cleanPhone = '967' + cleanPhone;
+  }
+
+  var url = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+
+  showToast('📱 تم فتح واتساب لإبلاغ ' + customerName, 'success');
 }
 
 function approveOrder(id){
