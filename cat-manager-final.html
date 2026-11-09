@@ -2446,12 +2446,43 @@ function saveProductEdit(){
 // ============================================
 function fillSuppliers(){
   const sel = document.getElementById('pf-supplier');
+  if (!sel) return;
+
+  var cat = state.cat;
+  var filtered = state.suppliers.filter(function(s) {
+    if (!cat) return true;
+
+    // 1) categories مصفوفة
+    if (Array.isArray(s.categories) && s.categories.length > 0) {
+      return s.categories.indexOf(cat) !== -1;
+    }
+
+    // 2) category أو cat (string)
+    if (s.category || s.cat) {
+      return (s.category === cat) || (s.cat === cat);
+    }
+
+    // 3) لا معلومة قسم → نعرضه (توافق مع القديم)
+    return true;
+  });
+
   sel.innerHTML = '<option value="">-- اختر --</option>';
-  state.suppliers.forEach(s => {
+  filtered.forEach(function(s) {
     const opt = document.createElement('option');
-    opt.value = s.id; opt.textContent = s.name;
+    opt.value = s.id;
+    opt.textContent = s.name + (s.phone ? ' — ' + s.phone : '');
     sel.appendChild(opt);
   });
+
+  console.log('[SUPPLIERS] filtered for cat:', cat, '| total:', state.suppliers.length, '| shown:', filtered.length);
+
+  if (filtered.length === 0) {
+    var opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '⚠️ لا يوجد موردون لهذا القسم — أضفهم من لوحة الأدمن';
+    opt.disabled = true;
+    sel.appendChild(opt);
+  }
 }
 
 function calcProfit(){
