@@ -1105,7 +1105,7 @@ function seedData(){
 // ============================================
 // ===== تحميل + تهيئة =====
 // ============================================
-if(!localStorage.getItem('shizen_admin')) window.location.href = 'admin-login.html';
+// محذوف — Firebase onAuthStateChanged يتولى الحماية
 
 loadData();
 seedData();
@@ -1993,7 +1993,7 @@ function showToast(msg, type = ''){
 function logout(){
   showConfirm('تسجيل الخروج', 'هل تريد تسجيل الخروج؟', () => {
     localStorage.removeItem('shizen_admin');
-    window.location.href = 'admin-login.html';
+    window.location.href = 'cat-login-new.html';
   });
 }
 
