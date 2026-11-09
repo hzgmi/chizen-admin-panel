@@ -1004,12 +1004,10 @@ auth.onAuthStateChanged(async function(user) {
 
 // ═══ حالة التطبيق ═══
 const state = {
-  suppliers: [
-    {id:'s1', name:'شركة الوفاء للتجارة', phone:'967771234567'},
-    {id:'s2', name:'مؤسسة النخبة', phone:'967772345678'},
-    {id:'s3', name:'مورد الجملة الذهبي', phone:'967773456789'},
-    {id:'s4', name:'التاجر الدولي', phone:'967774567890'}
-  ],
+  user: null,
+  userData: {},
+  cat: null,
+  suppliers: [],
   exchangeRates: { YER:1, SAR:135, USD:505 },
   selectedSizes: [],
   colors: [],
@@ -1025,104 +1023,203 @@ let notifications = [];
 // ============================================
 // ===== تحميل البيانات مع فحص التوافق =====
 // ============================================
-function loadData(){
+// ═══════════════════════════════════════════════════════════════
+// Firestore Data Loading
+// ═══════════════════════════════════════════════════════════════
+
+async function loadSuppliers() {
   try {
-    const p = JSON.parse(localStorage.getItem('shizen_products') || '[]');
-    const o = JSON.parse(localStorage.getItem('shizen_orders') || '[]');
-    const n = JSON.parse(localStorage.getItem('shizen_notifications') || '[]');
-    products = Array.isArray(p) ? p : [];
-    orders = Array.isArray(o) ? o : [];
-    notifications = Array.isArray(n) ? n : [];
-  } catch(e){
-    products = []; orders = []; notifications = [];
+    var snap = await db.collection('suppliers').get();
+    state.suppliers = [];
+    snap.forEach(function(d) {
+      var x = d.data(); x.id = d.id;
+      state.suppliers.push(x);
+    });
+    console.log('[FIRESTORE] suppliers loaded:', state.suppliers.length);
+    fillSuppliers();
+  } catch(e) {
+    console.error('[FIRESTORE] suppliers error:', e);
+    state.suppliers = [];
   }
 }
 
-// ============================================
-// ===== فحص توافق البيانات + إنشاء تجريبية =====
-// ============================================
-function seedData(){
-  // فحص التوافق: هل الطلبات فيها items؟
-  const ordersValid = orders.length > 0 && orders.every(o => Array.isArray(o.items) && o.items.length > 0);
-  const productsValid = products.length > 0;
-  const notifsValid = notifications.length > 0;
-
-  if(!ordersValid || !productsValid || !notifsValid){
-    console.log('🔄 بيانات قديمة أو غير متوافقة — إعادة بناء البيانات التجريبية...');
-
-    const shirtImg = 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200';
-    const shoeImg = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200';
-    const watchImg = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200';
-    const headphoneImg = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200';
-
-    products = [
-      {id:'P001', name:'قميص قطني كلاسيكي', price:89, stock:50, brand:'Nike', supplier:'s1', desc:'قميص قطن 100%', images:[shirtImg], currency:'SAR', active:true, featured:true, threshold:5, createdAt:new Date().toISOString()},
-      {id:'P002', name:'حذاء رياضي', price:220, stock:3, brand:'Adidas', supplier:'s2', desc:'حذاء رياضي مريح', images:[shoeImg], currency:'SAR', active:true, featured:false, threshold:5, createdAt:new Date().toISOString()},
-      {id:'P003', name:'ساعة ذكية', price:450, stock:15, brand:'Apple', supplier:'s1', desc:'ساعة ذكية AMOLED', images:[watchImg], currency:'SAR', active:true, featured:false, threshold:5, createdAt:new Date().toISOString()},
-      {id:'P004', name:'سماعات لاسلكية', price:320, stock:8, brand:'Sony', supplier:'s3', desc:'سماعات بلوتوث', images:[headphoneImg], currency:'SAR', active:true, featured:false, threshold:5, createdAt:new Date().toISOString()}
-    ];
-
-    orders = [
-      {
-        id:'ORD-1001', customer:'أحمد محمد', phone:'0551234567',
-        items: [
-          {productId:'P001', name:'قميص قطني كلاسيكي', price:89, qty:2, brand:'Nike', supplier:'s1', status:'pending'},
-          {productId:'P002', name:'حذاء رياضي', price:220, qty:1, brand:'Adidas', supplier:'s2', status:'pending'}
-        ],
-        total:398, status:'pending', date:new Date(Date.now()-3600000).toISOString()
-      },
-      {
-        id:'ORD-1002', customer:'سارة علي', phone:'0559876543',
-        items:[
-          {productId:'P003', name:'ساعة ذكية', price:450, qty:1, brand:'Apple', supplier:'s1', status:'pending'}
-        ],
-        total:450, status:'pending', date:new Date(Date.now()-7200000).toISOString()
-      },
-      {
-        id:'ORD-1003', customer:'خالد العتيبي', phone:'0555555555',
-        items:[
-          {productId:'P004', name:'سماعات لاسلكية', price:320, qty:2, brand:'Sony', supplier:'s3', status:'pending'},
-          {productId:'P003', name:'ساعة ذكية', price:450, qty:1, brand:'Apple', supplier:'s1', status:'pending'}
-        ],
-        total:1090, status:'pending', date:new Date(Date.now()-86400000).toISOString()
-      },
-      {
-        id:'ORD-1004', customer:'نورة السالم', phone:'0553333333',
-        items:[
-          {productId:'P001', name:'قميص قطني كلاسيكي', price:89, qty:3, brand:'Nike', supplier:'s1', status:'pending'}
-        ],
-        total:267, status:'pending', date:new Date(Date.now()-1800000).toISOString()
-      }
-    ];
-
-    notifications = [
-      {id:'N1', type:'info', title:'مرحباً بك', text:'تم تسجيل دخولك بنجاح', time:new Date().toISOString(), read:false}
-    ];
-
-    save();
-    console.log('✅ تم إنشاء البيانات:', {products: products.length, orders: orders.length});
+async function loadRates() {
+  try {
+    var doc = await db.collection('config').doc('rates').get();
+    if (doc.exists) {
+      var d = doc.data();
+      state.exchangeRates = {
+        YER: d.YER || 1,
+        SAR: d.SAR || 135,
+        USD: d.USD || 505
+      };
+      console.log('[FIRESTORE] rates loaded:', state.exchangeRates);
+    }
+  } catch(e) {
+    console.warn('[FIRESTORE] rates error:', e);
   }
 }
 
-// ============================================
-// ===== تحميل + تهيئة =====
-// ============================================
-// محذوف — Firebase onAuthStateChanged يتولى الحماية
-
-loadData();
-seedData();
-updateStats();
-renderOrders();
-renderProducts();
-renderNotifications();
-updateBadges();
-fillSuppliers();
-
-function save(){
-  localStorage.setItem('shizen_products', JSON.stringify(products));
-  localStorage.setItem('shizen_orders', JSON.stringify(orders));
-  localStorage.setItem('shizen_notifications', JSON.stringify(notifications));
+async function loadOrders() {
+  try {
+    var snap = await db.collection('orders')
+      .where('category', '==', state.cat)
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get();
+    orders = [];
+    snap.forEach(function(d) {
+      var x = d.data(); x.id = d.id;
+      orders.push(x);
+    });
+    console.log('[FIRESTORE] orders loaded:', orders.length);
+    renderOrders();
+    updateStats();
+  } catch(e) {
+    console.error('[FIRESTORE] orders error:', e);
+    // fallback: بدون orderBy (في حال عدم وجود index)
+    try {
+      var snap2 = await db.collection('orders').where('category', '==', state.cat).limit(100).get();
+      orders = [];
+      snap2.forEach(function(d) { var x = d.data(); x.id = d.id; orders.push(x); });
+      renderOrders();
+      updateStats();
+    } catch(e2) {
+      console.error('[FIRESTORE] orders fallback error:', e2);
+    }
+  }
 }
+
+async function loadProducts() {
+  try {
+    var snap = await db.collection('products')
+      .where('category', '==', state.cat)
+      .limit(200)
+      .get();
+    products = [];
+    snap.forEach(function(d) {
+      var x = d.data(); x.id = d.id;
+      products.push(x);
+    });
+    console.log('[FIRESTORE] products loaded:', products.length);
+    renderProducts();
+    updateStats();
+  } catch(e) {
+    console.error('[FIRESTORE] products error:', e);
+    products = [];
+    renderProducts();
+  }
+}
+
+async function loadNotifications() {
+  try {
+    if (!state.user) return;
+    var snap = await db.collection('notifications')
+      .where('userId', '==', state.user.uid)
+      .limit(50)
+      .get();
+    notifications = [];
+    snap.forEach(function(d) {
+      var x = d.data(); x.id = d.id;
+      notifications.push(x);
+    });
+    notifications.sort(function(a, b) {
+      var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+      var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+      return tb - ta;
+    });
+    console.log('[FIRESTORE] notifications loaded:', notifications.length);
+    renderNotifications();
+    updateBadges();
+  } catch(e) {
+    console.error('[FIRESTORE] notifications error:', e);
+  }
+}
+
+async function initPanel(user, cat) {
+  console.log('[INIT] starting panel with cat:', cat);
+  state.user = user;
+  state.cat = cat;
+  window.__CATEGORY__ = cat;
+
+  // تحديث اسم القسم في header (إن وجد)
+  var catNameEl = document.getElementById('catName');
+  if (catNameEl) {
+    var labels = { fashion:'أزياء', shoes:'أحذية', perfume:'عطور', electronics:'إلكترونيات', accessories:'إكسسوارات', kids:'أطفال', supermarket:'سوبر ماركت', home:'منزل', beauty:'جمال' };
+    catNameEl.textContent = labels[cat] || cat;
+  }
+
+  // تحميل متوازي
+  await Promise.all([
+    loadSuppliers(),
+    loadRates(),
+    loadOrders(),
+    loadProducts(),
+    loadNotifications()
+  ]);
+
+  renderColors();
+  calculateAutoRates();
+  console.log('[INIT] panel ready');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Firestore Write Operations
+// ═══════════════════════════════════════════════════════════════
+
+async function updateOrderStatus(orderId, newStatus) {
+  try {
+    await db.collection('orders').doc(orderId).update({
+      status: newStatus,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return true;
+  } catch(e) {
+    console.error('[FIRESTORE] updateOrderStatus error:', e);
+    showToast('❌ فشل التحديث: ' + e.message, 'error');
+    return false;
+  }
+}
+
+async function saveProductToFirestore(product) {
+  try {
+    if (product.id && !product.id.startsWith('P' + Date.now().toString().slice(0, 10))) {
+      // تعديل
+      await db.collection('products').doc(product.id).update(product);
+      return product.id;
+    } else {
+      // إضافة
+      product.id = null; // Firestore سيولّد ID
+      var ref = await db.collection('products').add(product);
+      return ref.id;
+    }
+  } catch(e) {
+    console.error('[FIRESTORE] saveProduct error:', e);
+    throw e;
+  }
+}
+
+async function deleteProductFromFirestore(id) {
+  try {
+    await db.collection('products').doc(id).delete();
+    return true;
+  } catch(e) {
+    console.error('[FIRESTORE] deleteProduct error:', e);
+    return false;
+  }
+}
+
+async function addNotificationToFirestore(notif) {
+  try {
+    notif.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection('notifications').add(notif);
+    return true;
+  } catch(e) {
+    console.error('[FIRESTORE] addNotification error:', e);
+    return false;
+  }
+}
+
 
 function getSupplier(id){ return state.suppliers.find(s => s.id === id); }
 function getProduct(id){ return products.find(p => p.id === id); }
@@ -1337,9 +1434,13 @@ function approveOrder(id){
   if(!order) return;
   showConfirm('✅ تأكيد الطلب', `تأكيد الطلب ${id}؟`, () => {
     order.status = 'approved';
-    addNotif('success', 'تم تأكيد الطلب', `${id} من ${order.customer}`);
-    save(); updateStats(); renderOrders(); closeModal();
-    showToast('✅ تم تأكيد الطلب', 'success');
+    addNotif('success', 'تم تأكيد الطلب', id + ' من ' + order.customer);
+    updateOrderStatus(id, 'approved').then(function(ok) {
+      if (ok) {
+        updateStats(); renderOrders(); closeModal();
+        showToast('✅ تم تأكيد الطلب', 'success');
+      }
+    });
   });
 }
 
@@ -1348,9 +1449,13 @@ function rejectOrder(id){
   if(!order) return;
   showConfirm('❌ رفض الطلب', `رفض الطلب ${id}؟`, () => {
     order.status = 'rejected';
-    addNotif('danger', 'تم رفض الطلب', `${id} من ${order.customer}`);
-    save(); updateStats(); renderOrders(); closeModal();
-    showToast('❌ تم رفض الطلب', 'error');
+    addNotif('danger', 'تم رفض الطلب', id + ' من ' + order.customer);
+    updateOrderStatus(id, 'rejected').then(function(ok) {
+      if (ok) {
+        updateStats(); renderOrders(); closeModal();
+        showToast('❌ تم رفض الطلب', 'error');
+      }
+    });
   });
 }
 
@@ -1359,9 +1464,13 @@ function resetOrder(id){
   if(!order) return;
   showConfirm('🔄 إرجاع الطلب', `إرجاع ${id} إلى الانتظار؟`, () => {
     order.status = 'pending';
-    addNotif('info', 'تم إرجاع الطلب', `${id} إلى الانتظار`);
-    save(); updateStats(); renderOrders(); closeModal();
-    showToast('🔄 تم الإرجاع', 'success');
+    addNotif('info', 'تم إرجاع الطلب', id + ' إلى الانتظار');
+    updateOrderStatus(id, 'pending').then(function(ok) {
+      if (ok) {
+        updateStats(); renderOrders(); closeModal();
+        showToast('🔄 تم الإرجاع', 'success');
+      }
+    });
   });
 }
 
@@ -1592,19 +1701,27 @@ function toggleHide(id){
   if(!p) return;
   p.active = p.active === false ? true : false;
   const action = p.active ? 'إظهار' : 'إخفاء';
-  addNotif('info', `${action} منتج`, `${action} "${p.name}"`);
-  save(); renderProducts();
-  showToast(`✅ تم ${action}`, 'success');
+  addNotif('info', action + ' منتج', action + ' "' + p.name + '"');
+  db.collection('products').doc(id).update({ active: p.active }).then(function() {
+    renderProducts();
+    showToast('✅ تم ' + action, 'success');
+  }).catch(function(e) {
+    showToast('❌ فشل: ' + e.message, 'error');
+  });
 }
 
 function deleteProduct(id){
   const p = products.find(x => x.id === id);
   if(!p) return;
   showConfirm('حذف المنتج', `حذف "${p.name}"؟`, () => {
-    products = products.filter(x => x.id !== id);
-    addNotif('warning', 'حذف منتج', `تم حذف "${p.name}"`);
-    save(); updateStats(); renderProducts(); closeModal();
-    showToast('🗑️ تم الحذف', 'error');
+    addNotif('warning', 'حذف منتج', 'تم حذف "' + p.name + '"');
+    deleteProductFromFirestore(id).then(function(ok) {
+      if (ok) {
+        products = products.filter(x => x.id !== id);
+        updateStats(); renderProducts(); closeModal();
+        showToast('🗑️ تم الحذف', 'error');
+      }
+    });
   });
 }
 
@@ -1738,9 +1855,13 @@ function saveProductEdit(){
   p.featured = document.getElementById('ep-featured').checked;
   p.active = document.getElementById('ep-active').checked;
 
-  addNotif('info', 'تعديل منتج', `تم تعديل "${p.name}"`);
-  save(); renderProducts(); closeEditModal();
-  showToast('✅ تم حفظ التعديلات', 'success');
+  addNotif('info', 'تعديل منتج', 'تم تعديل "' + p.name + '"');
+  db.collection('products').doc(id).update(p).then(function() {
+    renderProducts(); closeEditModal();
+    showToast('✅ تم حفظ التعديلات', 'success');
+  }).catch(function(e) {
+    showToast('❌ فشل: ' + e.message, 'error');
+  });
 }
 
 // ============================================
@@ -1887,11 +2008,23 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     createdAt: new Date().toISOString()
   };
 
-  products.unshift(product);
-  addNotif('success', 'منتج جديد', `تمت إضافة "${name}"`);
-  save(); updateStats(); renderProducts(); resetForm();
-  showToast('✅ تمت الإضافة', 'success');
-  setTimeout(() => switchTab('products'), 900);
+  product.category = state.cat;
+  product.categories = [state.cat];
+  product.status = 'pending_review';
+  product.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
+  saveProductToFirestore(product).then(function(newId) {
+    if (newId) {
+      product.id = newId;
+      products.unshift(product);
+      addNotif('success', 'منتج جديد', 'تمت إضافة "' + name + '"');
+      updateStats(); renderProducts(); resetForm();
+      showToast('✅ تمت الإضافة', 'success');
+      setTimeout(function() { switchTab('products'); }, 900);
+    }
+  }).catch(function(e) {
+    showToast('❌ فشل: ' + e.message, 'error');
+  });
 });
 
 function saveDraft(){
@@ -1919,8 +2052,14 @@ function resetForm(){
 // ===== الإشعارات =====
 // ============================================
 function addNotif(type, title, text){
+  var notif = {
+    userId: state.user ? state.user.uid : null,
+    type: type, title: title, text: text,
+    read: false
+  };
   notifications.unshift({id:'N' + Date.now(), type, title, text, time:new Date().toISOString(), read:false});
-  save(); renderNotifications(); updateBadges();
+  renderNotifications(); updateBadges();
+  addNotificationToFirestore(notif);
 }
 
 function renderNotifications(){
@@ -1944,7 +2083,13 @@ function renderNotifications(){
 
 function markRead(id){
   const n = notifications.find(x => x.id === id);
-  if(n){ n.read = true; save(); renderNotifications(); }
+  if(n){
+    n.read = true;
+    renderNotifications();
+    db.collection('notifications').doc(id).update({ read: true }).catch(function(e){
+      console.warn('[markRead]', e);
+    });
+  }
 }
 
 function markAllRead(){
@@ -1994,14 +2139,22 @@ function showToast(msg, type = ''){
 
 function logout(){
   showConfirm('تسجيل الخروج', 'هل تريد تسجيل الخروج؟', () => {
-    localStorage.removeItem('shizen_admin');
-    window.location.href = 'cat-login-new.html';
+    auth.signOut().then(function() {
+      window.location.href = 'cat-login-new.html';
+    });
   });
 }
 
-// تهيئة
+// ═══ التهيئة ═══
 renderColors();
 calculateAutoRates();
+
+// ربط onAuthReady — يُستدعى من onAuthStateChanged
+window.onAuthReady = function(user, cat) {
+  initPanel(user, cat);
+};
+
+console.log('[APP] ready — waiting for auth');
 </script>
 </body>
 </html>
