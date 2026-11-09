@@ -768,18 +768,7 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
           <div class="form-row two">
             <div class="form-field">
               <label for="pf-brand">🏷️ الماركة</label>
-              <select id="pf-brand">
-                <option value="">-- اختر --</option>
-                <option value="Samsung">Samsung</option>
-                <option value="Apple">Apple</option>
-                <option value="Xiaomi">Xiaomi</option>
-                <option value="Huawei">Huawei</option>
-                <option value="Sony">Sony</option>
-                <option value="LG">LG</option>
-                <option value="Nike">Nike</option>
-                <option value="Adidas">Adidas</option>
-                <option value="Other">أخرى</option>
-              </select>
+              <select id="pf-brand"><option value="">-- اختر --</option></select>
             </div>
             <div class="form-field">
               <label for="pf-sku">🔖 SKU</label>
@@ -1069,6 +1058,80 @@ const state = {
   currentViewingOrderId: null
 };
 
+// ═══ الماركات الثابتة (لا يعدلها الأدمن) ═══
+const FIXED_BRANDS = {
+  fashion: [
+    { en: 'Nike', ar: 'نايك', logo: 'https://cdn.worldvectorlogo.com/logos/nike-1.svg' },
+    { en: 'Adidas', ar: 'أديداس', logo: 'https://cdn.worldvectorlogo.com/logos/adidas-4.svg' },
+    { en: 'Zara', ar: 'زارا', logo: 'https://cdn.worldvectorlogo.com/logos/zara-1.svg' },
+    { en: 'H&M', ar: 'إتش آند إم', logo: 'https://cdn.worldvectorlogo.com/logos/hm-2.svg' },
+    { en: 'Uniqlo', ar: 'يونيكلو', logo: 'https://cdn.worldvectorlogo.com/logos/uniqlo-1.svg' },
+    { en: "Levi's", ar: 'ليفايس', logo: 'https://cdn.worldvectorlogo.com/logos/levis-1.svg' },
+    { en: 'Puma', ar: 'بوما', logo: 'https://cdn.worldvectorlogo.com/logos/puma-logo.svg' },
+    { en: 'Gucci', ar: 'غوتشي', logo: 'https://cdn.worldvectorlogo.com/logos/gucci-1.svg' }
+  ],
+  shoes: [
+    { en: 'Nike', ar: 'نايك', logo: 'https://cdn.worldvectorlogo.com/logos/nike-1.svg' },
+    { en: 'Adidas', ar: 'أديداس', logo: 'https://cdn.worldvectorlogo.com/logos/adidas-4.svg' },
+    { en: 'Puma', ar: 'بوما', logo: 'https://cdn.worldvectorlogo.com/logos/puma-logo.svg' },
+    { en: 'New Balance', ar: 'نيو بالانس', logo: 'https://cdn.worldvectorlogo.com/logos/new-balance-1.svg' },
+    { en: 'Converse', ar: 'كونفرس', logo: 'https://cdn.worldvectorlogo.com/logos/converse-1.svg' },
+    { en: 'Vans', ar: 'فانز', logo: 'https://cdn.worldvectorlogo.com/logos/vans-1.svg' },
+    { en: 'Reebok', ar: 'ريبوك', logo: 'https://cdn.worldvectorlogo.com/logos/reebok-1.svg' }
+  ],
+  perfume: [
+    { en: 'Chanel', ar: 'شانيل', logo: 'https://cdn.worldvectorlogo.com/logos/chanel-1.svg' },
+    { en: 'Dior', ar: 'ديور', logo: 'https://cdn.worldvectorlogo.com/logos/dior-1.svg' },
+    { en: 'Gucci', ar: 'غوتشي', logo: 'https://cdn.worldvectorlogo.com/logos/gucci-1.svg' },
+    { en: 'Versace', ar: 'فيرزاتشي', logo: 'https://cdn.worldvectorlogo.com/logos/versace-1.svg' },
+    { en: 'Hermès', ar: 'هيرميس', logo: 'https://cdn.worldvectorlogo.com/logos/hermes-1.svg' },
+    { en: 'Tom Ford', ar: 'توم فورد', logo: 'https://cdn.worldvectorlogo.com/logos/tom-ford-1.svg' }
+  ],
+  electronics: [
+    { en: 'Apple', ar: 'آبل', logo: 'https://cdn.worldvectorlogo.com/logos/apple-1.svg' },
+    { en: 'Samsung', ar: 'سامسونج', logo: 'https://cdn.worldvectorlogo.com/logos/samsung-1.svg' },
+    { en: 'Sony', ar: 'سوني', logo: 'https://cdn.worldvectorlogo.com/logos/sony-1.svg' },
+    { en: 'Huawei', ar: 'هواوي', logo: 'https://cdn.worldvectorlogo.com/logos/huawei-1.svg' },
+    { en: 'Xiaomi', ar: 'شاومي', logo: 'https://cdn.worldvectorlogo.com/logos/xiaomi-1.svg' },
+    { en: 'LG', ar: 'إل جي', logo: 'https://cdn.worldvectorlogo.com/logos/lg-1.svg' }
+  ],
+  accessories: [
+    { en: 'Rolex', ar: 'رولكس', logo: 'https://cdn.worldvectorlogo.com/logos/rolex-1.svg' },
+    { en: 'Cartier', ar: 'كارتييه', logo: 'https://cdn.worldvectorlogo.com/logos/cartier-1.svg' },
+    { en: 'Ray-Ban', ar: 'راي بان', logo: 'https://cdn.worldvectorlogo.com/logos/ray-ban-1.svg' }
+  ],
+  kids: [
+    { en: 'Disney', ar: 'ديزني', logo: 'https://cdn.worldvectorlogo.com/logos/disney-1.svg' },
+    { en: 'Barbie', ar: 'باربي', logo: 'https://cdn.worldvectorlogo.com/logos/barbie-1.svg' }
+  ],
+  supermarket: [],
+  home: [
+    { en: 'IKEA', ar: 'ايكيا', logo: 'https://cdn.worldvectorlogo.com/logos/ikea-1.svg' }
+  ],
+  beauty: [
+    { en: "L'Oréal", ar: 'لوريال', logo: 'https://cdn.worldvectorlogo.com/logos/loreal-1.svg' },
+    { en: 'Nivea', ar: 'نيفيا', logo: 'https://cdn.worldvectorlogo.com/logos/nivea-1.svg' }
+  ]
+};
+
+function getCategoryBrands(cat) {
+  return FIXED_BRANDS[cat] || FIXED_BRANDS.fashion || [];
+}
+
+function renderBrands() {
+  var sel = document.getElementById('pf-brand');
+  if (!sel) return;
+  var cat = state.cat;
+  var brands = getCategoryBrands(cat);
+  var html = '<option value="">-- اختر الماركة --</option>';
+  brands.forEach(function(b) {
+    html += '<option value="' + b.en + '">' + b.ar + ' (' + b.en + ')</option>';
+  });
+  html += '<option value="Other">أخرى (Other)</option>';
+  sel.innerHTML = html;
+  console.log('[BRANDS] loaded for cat:', cat, 'count:', brands.length);
+}
+
 let products = [];
 let orders = [];
 let notifications = [];
@@ -1303,6 +1366,7 @@ async function initPanel(user, cat) {
 
   // 4) إخفاء الشريط فوراً (لا ننتظر notifications)
   renderColors();
+  renderBrands();
   calculateAutoRates();
   setProgress(100);
   setTimeout(function() { hideProgress(); }, 300);
