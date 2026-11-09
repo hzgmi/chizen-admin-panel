@@ -1083,23 +1083,24 @@ async function verifyPayment(orderId){
 
 async function rejectPayment(orderId, reason){
   if (!confirm('رفض الدفع؟ السبب: ' + reason)) return;
+  var order = state.orders.find(function(o){ return o.id === orderId; });
+  if (!order) return;
+
+  if (!orderId) {
+    if (window.__chizenToast) window.__chizenToast("❌ خطأ", "error", "معرف الطلب غير صالح");
+    else alert("معرف الطلب غير صالح");
+    return;
+  }
+
   try {
-    var order = state.orders.find(function(o){ return o.id === orderId; });
-    if (!order) return;
-    
-    if (!orderId) {
-      if (window.__chizenToast) window.__chizenToast("❌ خطأ", "error", "معرف الطلب غير صالح");
-      else alert("معرف الطلب غير صالح");
-      return;
-    }
-    await db.collection('orders').doc(orderId).set({
+    await db.collection('orders').doc(orderId).update({
       workflowStatus: 'payment_rejected',
       'payment.status': 'rejected',
       'payment.rejectedReason': reason,
       'payment.rejectedBy': state.user.uid,
       'payment.rejectedAt': firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    
+    });
+
     var custId = order.customerId || order.userId;
     if (custId) {
       db.collection('notifications').add({
@@ -1110,10 +1111,35 @@ async function rejectPayment(orderId, reason){
         read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp()
       }).catch(function(){});
     }
+
+    if (window.__chizenToast) window.__chizenToast("✅ تم رفض الدفع", "success");
+    else alert("✅ تم رفض الدفع");
+
+    // إعادة تحميل الطلبات محلياً (بدون reloadData التي تمسح الصفحة)
+    var snap = await db.collection('orders').orderBy('createdAt','desc').limit(500).get();
+    state.orders = [];
+    snap.forEach(function(d) { var o = d.data(); o.id = d.id; state.orders.push(o); });
     
-    toast('تم رفض الدفع', 'error');
-    await reloadData();
-  } catch(e){ toast('❌ ' + e.message, 'error'); }
+    // إعادة عرض القسم الحالي
+    if (state.activeTab === 'payments' && typeof renderTab === 'function') {
+      renderTab('payments');
+    }
+
+    // تحديث العداد فوراً
+    var badge = document.querySelector('[data-tab="payments"] .nav-badge');
+    if (badge) {
+      var pendingCount = state.orders.filter(function(o){
+        return (o.payment && o.payment.status === 'pending') || o.workflowStatus === 'awaiting_verification';
+      }).length;
+      badge.textContent = pendingCount;
+      badge.style.display = pendingCount > 0 ? 'block' : 'none';
+    }
+
+  } catch(e){
+    console.error('[rejectPayment] failed:', e);
+    if (window.__chizenToast) window.__chizenToast("❌ فشل الرفض", "error", e.message || "تحقق من الاتصال");
+    else alert("❌ فشل الرفض: " + (e.message || "خطأ غير معروف"));
+  }
 }
 
 function updatePaymentsBadge(){
