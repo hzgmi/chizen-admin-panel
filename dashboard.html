@@ -1082,13 +1082,13 @@ async function rejectPayment(orderId, reason){
       else alert("معرف الطلب غير صالح");
       return;
     }
-    await db.collection('orders').doc(orderId).set({
+    await db.collection('orders').doc(orderId).update({
       workflowStatus: 'payment_rejected',
       'payment.status': 'rejected',
       'payment.rejectedReason': reason,
       'payment.rejectedBy': state.user.uid,
       'payment.rejectedAt': firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    });
     
     var custId = order.customerId || order.userId;
     if (custId) {
@@ -1102,7 +1102,21 @@ async function rejectPayment(orderId, reason){
     }
     
     toast('تم رفض الدفع', 'error');
-    await reloadData();
+
+    // إعادة تحميل الطلبات محلياً (بدون reloadData المدمّرة)
+    try {
+      var snap = await db.collection('orders').orderBy('createdAt','desc').limit(500).get();
+      state.orders = [];
+      snap.forEach(function(d) { var o = d.data(); o.id = d.id; state.orders.push(o); });
+      if (state.activeTab === 'payments' && typeof renderTab === 'function') renderTab('payments');
+      var badge = document.querySelector('[data-tab="payments"] .nav-badge');
+      if (badge) {
+        var pendingCount = state.orders.filter(function(o){ return (o.payment && o.payment.status === 'pending') || o.workflowStatus === 'awaiting_verification'; }).length;
+        badge.textContent = pendingCount;
+        badge.style.display = pendingCount > 0 ? 'block' : 'none';
+      }
+    } catch(re) { console.warn('[rejectPayment] reload failed:', re); }
+    // await reloadData(); // معطّل — يمسح الواجهة (انظر fix verifyPayment)
   } catch(e){ toast('❌ ' + e.message, 'error'); }
 }
 
