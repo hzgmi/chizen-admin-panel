@@ -1145,18 +1145,46 @@ let notifications = [];
 
 async function loadSuppliers() {
   try {
+    // 1) من config/suppliers (الأدمن يحفظها هنا)
+    var cfg = await db.collection('config').doc('suppliers').get();
+    if (cfg.exists) {
+      var d = cfg.data();
+      if (d.list && Array.isArray(d.list) && d.list.length > 0) {
+        state.suppliers = d.list.slice();
+        console.log('[SUPPLIERS] from config/suppliers:', state.suppliers.length);
+        fillSuppliers();
+        return;
+      }
+    }
+
+    // 2) من suppliers collection (احتياطي)
     var snap = await db.collection('suppliers').get();
     state.suppliers = [];
     snap.forEach(function(d) {
       var x = d.data(); x.id = d.id;
       state.suppliers.push(x);
     });
-    console.log('[FIRESTORE] suppliers loaded:', state.suppliers.length);
+    console.log('[SUPPLIERS] from suppliers collection:', state.suppliers.length);
     fillSuppliers();
   } catch(e) {
-    console.error('[FIRESTORE] suppliers error:', e);
+    console.error('[SUPPLIERS] error:', e);
     state.suppliers = [];
   }
+}
+
+// ═══ تحديث لحظي للموردين ═══
+function listenToSuppliers() {
+  if (!db) return;
+  db.collection('config').doc('suppliers').onSnapshot(function(doc) {
+    if (doc.exists && doc.data().list) {
+      state.suppliers = doc.data().list.slice();
+      console.log('[SUPPLIERS] live update:', state.suppliers.length);
+      fillSuppliers();
+    }
+  }, function(err) {
+    console.warn('[SUPPLIERS] listener error:', err.message);
+  });
+  console.log('[SUPPLIERS] listener started');
 }
 
 async function loadRates() {
@@ -1388,7 +1416,8 @@ async function initPanel(user, cat) {
   try {
     setProgress(10);
     await Promise.all([loadSuppliers(), loadRates()]);
-    listenToRates();  // ← تحديث لحظي
+    listenToRates();      // ← تحديث لحظي للأسعار
+    listenToSuppliers();  // ← تحديث لحظي للموردين
     setProgress(30);
   } catch(e) { console.warn('[INIT] suppliers/rates:', e); }
 
