@@ -92,6 +92,41 @@ function hideMessages() {
   document.getElementById('errorMsg').classList.remove('show');
   document.getElementById('successMsg').classList.remove('show');
 }
+async function getUserRole(uid) {
+  var result = { role: null, category: null, source: null };
+  try {
+    // 1) admins/{uid}
+    var adoc = await db.collection('admins').doc(uid).get();
+    if (adoc.exists) {
+      var a = adoc.data();
+      if (a.role) result.role = a.role;
+      var cat = a.assignedCategory || a.category || a.cat;
+      if (cat) result.category = cat;
+      if (result.role || result.category) result.source = 'admins';
+    }
+
+    // 2) users/{uid}
+    var udoc = await db.collection('users').doc(uid).get();
+    if (udoc.exists) {
+      var u = udoc.data();
+      if (!result.role && u.role) result.role = u.role;
+      if (!result.category) {
+        var cat2 = u.assignedCategory || u.category || u.cat;
+        if (cat2) result.category = cat2;
+      }
+      if (!result.source && (result.role || result.category)) result.source = 'users';
+    }
+
+    // 3) إذا لم يوجد role صريح، نعتبره customer
+    if (!result.role) result.role = 'customer';
+
+    return result;
+  } catch (e) {
+    console.warn('[getUserRole] error:', e);
+    return result;
+  }
+}
+
 async function getUserCategory(uid) {
   try {
     var udoc = await db.collection('users').doc(uid).get();
@@ -142,22 +177,51 @@ async function doLogin() {
     var userCred = await auth.signInWithEmailAndPassword(email, password);
     var user = userCred.user;
     console.log('[LOGIN] user:', user.email, '| uid:', user.uid);
-    var isSuper = await isSuperAdmin(user.uid);
-    if (isSuper) {
-      showSuccess('✅ مرحباً بك في لوحة الإدارة');
-      setTimeout(function() { window.location.href = 'dashboard.html'; }, 500);
-      return;
-    }
-    var result = await getUserCategory(user.uid);
-    if (!result.cat) {
-      showError('❌ لم يتم تعيين قسم لحسابك. تواصل مع الإدارة.');
+
+    // ═══════════════════════════════════════════════
+    // 🔒 حماية صارمة: يجب أن يكون cat_manager
+    // ═══════════════════════════════════════════════
+
+    // 1) التحقق من الدور
+    var roleInfo = await getUserRole(user.uid);
+    console.log('[LOGIN] role:', roleInfo);
+
+    // 2) منع super_admin / delivery_mgr / accountant / bookings_mgr / customer
+    if (roleInfo.role !== 'cat_manager') {
       await auth.signOut();
       btn.disabled = false;
       btn.textContent = '🔐 تسجيل الدخول';
+      if (roleInfo.role === 'super_admin' || roleInfo.role === 'superadmin') {
+        showError('❌ هذا الحساب مدير عام — استخدم لوحة الإدارة العامة');
+      } else if (roleInfo.role === 'delivery_mgr') {
+        showError('❌ هذا الحساب مندوب توصيل — استخدم لوحة المندوب');
+      } else if (roleInfo.role === 'accountant') {
+        showError('❌ هذا الحساب محاسب — استخدم لوحة المحاسب');
+      } else if (roleInfo.role === 'bookings_mgr') {
+        showError('❌ هذا الحساب مدير حجوزات — استخدم لوحة الحجوزات');
+      } else if (roleInfo.role === 'customer' || !roleInfo.role) {
+        showError('❌ هذا الحساب عميل — لا يمكن الدخول للوحة مدير القسم');
+      } else {
+        showError('❌ هذا الحساب ليس مدير قسم');
+      }
       return;
     }
-    showSuccess('✅ تم تسجيل الدخول — القسم: ' + result.cat);
-    setTimeout(function() { window.location.href = 'cat-manager-final.html'; }, 600);
+
+    // 3) التحقق من category
+    if (!roleInfo.category) {
+      await auth.signOut();
+      btn.disabled = false;
+      btn.textContent = '🔐 تسجيل الدخول';
+      showError('❌ لم يتم تعيين قسم لحسابك. تواصل مع الإدارة.');
+      return;
+    }
+
+    // 4) نجاح
+    showSuccess('✅ مرحباً — القسم: ' + roleInfo.category);
+    console.log('[LOGIN] ✓ cat_manager, redirecting to cat-manager-final.html');
+    setTimeout(function() {
+      window.location.href = 'cat-manager-final.html';
+    }, 600);
   } catch (e) {
     console.error('[LOGIN] error:', e);
     var msg = e.message || 'خطأ غير معروف';
@@ -184,11 +248,21 @@ document.addEventListener('keydown', function(e) {
 auth.onAuthStateChanged(async function(user) {
   if (!user) return;
   console.log('[AUTH-STATE] already logged in:', user.email);
+
   try {
-    var isSuper = await isSuperAdmin(user.uid);
-    if (isSuper) { window.location.href = 'dashboard.html'; return; }
-    var result = await getUserCategory(user.uid);
-    if (result.cat) { window.location.href = 'cat-manager-final.html'; }
+    // تحقق صارم: يجب أن يكون cat_manager مع category
+    var roleInfo = await getUserRole(user.uid);
+    console.log('[AUTH-STATE] role:', roleInfo);
+
+    if (roleInfo.role === 'cat_manager' && roleInfo.category) {
+      console.log('[AUTH-STATE] ✓ cat_manager — redirecting');
+      window.location.href = 'cat-manager-final.html';
+    } else {
+      // أي دور آخر → خروج صامت (لا توجيه)
+      console.log('[AUTH-STATE] ✗ not cat_manager — staying on login');
+      // لا نسجل خروج تلقائياً (المستخدم قد يريد رؤية الصفحة)
+      // لكن لا نوجهه أيضاً
+    }
   } catch (e) {
     console.warn('[AUTH-STATE] error:', e);
   }
