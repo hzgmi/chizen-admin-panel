@@ -953,6 +953,8 @@ console.log('[FIREBASE] initialized');
 
 // ═══ الحماية: التحقق من تسجيل الدخول ═══
 auth.onAuthStateChanged(async function(user) {
+  console.log('[DEBUG] onAuthStateChanged fired, user:', user ? user.uid + ' / ' + user.email : 'NULL');
+  console.log('[DEBUG] window.location.href:', window.location.href);
   if (!user) {
     console.log('[AUTH] no user — redirecting to cat-login-new.html');
     window.location.href = 'cat-login-new.html';
