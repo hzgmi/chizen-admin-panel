@@ -2,22 +2,40 @@
 (function() {
   'use strict';
 
-  const state = { orders: [], filter: 'pending', db: null };
+  const state = { orders: [], filter: 'pending', db: null, loaded: false };
 
   function init() {
     state.db = window.db || (window.firebase && firebase.firestore());
     if (!state.db) { console.error('[PaymentsV2] DB not ready'); return; }
-    window.PaymentsV2 = { renderSection, verify, reject, refresh };
+    window.PaymentsV2 = { renderSection, verify, reject, refresh, _setFilter: (f) => { state.filter = f; renderSection(); } };
   }
 
-  // 1. دالة التحديث الموحدة (تحدّث state.orders وتعيد رسم القسم والعداد)
-  async function refresh() {
+  // 1. دالة التحديث (مع Cache)
+  async function refresh(force = false) {
     if (!state.db) return;
+    
+    // إذا كانت البيانات موجودة ولم نطلب تحديثاً قسرياً، اعرضها فوراً
+    if (state.loaded && !force) {
+      renderSection();
+      // ثم حدّث في الخلفية بهدوء
+      _fetchAndUpdate();
+      return;
+    }
+
+    // إذا كانت هذه أول مرة، اعرض التحميل
+    const c = document.getElementById('content');
+    if (c && !state.loaded) c.innerHTML = '<div style="text-align:center;padding:40px;">⏳ جاري التحميل...</div>';
+    
+    await _fetchAndUpdate();
+  }
+
+  async function _fetchAndUpdate() {
     try {
       const snap = await state.db.collection('orders').orderBy('createdAt', 'desc').limit(500).get();
       state.orders = [];
       snap.forEach(d => { const o = d.data(); o.id = d.id; state.orders.push(o); });
-      
+      state.loaded = true;
+
       // تحديث العداد
       const pendingCount = state.orders.filter(o => 
         (o.payment && o.payment.status === 'pending') || o.workflowStatus === 'awaiting_verification'
@@ -31,12 +49,12 @@
 
       renderSection();
     } catch(e) {
-      console.error('[PaymentsV2] refresh failed:', e);
-      toast('❌ فشل تحميل الطلبات: ' + e.message, 'error');
+      console.error('[PaymentsV2] fetch failed:', e);
+      if (window.toast) toast('❌ فشل تحميل الطلبات: ' + e.message, 'error');
     }
   }
 
-  // 2. دالة العرض الموحد (معلقة / مؤكدة / مرفوضة)
+  // 2. دالة العرض الموحد
   function renderSection() {
     const c = document.getElementById('content');
     if (!c) return;
@@ -91,11 +109,11 @@
         'payment.status': 'verified',
         'payment.verifiedAt': firebase.firestore.FieldValue.serverTimestamp()
       });
-      toast('✅ تم تأكيد الدفع', 'success');
-      await refresh();
+      if (window.toast) toast('✅ تم تأكيد الدفع', 'success');
+      await refresh(true); // force update
     } catch(e) {
       console.error('[PaymentsV2] verify failed:', e);
-      toast('❌ فشل التأكيد: ' + e.message, 'error');
+      if (window.toast) toast('❌ فشل التأكيد: ' + e.message, 'error');
     }
   }
 
@@ -110,18 +128,17 @@
         'payment.rejectedReason': reason,
         'payment.rejectedAt': firebase.firestore.FieldValue.serverTimestamp()
       });
-      toast('✅ تم رفض الدفع', 'success');
-      await refresh();
+      if (window.toast) toast('✅ تم رفض الدفع', 'success');
+      await refresh(true); // force update
     } catch(e) {
       console.error('[PaymentsV2] reject failed:', e);
-      toast('❌ فشل الرفض: ' + e.message, 'error');
+      if (window.toast) toast('❌ فشل الرفض: ' + e.message, 'error');
     }
   }
 
   // دوال مساعدة
   window.PaymentsV2 = { renderSection, verify, reject, refresh, _setFilter: (f) => { state.filter = f; renderSection(); } };
   
-  // التشغيل عند جاهزية DOM
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
