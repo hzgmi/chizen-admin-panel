@@ -8,3 +8,8 @@ worker.js
 _archive/
 _check_*.html
 www/
+
+# Backups
+*.bak_*
+# Stray files
+"===\"
