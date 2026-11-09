@@ -1415,158 +1415,143 @@ function resetAllData(){
 // ============================================
 function renderOrders(){
   const grid = document.getElementById('ordersGrid');
-  const filter = document.getElementById('orderFilter').value;
-  const sort = document.getElementById('orderSort').value;
-  const search = document.getElementById('orderSearch').value.trim().toLowerCase();
+  if (!grid) return;
+
+  const filterEl = document.getElementById('orderFilter');
+  const sortEl = document.getElementById('orderSort');
+  const searchEl = document.getElementById('orderSearch');
+  const filter = filterEl ? filterEl.value : 'all';
+  const sort = sortEl ? sortEl.value : 'newest';
+  const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+  const statusMap = {
+    pending: {text:'⏳ انتظار', cls:'status-pending'},
+    payment_verified: {text:'💳 مدفوع', cls:'status-pending'},
+    awaiting_verification: {text:'⏳ تحقق دفع', cls:'status-pending'},
+    approved: {text:'✅ مقبولة', cls:'status-approved'},
+    confirmed: {text:'✅ مؤكدة', cls:'status-approved'},
+    ready_for_pickup: {text:'📥 جاهز', cls:'status-approved'},
+    preparing: {text:'⚙️ تجهيز', cls:'status-approved'},
+    rejected: {text:'❌ مرفوضة', cls:'status-rejected'},
+    payment_rejected: {text:'❌ دفع مرفوض', cls:'status-rejected'},
+    category_rejected: {text:'❌ قسم مرفوض', cls:'status-rejected'}
+  };
+
+  function getStatus(o) {
+    var s = o.status || o.workflowStatus || 'pending';
+    return statusMap[s] || {text: s, cls: 'status-pending'};
+  }
+
+  function getCustomer(o) {
+    return o.customerName || o.name || o.customer || o.userName || 'عميل';
+  }
+
+  function getPhone(o) {
+    return o.phone || o.customerPhone || o.userPhone || '—';
+  }
+
+  function getDate(o) {
+    if (o.date) return new Date(o.date);
+    if (o.createdAt && o.createdAt.seconds) return new Date(o.createdAt.seconds * 1000);
+    if (o.createdAt && o.createdAt.toDate) return o.createdAt.toDate();
+    return new Date(0);
+  }
+
+  function getTotal(o) {
+    return Number(o.total) || Number(o.subtotal) || 0;
+  }
+
+  function getItems(o) {
+    if (Array.isArray(o.items)) return o.items;
+    if (o.categories && typeof o.categories === 'object') {
+      var all = [];
+      for (var k in o.categories) {
+        if (o.categories[k].items) all = all.concat(o.categories[k].items);
+      }
+      return all;
+    }
+    return [];
+  }
 
   let filtered = [...orders];
-  if(filter !== 'all') filtered = filtered.filter(o => o.status === filter);
-  if(search){
+  if (filter !== 'all') {
     filtered = filtered.filter(o => {
-      if(o.id.toLowerCase().includes(search)) return true;
-      if(o.customer.toLowerCase().includes(search)) return true;
-      if(o.phone.includes(search)) return true;
-      return o.items.some(i => i.name.toLowerCase().includes(search));
+      var s = o.status || o.workflowStatus || 'pending';
+      if (filter === 'pending') return s === 'pending' || s === 'payment_verified' || s === 'awaiting_verification';
+      if (filter === 'approved') return s === 'approved' || s === 'confirmed' || s === 'ready_for_pickup' || s === 'preparing';
+      if (filter === 'rejected') return s === 'rejected' || s === 'payment_rejected' || s === 'category_rejected';
+      return s === filter;
     });
   }
 
-  if(sort === 'newest') filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
-  else if(sort === 'oldest') filtered.sort((a,b) => new Date(a.date) - new Date(b.date));
-  else if(sort === 'high') filtered.sort((a,b) => b.total - a.total);
-  else if(sort === 'low') filtered.sort((a,b) => a.total - b.total);
+  if (search) {
+    filtered = filtered.filter(o => {
+      var id = (o.id || '').toLowerCase();
+      var cust = getCustomer(o).toLowerCase();
+      var phone = getPhone(o);
+      if (id.indexOf(search) !== -1) return true;
+      if (cust.indexOf(search) !== -1) return true;
+      if (phone.indexOf(search) !== -1) return true;
+      return getItems(o).some(i => (i.name || '').toLowerCase().indexOf(search) !== -1);
+    });
+  }
 
-  if(filtered.length === 0){
-    grid.innerHTML = `<div class="empty-state">
-      <div class="icon">📭</div><h3>لا توجد طلبات</h3>
-      <p>جرّب تصفير البيانات أو تغيير الفلتر</p>
-      <button class="btn btn-primary btn-sm" onclick="resetAllData()">🗑️ تصفير البيانات</button>
-    </div>`;
+  if (sort === 'newest') filtered.sort((a, b) => getDate(b) - getDate(a));
+  else if (sort === 'oldest') filtered.sort((a, b) => getDate(a) - getDate(b));
+  else if (sort === 'high') filtered.sort((a, b) => getTotal(b) - getTotal(a));
+  else if (sort === 'low') filtered.sort((a, b) => getTotal(a) - getTotal(b));
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>لا توجد طلبات</h3><p>جرّب تغيير الفلتر أو البحث</p></div>';
     return;
   }
 
-  const statusMap = {
-    pending:{text:'⏳ انتظار', cls:'status-pending'},
-    approved:{text:'✅ مقبولة', cls:'status-approved'},
-    rejected:{text:'❌ مرفوضة', cls:'status-rejected'}
-  };
-
   grid.innerHTML = filtered.map(o => {
-    const st = statusMap[o.status];
-    const itemsCount = o.items.reduce((s, i) => s + i.qty, 0);
-    const okCount = o.items.filter(i => getItemStatus(i) === 'ok').length;
-    const noCount = o.items.filter(i => getItemStatus(i) === 'no').length;
-    const waitCount = o.items.filter(i => getItemStatus(i) === 'pending').length;
+    const st = getStatus(o);
+    const items = getItems(o);
+    const itemsCount = items.reduce((s, i) => s + (Number(i.qty) || 1), 0);
+    const customer = getCustomer(o);
+    const phone = getPhone(o);
+    const total = getTotal(o);
+    const date = getDate(o);
+    const dateStr = date.getTime() > 0 ? date.toLocaleDateString('ar-YE', {month:'short', day:'numeric'}) : '—';
+
+    var cardClass = 'pending';
+    if (st.cls === 'status-approved') cardClass = 'approved';
+    else if (st.cls === 'status-rejected') cardClass = 'rejected';
 
     let previewHtml = '';
-    const previewItems = o.items.slice(0, 4);
+    const previewItems = items.slice(0, 4);
     previewItems.forEach(item => {
-      const product = getProduct(item.productId);
-      const img = product && product.images && product.images.length > 0 ? product.images[0] : null;
-      const ist = getItemStatus(item);
-      let statusIcon = '';
-      if(ist === 'ok') statusIcon = '<span class="status-icon ok">✓</span>';
-      else if(ist === 'no') statusIcon = '<span class="status-icon no">✕</span>';
-      previewHtml += `
-        <div class="thumb" onclick="viewOrderItems('${o.id}')" title="${item.name}">
-          ${img ? `<img src="${img}" onerror="this.parentElement.innerHTML='🛍️'">` : '🛍️'}
-          <span class="qty-badge">${item.qty}</span>
-          ${statusIcon}
-        </div>
-      `;
+      var img = item.image || item.img || null;
+      previewHtml += '<div class="thumb" title="' + (item.name || '') + '">' +
+        (img ? '<img src="' + img + '" onerror="this.parentElement.innerHTML=\'🛍️\'">' : '🛍️') +
+        '<span class="qty-badge">' + (item.qty || 1) + '</span>' +
+        '</div>';
     });
-    if(o.items.length > 4){
-      previewHtml += `<div class="thumb" onclick="viewOrderItems('${o.id}')" style="font-size:11px;font-weight:900;color:#64748b">+${o.items.length - 4}</div>`;
+    if (items.length > 4) {
+      previewHtml += '<div class="thumb" style="font-size:11px;font-weight:900;color:#64748b">+' + (items.length - 4) + '</div>';
+    }
+    if (items.length === 0) {
+      previewHtml = '<div style="font-size:11px;color:#94a3b8;padding:6px;">لا أصناف</div>';
     }
 
-    const suppliersMap = {};
-    o.items.forEach(item => {
-      if(!suppliersMap[item.supplier]) suppliersMap[item.supplier] = [];
-      suppliersMap[item.supplier].push(item);
-    });
-    const supplierKeys = Object.keys(suppliersMap);
-
-    let whatsappHtml = '';
-    if(supplierKeys.length > 0 && o.status === 'pending'){
-      whatsappHtml = `
-        <div class="whatsapp-section">
-          <div class="title">📱 إرسال للتجهيز للموردين (${supplierKeys.length})</div>
-          <div class="whatsapp-btns">
-            ${supplierKeys.map(sid => {
-              const sup = getSupplier(sid);
-              const items = suppliersMap[sid];
-              return `
-                <button class="wa-btn" onclick="sendToSupplier('${o.id}', '${sid}')">
-                  <div class="left">
-                    <div class="icon">💬</div>
-                    <span>${sup ? sup.name : 'مورد'}</span>
-                  </div>
-                  <span class="count">${items.length} صنف</span>
-                </button>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    return `
-    <div class="order-card ${o.status}">
-      <div class="order-head">
-        <div class="order-id">
-          ${o.id}
-          <span class="time">${formatTime(o.date)}</span>
-        </div>
-        <span class="order-status ${st.cls}">${st.text}</span>
-      </div>
-
-      <div class="order-info">
-        <div class="chip">👤 <strong>العميل:</strong> ${o.customer}</div>
-        <div class="chip">📞 ${o.phone}</div>
-        <div class="chip">📦 ${o.items.length} صنف • ${itemsCount} قطعة</div>
-      </div>
-
-      <div class="items-preview">
-        ${previewHtml}
-      </div>
-
-      <div class="items-stats">
-        <div class="stat ok">
-          <div class="val">${okCount}</div>
-          <div class="lbl">✅ متوفر</div>
-        </div>
-        <div class="stat no">
-          <div class="val">${noCount}</div>
-          <div class="lbl">❌ غير متوفر</div>
-        </div>
-        <div class="stat wait">
-          <div class="val">${waitCount}</div>
-          <div class="lbl">⚪ لم يُفحص</div>
-        </div>
-      </div>
-
-      <button class="btn-view-items" onclick="viewOrderItems('${o.id}')">
-        👁️ رؤية الأصناف وفحصها (${o.items.length})
-      </button>
-
-      ${whatsappHtml}
-
-      <div class="order-total">
-        <span class="label">💰 الإجمالي</span>
-        <span class="value">${o.total} ر.س</span>
-      </div>
-
-      ${o.status === 'pending' ? `
-        <div class="order-actions">
-          <button class="btn btn-success" onclick="approveOrder('${o.id}')">✅ تأكيد</button>
-          <button class="btn btn-danger" onclick="rejectOrder('${o.id}')">❌ رفض</button>
-        </div>
-      ` : `
-        <div class="order-actions">
-          <button class="btn btn-outline" onclick="resetOrder('${o.id}')">🔄 إرجاع للانتظار</button>
-        </div>
-      `}
-    </div>
-    `;
+    return '<div class="order-card ' + cardClass + '">' +
+      '<div class="order-head">' +
+        '<div class="order-id">' + (o.id || '') + ' <span class="time">' + dateStr + '</span></div>' +
+        '<span class="order-status ' + st.cls + '">' + st.text + '</span>' +
+      '</div>' +
+      '<div class="order-info">' +
+        '<div class="chip">👤 <strong>العميل:</strong> ' + customer + '</div>' +
+        '<div class="chip">📞 ' + phone + '</div>' +
+        '<div class="chip">📦 ' + items.length + ' صنف • ' + itemsCount + ' قطعة</div>' +
+      '</div>' +
+      '<div class="items-preview">' + previewHtml + '</div>' +
+      '<div class="order-total">' +
+        '<span class="label">💰 الإجمالي</span>' +
+        '<span class="value">' + total.toFixed(0) + ' ر.ي</span>' +
+      '</div>' +
+    '</div>';
   }).join('');
 }
 
