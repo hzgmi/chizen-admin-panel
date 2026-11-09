@@ -349,7 +349,7 @@ function renderTab(tab){
   state.activeTab = tab;
   var c = document.getElementById('content');
   if (tab === 'home') c.innerHTML = renderHome();
-  else if (tab === 'payments'){ c.innerHTML = '<div style="text-align:center;padding:40px;">⏳ جاري التحميل...</div>'; PaymentsV2.refresh(); }
+  else if (tab === 'payments'){ PaymentsV2.refresh(); }
   else if (tab === 'orders'){ c.innerHTML = renderOrders(); bindOrderChips(); }
   else if (tab === 'team') c.innerHTML = renderTeam();
   else if (tab === 'review'){ c.innerHTML = renderReview(); bindReviewActions(); }

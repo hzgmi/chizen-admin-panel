@@ -1,31 +1,26 @@
-/* payments-v2.js — وحدة المدفوعات النظيفة (تأكيد + رفض + عرض موحد) */
+/* payments-v2.js — وحدة المدفوعات النظيفة */
 (function() {
   'use strict';
-
   const state = { orders: [], filter: 'pending', db: null, loaded: false };
 
   function init() {
     state.db = window.db || (window.firebase && firebase.firestore());
-    if (!state.db) { console.error('[PaymentsV2] DB not ready'); return; }
+    if (!state.db) return;
     window.PaymentsV2 = { renderSection, verify, reject, refresh, _setFilter: (f) => { state.filter = f; renderSection(); } };
   }
 
-  // 1. دالة التحديث (مع Cache)
-  async function refresh(force = false) {
+  // الدالة التي تُستدعى عند فتح التبويب
+  async function refresh() {
     if (!state.db) return;
     
-    // إذا كانت البيانات موجودة ولم نطلب تحديثاً قسرياً، اعرضها فوراً
-    if (state.loaded && !force) {
+    // 1. إذا كانت البيانات موجودة في الذاكرة، اعرضها فوراً (بدون انتظار)
+    if (state.loaded) {
       renderSection();
-      // ثم حدّث في الخلفية بهدوء
-      _fetchAndUpdate();
+      _fetchAndUpdate(); // تحديث في الخلفية
       return;
     }
 
-    // إذا كانت هذه أول مرة، اعرض التحميل
-    const c = document.getElementById('content');
-    if (c && !state.loaded) c.innerHTML = '<div style="text-align:center;padding:40px;">⏳ جاري التحميل...</div>';
-    
+    // 2. إذا كانت أول مرة، اجلب البيانات واعرضها
     await _fetchAndUpdate();
   }
 
@@ -47,14 +42,13 @@
         b.style.display = pendingCount > 0 ? 'block' : 'none';
       });
 
-      renderSection();
+      // إذا كنا في تبويب الدفع، أعد الرسم
+      if (state.activeTab === 'payments') renderSection();
     } catch(e) {
       console.error('[PaymentsV2] fetch failed:', e);
-      if (window.toast) toast('❌ فشل تحميل الطلبات: ' + e.message, 'error');
     }
   }
 
-  // 2. دالة العرض الموحد
   function renderSection() {
     const c = document.getElementById('content');
     if (!c) return;
@@ -71,7 +65,6 @@
 
     let html = '<div style="padding:15px; max-width:800px; margin:0 auto;">';
     
-    // أزرار التبديل
     html += '<div style="display:flex; gap:10px; margin-bottom:20px;">';
     html += `<button onclick="PaymentsV2._setFilter('pending')" style="flex:1; padding:10px; border-radius:8px; border:none; background:${state.filter==='pending'?'#FF3D9A':'#333'}; color:white; font-weight:bold;">⏳ معلقة (${pending.length})</button>`;
     html += `<button onclick="PaymentsV2._setFilter('verified')" style="flex:1; padding:10px; border-radius:8px; border:none; background:${state.filter==='verified'?'#10b981':'#333'}; color:white; font-weight:bold;">✅ مؤكدة (${verified.length})</button>`;
@@ -99,7 +92,6 @@
     c.innerHTML = html;
   }
 
-  // 3. دالة التأكيد
   async function verify(orderId) {
     if (!confirm('تأكيد الدفع لهذا الطلب؟')) return;
     try {
@@ -110,14 +102,12 @@
         'payment.verifiedAt': firebase.firestore.FieldValue.serverTimestamp()
       });
       if (window.toast) toast('✅ تم تأكيد الدفع', 'success');
-      await refresh(true); // force update
+      await _fetchAndUpdate();
     } catch(e) {
-      console.error('[PaymentsV2] verify failed:', e);
       if (window.toast) toast('❌ فشل التأكيد: ' + e.message, 'error');
     }
   }
 
-  // 4. دالة الرفض
   async function reject(orderId) {
     const reason = prompt('أدخل سبب الرفض:');
     if (!reason) return;
@@ -129,14 +119,12 @@
         'payment.rejectedAt': firebase.firestore.FieldValue.serverTimestamp()
       });
       if (window.toast) toast('✅ تم رفض الدفع', 'success');
-      await refresh(true); // force update
+      await _fetchAndUpdate();
     } catch(e) {
-      console.error('[PaymentsV2] reject failed:', e);
       if (window.toast) toast('❌ فشل الرفض: ' + e.message, 'error');
     }
   }
 
-  // دوال مساعدة
   window.PaymentsV2 = { renderSection, verify, reject, refresh, _setFilter: (f) => { state.filter = f; renderSection(); } };
   
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
