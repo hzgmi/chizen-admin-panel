@@ -1161,7 +1161,12 @@ async function loadOrders() {
     });
 
     console.log('[FIRESTORE] orders loaded:', orders.length, '/', snap.size, 'total (filtered to cat:', cat, ')');
-    renderOrders();
+    try {
+      renderOrders();
+    } catch(re) {
+      console.error('[RENDER-ORDERS] error:', re);
+      throw re;
+    }
     updateStats();
   } catch(e) {
     console.error('[FIRESTORE] orders error:', e);
@@ -1414,6 +1419,7 @@ function resetAllData(){
 // ===== الطلبات =====
 // ============================================
 function renderOrders(){
+  console.log('[RENDER-ORDERS] called with orders:', orders.length);
   const grid = document.getElementById('ordersGrid');
   if (!grid) return;
 
