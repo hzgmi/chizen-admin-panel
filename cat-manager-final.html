@@ -1118,7 +1118,7 @@ function renderOrdersList() {
   // تحديث الإحصائيات
   var allCount = (state.orders || []).length;
   var pendingCount = (state.orders || []).filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; }).length;
-  var confirmedCount = (state.orders || []).filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; }).length;
+  var confirmedCount = (state.orders || []).filter(function(o) { return o.status === 'confirmed' || o.status === 'processing' || o.status === 'payment_verified'; }).length;
   var completedCount = (state.orders || []).filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; }).length;
   
   var statAll = document.getElementById('ordStatAll');
@@ -1133,7 +1133,7 @@ function renderOrdersList() {
   // فلترة
   var arr = (state.orders || []).slice();
   if (_orderFilter === 'pending') arr = arr.filter(function(o) { return o.status === 'pending' || o.status === 'awaiting_verification'; });
-  else if (_orderFilter === 'confirmed') arr = arr.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing'; });
+  else if (_orderFilter === 'confirmed') arr = arr.filter(function(o) { return o.status === 'confirmed' || o.status === 'processing' || o.status === 'payment_verified'; });
   else if (_orderFilter === 'completed') arr = arr.filter(function(o) { return o.status === 'completed' || o.status === 'delivered'; });
   
   // بحث
@@ -1274,7 +1274,7 @@ async function confirmOrder(id) {
   if (!confirm('تأكيد توفر منتجات هذا الطلب؟')) return;
   try {
     await db.collection('orders').doc(id).update({
-      status: 'confirmed',
+      status: 'ready_for_pickup',
       workflowStatus: 'ready_for_pickup',
       fulfillmentStage: 'ready_for_pickup',
       confirmedBy: state.user ? state.user.email : '',
@@ -1291,8 +1291,10 @@ async function rejectOrder(id) {
   var reason = prompt('سبب الرفض:');
   if (!reason) return;
   try {
-    await db.collection('orders').doc(id).set({
+    await db.collection('orders').doc(id).update({
       status: 'rejected',
+      workflowStatus: 'category_rejected',
+      fulfillmentStage: 'category_rejected',
       rejectReason: reason,
       rejectedBy: state.user ? state.user.email : '',
       rejectedAt: firebase.firestore.FieldValue.serverTimestamp()

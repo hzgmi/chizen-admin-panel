@@ -141,7 +141,7 @@
     try {
       await state.db.collection('orders').doc(orderId).update({
         workflowStatus: 'awaiting_categories',
-        status: 'payment_verified',
+        status: 'confirmed',
         'payment.status': 'verified',
         fulfillmentStage: 'preparing',
         'payment.verifiedAt': firebase.firestore.FieldValue.serverTimestamp()
@@ -159,6 +159,8 @@
     try {
       await state.db.collection('orders').doc(orderId).update({
         workflowStatus: 'payment_rejected',
+        status: 'rejected',
+        fulfillmentStage: 'payment_rejected',
         'payment.status': 'rejected',
         'payment.rejectedReason': reason,
         'payment.rejectedAt': firebase.firestore.FieldValue.serverTimestamp()
