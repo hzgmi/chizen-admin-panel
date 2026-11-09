@@ -2408,5 +2408,69 @@ console.log('[CAT-MANAGER-NEW v2] loaded');
     <div id="ordersModalList" style="padding:0 16px 100px;"></div>
   </div>
 </div>
+
+<!-- ═══ FINAL FIX: إعادة ربط الأزرار بعد تحميل DOM ═══ -->
+<script>
+(function() {
+  function rebindButtons() {
+    console.log('[FIX] rebinding buttons...');
+    
+    // 1) زر "إضافة منتج"
+    var addBtns = document.querySelectorAll('.action-btn.add');
+    addBtns.forEach(function(btn) {
+      btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { openProductModal(); } catch(err) { console.error('[FIX] add:', err); alert('❌ ' + err.message); }
+      };
+    });
+    
+    // 2) زر "منتجاتي"
+    var viewBtns = document.querySelectorAll('.action-btn.view');
+    viewBtns.forEach(function(btn) {
+      btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[FIX] products button clicked');
+        try { openProductsView(); } catch(err) { console.error('[FIX] view:', err); alert('❌ ' + err.message); }
+      };
+    });
+    
+    // 3) "عرض الكل" (الطلبات)
+    var ordersLinks = document.querySelectorAll('a[onclick*="openOrdersModal"]');
+    ordersLinks.forEach(function(link) {
+      link.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[FIX] orders link clicked');
+        try { openOrdersModal(); } catch(err) { console.error('[FIX] orders:', err); alert('❌ ' + err.message); }
+      };
+    });
+    
+    // 4) "الإشعارات"
+    var notifBtns = document.querySelectorAll('.nav-item[onclick*="openNotifModal"]');
+    notifBtns.forEach(function(btn) {
+      btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[FIX] notif button clicked');
+        try { openNotifModal(); } catch(err) { console.error('[FIX] notif:', err); alert('❌ ' + err.message); }
+      };
+    });
+    
+    console.log('[FIX] buttons rebound:', addBtns.length + viewBtns.length + ordersLinks.length + notifBtns.length);
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(rebindButtons, 100); });
+  } else {
+    setTimeout(rebindButtons, 100);
+  }
+  
+  // إعادة الربط عند تغيير الصفحة (SPA)
+  window.addEventListener('hashchange', function() { setTimeout(rebindButtons, 100); });
+})();
+</script>
+
 </body>
 </html>
