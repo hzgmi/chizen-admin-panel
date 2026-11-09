@@ -704,6 +704,12 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
       </select>
     </div>
 
+    <div id="bulkSuppliersBar" style="display:none; background:linear-gradient(135deg,#f0fdf4,#dcfce7); border:2px solid #86efac; border-radius:12px; padding:10px; margin-bottom:12px;">
+      <div style="font-size:12px; font-weight:900; color:#065f46; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+        📱 إرسال جماعي للموردين (كل الطلبات المعلقة)
+      </div>
+      <div id="bulkSuppliersList" style="display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
     <div class="orders-grid" id="ordersGrid"></div>
   </div>
 
@@ -1422,6 +1428,9 @@ function renderOrders(){
   const grid = document.getElementById('ordersGrid');
   if (!grid) return;
 
+  // تحديث الأزرار الجماعية للموردين
+  try { renderBulkSupplierButtons(); } catch(e) { console.warn('[bulk]', e); }
+
   const filterEl = document.getElementById('orderFilter');
   const sortEl = document.getElementById('orderSort');
   const searchEl = document.getElementById('orderSearch');
@@ -1776,6 +1785,139 @@ function closeItemsModal(){
 // ============================================
 // ===== إرسال واتساب (بدون إجمالي) =====
 // ============================================
+function renderBulkSupplierButtons(){
+  var bar = document.getElementById('bulkSuppliersBar');
+  var list = document.getElementById('bulkSuppliersList');
+  if (!bar || !list) return;
+
+  // نجمّع فقط الطلبات المعلقة
+  var pendingOrders = orders.filter(function(o) {
+    var s = o.status || o.workflowStatus || 'pending';
+    return s === 'pending' || s === 'awaiting_verification' || s === 'payment_verified';
+  });
+
+  if (pendingOrders.length === 0) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  // نجمّع حسب المورد: { supplierId: { orders: [...], items: [...] } }
+  var bySupplier = {};
+  pendingOrders.forEach(function(order) {
+    var items = getOrderItems(order);
+    items.forEach(function(item) {
+      var product = getProduct(item.productId);
+      var sid = item.supplier || item.supplierId || (product && product.supplier) || 'unknown';
+      if (!bySupplier[sid]) bySupplier[sid] = { orders: {}, items: [] };
+      bySupplier[sid].orders[order.id] = true;
+      bySupplier[sid].items.push({ orderId: order.id, item: item });
+    });
+  });
+
+  var supplierIds = Object.keys(bySupplier);
+  if (supplierIds.length === 0) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'block';
+
+  var html = '';
+  supplierIds.forEach(function(sid) {
+    var data = bySupplier[sid];
+    var sup = getSupplier(sid);
+    // اسم المورد
+    var firstProduct = getProduct(data.items[0].item.productId);
+    var supName = (sup && sup.name) || (firstProduct && firstProduct.supplierName) || data.items[0].item.supplierName || 'مورد غير محدد';
+    var ordersCount = Object.keys(data.orders).length;
+    var itemsCount = data.items.length;
+
+    html += '<button class="wa-btn" onclick="sendBulkToSupplier(\'' + sid + '\')" style="width:100%;">' +
+      '<div class="left"><div class="icon">💬</div><span>' + supName + '</span></div>' +
+      '<span class="count">' + ordersCount + ' طلب • ' + itemsCount + ' صنف</span>' +
+      '</button>';
+  });
+
+  list.innerHTML = html;
+}
+
+function sendBulkToSupplier(supplierId){
+  var pendingOrders = orders.filter(function(o) {
+    var s = o.status || o.workflowStatus || 'pending';
+    return s === 'pending' || s === 'awaiting_verification' || s === 'payment_verified';
+  });
+
+  if (pendingOrders.length === 0) {
+    showToast('⚠️ لا طلبات معلقة', 'error');
+    return;
+  }
+
+  // نجمّع الأصناف من هذا المورد في كل الطلبات المعلقة
+  var ordersWithItems = [];  // [{ orderId, items: [] }]
+  var firstItemRef = null;
+  var supName = 'مورد';
+  var phone = '';
+
+  pendingOrders.forEach(function(order) {
+    var items = getOrderItems(order);
+    var supplierItems = items.filter(function(i) {
+      var product = getProduct(i.productId);
+      var sid = i.supplier || i.supplierId || (product && product.supplier);
+      return sid === supplierId;
+    });
+
+    if (supplierItems.length) {
+      ordersWithItems.push({ orderId: order.id, items: supplierItems });
+      if (!firstItemRef) {
+        firstItemRef = supplierItems[0];
+        var prod = getProduct(firstItemRef.productId);
+        var sup = getSupplier(supplierId);
+        supName = (sup && sup.name) || (prod && prod.supplierName) || firstItemRef.supplierName || 'مورد';
+        phone = (sup && sup.phone) || (prod && prod.supplierPhone) || firstItemRef.supplierPhone || '';
+      }
+    }
+  });
+
+  if (ordersWithItems.length === 0) {
+    showToast('⚠️ لا طلبات لهذا المورد', 'error');
+    return;
+  }
+
+  if (!phone) {
+    showToast('⚠️ لا يوجد رقم واتساب لهذا المورد', 'error');
+    return;
+  }
+
+  // بناء الرسالة الجماعية
+  var msg = 'السلام عليكم ورحمة الله 🌹\n\n';
+  msg += 'نرجو تجهيز الطلبات التالية:\n\n';
+
+  var totalItems = 0;
+
+  ordersWithItems.forEach(function(entry, orderIdx) {
+    msg += '📦 طلب #' + entry.orderId + ':\n';
+    entry.items.forEach(function(item, idx) {
+      totalItems++;
+      msg += '   ' + (idx+1) + '. ' + (item.name || 'منتج') + '\n';
+      if (item.brand) msg += '      🏷️ ' + item.brand + '\n';
+      msg += '      🔢 الكمية: ' + (item.qty || 1) + '\n';
+      msg += '      💰 السعر: ' + (item.price || 0) + ' ر.س\n';
+    });
+    msg += '\n';
+  });
+
+  msg += '──────────────\n';
+  msg += '📊 الإجمالي: ' + ordersWithItems.length + ' طلب • ' + totalItems + ' صنف\n\n';
+  msg += 'شكراً لتعاونكم 🌸';
+
+  var cleanPhone = phone.replace(/[^0-9]/g, '');
+  var url = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+
+  addNotif('success', 'إرسال جماعي', 'تم إرسال ' + ordersWithItems.length + ' طلب إلى ' + supName);
+  showToast('📱 تم فتح واتساب لـ ' + supName + ' (' + ordersWithItems.length + ' طلب)', 'success');
+}
+
 function sendToSupplier(orderId, supplierId){
   const order = orders.find(o => o.id === orderId);
   if(!order) return;
