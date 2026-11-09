@@ -1533,10 +1533,11 @@ function renderOrders(){
       previewHtml += '<div class="thumb" onclick="viewOrderItems(\'' + o.id + '\')" style="font-size:11px;font-weight:900;color:#64748b">+' + (items.length - 4) + '</div>';
     }
 
-    // الموردون
+    // الموردون (نجلب من المنتج إذا لم يكن موجوداً في الطلب)
     const suppliersMap = {};
     items.forEach(item => {
-      var sid = item.supplier || item.supplierId || 'unknown';
+      var product = getProduct(item.productId);
+      var sid = item.supplier || item.supplierId || (product && product.supplier) || 'unknown';
       if (!suppliersMap[sid]) suppliersMap[sid] = [];
       suppliersMap[sid].push(item);
     });
@@ -1549,8 +1550,10 @@ function renderOrders(){
       supplierKeys.forEach(sid => {
         var sup = getSupplier(sid);
         var supItems = suppliersMap[sid];
+        // اسم المورد: من suppliers collection، أو من المنتج
+        var supName = (sup && sup.name) || supItems[0].supplierName || 'مورد غير محدد';
         whatsappHtml += '<button class="wa-btn" onclick="sendToSupplier(\'' + o.id + '\',\'' + sid + '\')">' +
-          '<div class="left"><div class="icon">💬</div><span>' + (sup ? sup.name : 'مورد') + '</span></div>' +
+          '<div class="left"><div class="icon">💬</div><span>' + supName + '</span></div>' +
           '<span class="count">' + supItems.length + ' صنف</span>' +
           '</button>';
       });
@@ -1669,8 +1672,9 @@ function viewOrderItems(orderId){
   items.forEach((item, idx) => {
     const product = getProduct(item.productId);
     const img = (product && product.images && product.images[0]) || item.image || item.img || null;
-    const sup = getSupplier(item.supplier || item.supplierId);
-    const supName = (sup && sup.name) || item.supplierName || '—';
+    const supId = item.supplier || item.supplierId || (product && product.supplier);
+    const sup = getSupplier(supId);
+    const supName = (sup && sup.name) || (product && product.supplierName) || item.supplierName || '—';
     const ist = getItemStatus(item);
 
     let rowClass = '';
@@ -1777,15 +1781,20 @@ function sendToSupplier(orderId, supplierId){
   if(!order) return;
 
   const items = getOrderItems(order);
-  const supplierItems = items.filter(i => (i.supplier || i.supplierId) === supplierId);
+  const supplierItems = items.filter(i => {
+    var product = getProduct(i.productId);
+    var sid = i.supplier || i.supplierId || (product && product.supplier);
+    return sid === supplierId;
+  });
   if (!supplierItems.length) {
     showToast('⚠️ لا أصناف لهذا المورد', 'error');
     return;
   }
 
   var supplier = getSupplier(supplierId);
-  var supplierName = (supplier && supplier.name) || supplierItems[0].supplierName || 'مورد';
-  var phone = (supplier && supplier.phone) || supplierItems[0].supplierPhone || '';
+  var firstProduct = getProduct(supplierItems[0].productId);
+  var supplierName = (supplier && supplier.name) || (firstProduct && firstProduct.supplierName) || supplierItems[0].supplierName || 'مورد';
+  var phone = (supplier && supplier.phone) || (firstProduct && firstProduct.supplierPhone) || supplierItems[0].supplierPhone || '';
 
   // إذا لا رقم → عرض رسالة
   if (!phone) {
@@ -1821,9 +1830,12 @@ function sendAllSuppliers(orderId){
   if(!order) return;
 
   const suppliersMap = {};
-  order.items.forEach(item => {
-    if(!suppliersMap[item.supplier]) suppliersMap[item.supplier] = [];
-    suppliersMap[item.supplier].push(item);
+  const items = getOrderItems(order);
+  items.forEach(item => {
+    var product = getProduct(item.productId);
+    var sid = item.supplier || item.supplierId || (product && product.supplier) || 'unknown';
+    if(!suppliersMap[sid]) suppliersMap[sid] = [];
+    suppliersMap[sid].push(item);
   });
 
   const supplierIds = Object.keys(suppliersMap);
