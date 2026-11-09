@@ -344,10 +344,11 @@ function showError(msg) {
 async function loadUserData(user) {
   var udoc = await db.collection('users').doc(user.uid).get();
   state.userData = udoc.exists ? udoc.data() : {};
-  state.cat = state.userData.category || state.userData.cat || null;
+  state.cat = state.userData.category || state.userData.cat || state.userData.assignedCategory || null;
   
   if (!state.cat) {
-    var _mc = prompt('اختر رقم القسم: 1=fashion, 2=electronics, 3=perfume, 4=shoes'); var _map={'1':'fashion','2':'electronics','3':'perfume','4':'shoes'}; if(_mc && _map[_mc]) { state.cat = _map[_mc]; localStorage.setItem('chz_cat_manager_cat', state.cat); document.getElementById('catName').textContent = 'قسم: ' + catLabel(state.cat); return true; } else { document.getElementById('catName').textContent = '⚠️ لم يتم تعيين قسم'; }
+    document.getElementById('catName').textContent = '⚠️ لم يتم تعيين قسم';
+    document.getElementById('ordersContainer').innerHTML = '<div class="empty" style="padding:40px 20px;"><i style="font-size:48px;">⚠️</i><b>لم يتم تعيين قسم لحسابك</b><small>تواصل مع الإدارة لتعيين قسم لك</small></div>';
     return false;
   }
   

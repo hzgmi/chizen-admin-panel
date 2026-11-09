@@ -223,7 +223,7 @@ async function doLogin() {
       var udoc = await db.collection('users').doc(user.uid).get();
       if (udoc.exists) {
         userData = udoc.data();
-        cat = userData.category || userData.cat || null;
+        cat = userData.category || userData.cat || userData.assignedCategory || null;
       }
     } catch(e) {}
     
@@ -233,7 +233,7 @@ async function doLogin() {
         var adoc = await db.collection('admins').doc(user.uid).get();
         if (adoc.exists) {
           var adminData = adoc.data();
-          cat = adminData.category || adminData.cat || null;
+          cat = adminData.category || adminData.cat || adminData.assignedCategory || null;
           if (!cat && adminData.role === 'cat_manager') {
             cat = adminData.categories ? adminData.categories[0] : 'general';
           }
