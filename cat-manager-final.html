@@ -1109,61 +1109,85 @@ async function loadRates() {
 
 async function loadOrders() {
   try {
-    // نجلب كل الطلبات، ثم نفلتر محلياً (لأن الطلب قد يحتوي على categories كائن، وليس category مفرد)
-    var snap = await db.collection('orders')
-      .orderBy('createdAt', 'desc')
-      .limit(200)
-      .get();
-    orders = [];
     var cat = state.cat;
+    var snap = await db.collection('orders').limit(50).get();
+    console.log('[FIRESTORE] orders raw:', snap.size, '| cat:', cat);
+
+    orders = [];
+    var matched = 0;
+
     snap.forEach(function(d) {
       var x = d.data(); x.id = d.id;
-      // الفلترة: هل الطلب يحتوي على منتجات من قسمي؟
       var hasMyCat = false;
+
+      // 1) category مفرد
       if (x.category === cat) hasMyCat = true;
-      if (x.categories && typeof x.categories === 'object' && x.categories[cat]) hasMyCat = true;
-      if (hasMyCat) orders.push(x);
+
+      // 2) categories كائن {fashion: {...}}
+      if (x.categories && typeof x.categories === 'object' && !Array.isArray(x.categories)) {
+        if (x.categories[cat]) hasMyCat = true;
+        // 3) مفتاح يحتوي على cat (مثل fashion_men)
+        if (!hasMyCat) {
+          for (var key in x.categories) {
+            if (key.indexOf(cat) !== -1) { hasMyCat = true; break; }
+          }
+        }
+      }
+
+      // 4) categories مصفوفة ['fashion', ...]
+      if (!hasMyCat && Array.isArray(x.categories) && x.categories.indexOf(cat) !== -1) {
+        hasMyCat = true;
+      }
+
+      if (hasMyCat) { orders.push(x); matched++; }
     });
+
+    // إذا لم نجد أي تطابق — نعرض كل الطلبات (للتشخيص) + رسالة واضحة
+    if (matched === 0 && snap.size > 0) {
+      console.warn('[FIRESTORE] ⚠️ No orders matched cat:', cat, '| showing all orders for debug');
+      snap.forEach(function(d) { var x = d.data(); x.id = d.id; orders.push(x); });
+      window.__DEBUG_NO_MATCH__ = { cat: cat, total: snap.size };
+      // عرض رسالة مرئية
+      showDebugBanner('⚠️ لا طلبات مطابقة للقسم "' + cat + '". يتم عرض كل الطلبات (' + snap.size + ') للتشخيص.');
+    } else {
+      window.__DEBUG_ORDERS__ = { cat: cat, matched: matched, total: snap.size };
+    }
+
+    // ترتيب حسب createdAt
+    orders.sort(function(a, b) {
+      var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+      var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+      return tb - ta;
+    });
+
     console.log('[FIRESTORE] orders loaded:', orders.length, '/', snap.size, 'total (filtered to cat:', cat, ')');
     renderOrders();
     updateStats();
   } catch(e) {
     console.error('[FIRESTORE] orders error:', e);
-    // fallback: بدون orderBy
-    try {
-      var snap2 = await db.collection('orders').limit(200).get();
-      orders = [];
-      var cat2 = state.cat;
-      snap2.forEach(function(d) {
-        var x = d.data(); x.id = d.id;
-        var hasMyCat = false;
-        if (x.category === cat2) hasMyCat = true;
-        if (x.categories && typeof x.categories === 'object' && x.categories[cat2]) hasMyCat = true;
-        if (hasMyCat) orders.push(x);
-      });
-      console.log('[FIRESTORE] orders loaded (fallback):', orders.length);
-      renderOrders();
-      updateStats();
-    } catch(e2) {
-      console.error('[FIRESTORE] orders fallback error:', e2);
-    }
+    showDebugBanner('❌ خطأ في تحميل الطلبات: ' + e.message);
   }
 }
 
 async function loadProducts() {
   try {
-    var snap = await db.collection('products')
-      .limit(300)
-      .get();
-    products = [];
     var cat = state.cat;
+    var snap = await db.collection('products').limit(100).get();
+    console.log('[FIRESTORE] products raw:', snap.size, '| cat:', cat);
+
+    products = [];
     snap.forEach(function(d) {
       var x = d.data(); x.id = d.id;
       var hasMyCat = false;
+
       if (x.category === cat) hasMyCat = true;
       if (Array.isArray(x.categories) && x.categories.indexOf(cat) !== -1) hasMyCat = true;
+      if (x.categories && typeof x.categories === 'object' && !Array.isArray(x.categories) && x.categories[cat]) hasMyCat = true;
+
       if (hasMyCat) products.push(x);
     });
+
+    window.__DEBUG_PRODUCTS__ = { cat: cat, matched: products.length, total: snap.size };
     console.log('[FIRESTORE] products loaded:', products.length, '/', snap.size, 'total (filtered to cat:', cat, ')');
     renderProducts();
     updateStats();
@@ -1200,6 +1224,22 @@ async function loadNotifications() {
 }
 
 // ═══ Progress Bar Control ═══
+function showDebugBanner(msg) {
+  var existing = document.getElementById('debug-banner');
+  if (existing) existing.remove();
+  var div = document.createElement('div');
+  div.id = 'debug-banner';
+  div.style.cssText = 'position:fixed;top:56px;left:8px;right:8px;background:#fef3c7;color:#92400e;padding:10px 14px;border:1px solid #fcd34d;border-radius:8px;font-size:12px;font-weight:700;z-index:9000;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);';
+  div.textContent = msg;
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'position:absolute;top:4px;left:4px;background:transparent;border:none;cursor:pointer;font-weight:900;color:#92400e;font-size:14px;';
+  closeBtn.onclick = function() { div.remove(); };
+  div.appendChild(closeBtn);
+  document.body.appendChild(div);
+  setTimeout(function() { if (div.parentNode) div.remove(); }, 15000);
+}
+
 function showProgress() {
   var el = document.getElementById('global-progress');
   if (el) el.classList.add('active');
@@ -1225,50 +1265,43 @@ async function initPanel(user, cat) {
   state.cat = cat;
   window.__CATEGORY__ = cat;
 
-  // تحديث اسم القسم في header
   var catNameEl = document.getElementById('catName');
   if (catNameEl) {
     var labels = { fashion:'أزياء', shoes:'أحذية', perfume:'عطور', electronics:'إلكترونيات', accessories:'إكسسوارات', kids:'أطفال', supermarket:'سوبر ماركت', home:'منزل', beauty:'جمال' };
     catNameEl.textContent = labels[cat] || cat;
   }
 
+  // 1) suppliers + rates (سريع) → 20%
   try {
-    // 10% → بدء
     setProgress(10);
-
-    // 25% → suppliers + rates
     await Promise.all([loadSuppliers(), loadRates()]);
     setProgress(30);
+  } catch(e) { console.warn('[INIT] suppliers/rates:', e); }
 
-    // 50% → orders
+  // 2) orders (سريع) → 50%
+  try {
     await loadOrders();
     setProgress(55);
+  } catch(e) { console.warn('[INIT] orders:', e); }
 
-    // 75% → products
+  // 3) products → 80%
+  try {
     await loadProducts();
-    setProgress(80);
+    setProgress(85);
+  } catch(e) { console.warn('[INIT] products:', e); }
 
-    // 95% → notifications
-    await loadNotifications();
-    setProgress(95);
+  // 4) إخفاء الشريط فوراً (لا ننتظر notifications)
+  renderColors();
+  calculateAutoRates();
+  setProgress(100);
+  setTimeout(function() { hideProgress(); }, 300);
 
-    // 100% → اكتمل
-    renderColors();
-    calculateAutoRates();
-    setProgress(100);
+  console.log('[INIT] panel ready (notifications loading in background)');
 
-    setTimeout(function() {
-      hideProgress();
-    }, 300);
-
-    console.log('[INIT] panel ready');
-
-  } catch(e) {
-    console.error('[INIT] error:', e);
-    setProgress(100);
-    setTimeout(function() { hideProgress(); }, 300);
-    showToast('⚠️ بعض البيانات لم تُحمَّل', 'error');
-  }
+  // 5) notifications في الخلفية (بدون انتظار)
+  loadNotifications().catch(function(e) {
+    console.warn('[INIT] notifications bg:', e);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
