@@ -1419,7 +1419,6 @@ function resetAllData(){
 // ===== الطلبات =====
 // ============================================
 function renderOrders(){
-  console.log('[RENDER-ORDERS] called with orders:', orders.length);
   const grid = document.getElementById('ordersGrid');
   if (!grid) return;
 
@@ -1430,121 +1429,150 @@ function renderOrders(){
   const sort = sortEl ? sortEl.value : 'newest';
   const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
 
-  const statusMap = {
-    pending: {text:'⏳ انتظار', cls:'status-pending'},
-    payment_verified: {text:'💳 مدفوع', cls:'status-pending'},
-    awaiting_verification: {text:'⏳ تحقق دفع', cls:'status-pending'},
-    approved: {text:'✅ مقبولة', cls:'status-approved'},
-    confirmed: {text:'✅ مؤكدة', cls:'status-approved'},
-    ready_for_pickup: {text:'📥 جاهز', cls:'status-approved'},
-    preparing: {text:'⚙️ تجهيز', cls:'status-approved'},
-    rejected: {text:'❌ مرفوضة', cls:'status-rejected'},
-    payment_rejected: {text:'❌ دفع مرفوض', cls:'status-rejected'},
-    category_rejected: {text:'❌ قسم مرفوض', cls:'status-rejected'}
-  };
-
-  function getStatus(o) {
-    var s = o.status || o.workflowStatus || 'pending';
-    return statusMap[s] || {text: s, cls: 'status-pending'};
-  }
-
-  function getCustomer(o) {
-    return o.customerName || o.name || o.customer || o.userName || 'عميل';
-  }
-
-  function getPhone(o) {
-    return o.phone || o.customerPhone || o.userPhone || '—';
-  }
-
+  // دوال مساعدة
+  function getCustomer(o) { return o.customerName || o.name || o.customer || o.userName || 'عميل'; }
+  function getPhone(o) { return o.phone || o.customerPhone || o.userPhone || '—'; }
   function getDate(o) {
     if (o.date) return new Date(o.date);
     if (o.createdAt && o.createdAt.seconds) return new Date(o.createdAt.seconds * 1000);
     if (o.createdAt && o.createdAt.toDate) return o.createdAt.toDate();
     return new Date(0);
   }
-
-  function getTotal(o) {
-    return Number(o.total) || Number(o.subtotal) || 0;
-  }
-
+  function getTotal(o) { return Number(o.total) || Number(o.subtotal) || 0; }
   function getItems(o) {
-    if (Array.isArray(o.items)) return o.items;
+    if (Array.isArray(o.items) && o.items.length) return o.items;
     if (o.categories && typeof o.categories === 'object') {
       var all = [];
       for (var k in o.categories) {
-        if (o.categories[k].items) all = all.concat(o.categories[k].items);
+        if (o.categories[k] && o.categories[k].items) all = all.concat(o.categories[k].items);
       }
-      return all;
+      if (all.length) return all;
     }
     return [];
   }
+  function getStatusLabel(o) {
+    var s = o.status || o.workflowStatus || 'pending';
+    if (s === 'pending' || s === 'awaiting_verification' || s === 'payment_verified') {
+      return {text: '⏳ انتظار', cls: 'status-pending', card: 'pending'};
+    }
+    if (s === 'approved' || s === 'confirmed' || s === 'ready_for_pickup' || s === 'preparing') {
+      return {text: '✅ مقبولة', cls: 'status-approved', card: 'approved'};
+    }
+    if (s === 'rejected' || s === 'payment_rejected' || s === 'category_rejected') {
+      return {text: '❌ مرفوضة', cls: 'status-rejected', card: 'rejected'};
+    }
+    return {text: s, cls: 'status-pending', card: 'pending'};
+  }
+  function getItemStatus(item) {
+    return item.status || 'pending';
+  }
 
+  // الفلترة
   let filtered = [...orders];
   if (filter !== 'all') {
     filtered = filtered.filter(o => {
       var s = o.status || o.workflowStatus || 'pending';
-      if (filter === 'pending') return s === 'pending' || s === 'payment_verified' || s === 'awaiting_verification';
+      if (filter === 'pending') return s === 'pending' || s === 'awaiting_verification' || s === 'payment_verified';
       if (filter === 'approved') return s === 'approved' || s === 'confirmed' || s === 'ready_for_pickup' || s === 'preparing';
       if (filter === 'rejected') return s === 'rejected' || s === 'payment_rejected' || s === 'category_rejected';
       return s === filter;
     });
   }
-
   if (search) {
     filtered = filtered.filter(o => {
       var id = (o.id || '').toLowerCase();
       var cust = getCustomer(o).toLowerCase();
-      var phone = getPhone(o);
+      var ph = getPhone(o);
       if (id.indexOf(search) !== -1) return true;
       if (cust.indexOf(search) !== -1) return true;
-      if (phone.indexOf(search) !== -1) return true;
+      if (ph.indexOf(search) !== -1) return true;
       return getItems(o).some(i => (i.name || '').toLowerCase().indexOf(search) !== -1);
     });
   }
-
   if (sort === 'newest') filtered.sort((a, b) => getDate(b) - getDate(a));
   else if (sort === 'oldest') filtered.sort((a, b) => getDate(a) - getDate(b));
   else if (sort === 'high') filtered.sort((a, b) => getTotal(b) - getTotal(a));
   else if (sort === 'low') filtered.sort((a, b) => getTotal(a) - getTotal(b));
 
   if (filtered.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>لا توجد طلبات</h3><p>جرّب تغيير الفلتر أو البحث</p></div>';
+    grid.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>لا توجد طلبات</h3><p>جرّب تغيير الفلتر</p></div>';
     return;
   }
 
+  // عرض البطاقات
   grid.innerHTML = filtered.map(o => {
-    const st = getStatus(o);
+    const st = getStatusLabel(o);
     const items = getItems(o);
     const itemsCount = items.reduce((s, i) => s + (Number(i.qty) || 1), 0);
     const customer = getCustomer(o);
     const phone = getPhone(o);
     const total = getTotal(o);
     const date = getDate(o);
-    const dateStr = date.getTime() > 0 ? date.toLocaleDateString('ar-YE', {month:'short', day:'numeric'}) : '—';
+    const timeAgo = date.getTime() > 0 ? formatTime(date.toISOString()) : '—';
 
-    var cardClass = 'pending';
-    if (st.cls === 'status-approved') cardClass = 'approved';
-    else if (st.cls === 'status-rejected') cardClass = 'rejected';
+    // إحصائيات العناصر
+    const okCount = items.filter(i => getItemStatus(i) === 'ok').length;
+    const noCount = items.filter(i => getItemStatus(i) === 'no').length;
+    const waitCount = items.filter(i => getItemStatus(i) === 'pending').length;
 
+    // معاينة العناصر
     let previewHtml = '';
-    const previewItems = items.slice(0, 4);
-    previewItems.forEach(item => {
+    items.slice(0, 4).forEach(item => {
       var img = item.image || item.img || null;
-      previewHtml += '<div class="thumb" title="' + (item.name || '') + '">' +
+      var ist = getItemStatus(item);
+      var statusIcon = '';
+      if (ist === 'ok') statusIcon = '<span class="status-icon ok">✓</span>';
+      else if (ist === 'no') statusIcon = '<span class="status-icon no">✕</span>';
+      previewHtml += '<div class="thumb" onclick="viewOrderItems(\'' + o.id + '\')" title="' + (item.name || '') + '">' +
         (img ? '<img src="' + img + '" onerror="this.parentElement.innerHTML=\'🛍️\'">' : '🛍️') +
         '<span class="qty-badge">' + (item.qty || 1) + '</span>' +
+        statusIcon +
         '</div>';
     });
     if (items.length > 4) {
-      previewHtml += '<div class="thumb" style="font-size:11px;font-weight:900;color:#64748b">+' + (items.length - 4) + '</div>';
-    }
-    if (items.length === 0) {
-      previewHtml = '<div style="font-size:11px;color:#94a3b8;padding:6px;">لا أصناف</div>';
+      previewHtml += '<div class="thumb" onclick="viewOrderItems(\'' + o.id + '\')" style="font-size:11px;font-weight:900;color:#64748b">+' + (items.length - 4) + '</div>';
     }
 
-    return '<div class="order-card ' + cardClass + '">' +
+    // الموردون
+    const suppliersMap = {};
+    items.forEach(item => {
+      var sid = item.supplier || item.supplierId || 'unknown';
+      if (!suppliersMap[sid]) suppliersMap[sid] = [];
+      suppliersMap[sid].push(item);
+    });
+    const supplierKeys = Object.keys(suppliersMap);
+
+    // زر واتساب
+    let whatsappHtml = '';
+    if (supplierKeys.length > 0 && st.card === 'pending') {
+      whatsappHtml = '<div class="whatsapp-section"><div class="title">📱 إرسال للتجهيز للموردين (' + supplierKeys.length + ')</div><div class="whatsapp-btns">';
+      supplierKeys.forEach(sid => {
+        var sup = getSupplier(sid);
+        var supItems = suppliersMap[sid];
+        whatsappHtml += '<button class="wa-btn" onclick="sendToSupplier(\'' + o.id + '\',\'' + sid + '\')">' +
+          '<div class="left"><div class="icon">💬</div><span>' + (sup ? sup.name : 'مورد') + '</span></div>' +
+          '<span class="count">' + supItems.length + ' صنف</span>' +
+          '</button>';
+      });
+      whatsappHtml += '</div></div>';
+    }
+
+    // الأزرار
+    let actionsHtml = '';
+    if (st.card === 'pending') {
+      actionsHtml = '<div class="order-actions">' +
+        '<button class="btn btn-success" onclick="approveOrder(\'' + o.id + '\')">✅ تأكيد</button>' +
+        '<button class="btn btn-danger" onclick="rejectOrder(\'' + o.id + '\')">❌ رفض</button>' +
+        '</div>';
+    } else {
+      actionsHtml = '<div class="order-actions">' +
+        '<button class="btn btn-outline" onclick="resetOrder(\'' + o.id + '\')">🔄 إرجاع للانتظار</button>' +
+        '</div>';
+    }
+
+    return '<div class="order-card ' + st.card + '">' +
       '<div class="order-head">' +
-        '<div class="order-id">' + (o.id || '') + ' <span class="time">' + dateStr + '</span></div>' +
+        '<div class="order-id">' + (o.id || '') + ' <span class="time">' + timeAgo + '</span></div>' +
         '<span class="order-status ' + st.cls + '">' + st.text + '</span>' +
       '</div>' +
       '<div class="order-info">' +
@@ -1553,10 +1581,15 @@ function renderOrders(){
         '<div class="chip">📦 ' + items.length + ' صنف • ' + itemsCount + ' قطعة</div>' +
       '</div>' +
       '<div class="items-preview">' + previewHtml + '</div>' +
-      '<div class="order-total">' +
-        '<span class="label">💰 الإجمالي</span>' +
-        '<span class="value">' + total.toFixed(0) + ' ر.ي</span>' +
+      '<div class="items-stats">' +
+        '<div class="stat ok"><div class="val">' + okCount + '</div><div class="lbl">✅ متوفر</div></div>' +
+        '<div class="stat no"><div class="val">' + noCount + '</div><div class="lbl">❌ غير متوفر</div></div>' +
+        '<div class="stat wait"><div class="val">' + waitCount + '</div><div class="lbl">⚪ لم يُفحص</div></div>' +
       '</div>' +
+      '<button class="btn-view-items" onclick="viewOrderItems(\'' + o.id + '\')">👁️ رؤية الأصناف وفحصها (' + items.length + ')</button>' +
+      whatsappHtml +
+      '<div class="order-total"><span class="label">💰 الإجمالي</span><span class="value">' + total.toFixed(0) + ' ر.س</span></div>' +
+      actionsHtml +
     '</div>';
   }).join('');
 }
