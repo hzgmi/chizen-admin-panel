@@ -143,6 +143,7 @@
         workflowStatus: 'awaiting_categories',
         status: 'payment_verified',
         'payment.status': 'verified',
+        fulfillmentStage: 'preparing',
         'payment.verifiedAt': firebase.firestore.FieldValue.serverTimestamp()
       });
       if (window.toast) toast('✅ تم تأكيد الدفع', 'success');
