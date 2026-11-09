@@ -1062,26 +1062,39 @@ async function loadRates() {
 
 async function loadOrders() {
   try {
+    // نجلب كل الطلبات، ثم نفلتر محلياً (لأن الطلب قد يحتوي على categories كائن، وليس category مفرد)
     var snap = await db.collection('orders')
-      .where('category', '==', state.cat)
       .orderBy('createdAt', 'desc')
-      .limit(100)
+      .limit(200)
       .get();
     orders = [];
+    var cat = state.cat;
     snap.forEach(function(d) {
       var x = d.data(); x.id = d.id;
-      orders.push(x);
+      // الفلترة: هل الطلب يحتوي على منتجات من قسمي؟
+      var hasMyCat = false;
+      if (x.category === cat) hasMyCat = true;
+      if (x.categories && typeof x.categories === 'object' && x.categories[cat]) hasMyCat = true;
+      if (hasMyCat) orders.push(x);
     });
-    console.log('[FIRESTORE] orders loaded:', orders.length);
+    console.log('[FIRESTORE] orders loaded:', orders.length, '/', snap.size, 'total (filtered to cat:', cat, ')');
     renderOrders();
     updateStats();
   } catch(e) {
     console.error('[FIRESTORE] orders error:', e);
-    // fallback: بدون orderBy (في حال عدم وجود index)
+    // fallback: بدون orderBy
     try {
-      var snap2 = await db.collection('orders').where('category', '==', state.cat).limit(100).get();
+      var snap2 = await db.collection('orders').limit(200).get();
       orders = [];
-      snap2.forEach(function(d) { var x = d.data(); x.id = d.id; orders.push(x); });
+      var cat2 = state.cat;
+      snap2.forEach(function(d) {
+        var x = d.data(); x.id = d.id;
+        var hasMyCat = false;
+        if (x.category === cat2) hasMyCat = true;
+        if (x.categories && typeof x.categories === 'object' && x.categories[cat2]) hasMyCat = true;
+        if (hasMyCat) orders.push(x);
+      });
+      console.log('[FIRESTORE] orders loaded (fallback):', orders.length);
       renderOrders();
       updateStats();
     } catch(e2) {
@@ -1093,15 +1106,18 @@ async function loadOrders() {
 async function loadProducts() {
   try {
     var snap = await db.collection('products')
-      .where('category', '==', state.cat)
-      .limit(200)
+      .limit(300)
       .get();
     products = [];
+    var cat = state.cat;
     snap.forEach(function(d) {
       var x = d.data(); x.id = d.id;
-      products.push(x);
+      var hasMyCat = false;
+      if (x.category === cat) hasMyCat = true;
+      if (Array.isArray(x.categories) && x.categories.indexOf(cat) !== -1) hasMyCat = true;
+      if (hasMyCat) products.push(x);
     });
-    console.log('[FIRESTORE] products loaded:', products.length);
+    console.log('[FIRESTORE] products loaded:', products.length, '/', snap.size, 'total (filtered to cat:', cat, ')');
     renderProducts();
     updateStats();
   } catch(e) {
