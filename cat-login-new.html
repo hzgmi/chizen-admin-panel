@@ -3,303 +3,196 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CHIZEN — تسجيل دخول مدير القسم</title>
+<meta name="theme-color" content="#0f172a">
+<title>شيزن | تسجيل الدخول</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,sans-serif; }
-body {
-  min-height:100vh;
-  background:linear-gradient(135deg,#1A2340 0%,#0f172a 50%,#2d1b4e 100%);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:20px;
-  color:#fff;
-}
-.login-box {
-  background:rgba(26,35,64,0.9);
-  backdrop-filter:blur(20px);
-  border:1px solid rgba(197,160,89,0.3);
-  border-radius:24px;
-  padding:32px 24px;
-  width:100%;
-  max-width:380px;
-  box-shadow:0 20px 60px rgba(0,0,0,0.5);
-}
-.logo {
-  text-align:center;
-  margin-bottom:24px;
-}
-.logo .icon {
-  font-size:56px;
-  display:block;
-  margin-bottom:8px;
-}
-.logo h1 {
-  font-size:22px;
-  font-weight:900;
-  background:linear-gradient(135deg,#C5A059,#F2E3C6);
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  background-clip:text;
-  margin-bottom:4px;
-}
-.logo p {
-  font-size:12px;
-  color:#9ca3af;
-  font-weight:700;
-}
-.form-group {
-  margin-bottom:16px;
-}
-.form-group label {
-  display:block;
-  font-size:12px;
-  color:#C5A059;
-  font-weight:800;
-  margin-bottom:6px;
-}
-.form-group input {
-  width:100%;
-  padding:14px 16px;
-  border:1.5px solid rgba(197,160,89,0.3);
-  border-radius:12px;
-  background:rgba(15,23,42,0.6);
-  color:#F2E3C6;
-  font-size:14px;
-  font-family:inherit;
-  transition:all 0.2s;
-}
-.form-group input:focus {
-  outline:none;
-  border-color:#C5A059;
-  box-shadow:0 0 0 3px rgba(197,160,89,0.15);
-}
-.form-group input::placeholder {
-  color:#6b7280;
-}
-.btn {
-  width:100%;
-  padding:16px;
-  background:linear-gradient(135deg,#C5A059,#9A7B4F);
-  color:#1A2340;
-  border:none;
-  border-radius:14px;
-  font-size:15px;
-  font-weight:900;
-  cursor:pointer;
-  font-family:inherit;
-  margin-top:8px;
-  transition:transform 0.15s;
-}
-.btn:active {
-  transform:scale(0.98);
-}
-.btn:disabled {
-  opacity:0.6;
-  cursor:not-allowed;
-}
-.error {
-  background:rgba(239,68,68,0.15);
-  border:1px solid rgba(239,68,68,0.4);
-  color:#f87171;
-  padding:12px;
-  border-radius:10px;
-  font-size:12px;
-  font-weight:700;
-  text-align:center;
-  margin-bottom:12px;
-  display:none;
-}
-.error.show {
-  display:block;
-}
-.success {
-  background:rgba(16,185,129,0.15);
-  border:1px solid rgba(16,185,129,0.4);
-  color:#10b981;
-  padding:12px;
-  border-radius:10px;
-  font-size:12px;
-  font-weight:700;
-  text-align:center;
-  margin-bottom:12px;
-  display:none;
-}
-.success.show {
-  display:block;
-}
-.hint {
-  text-align:center;
-  font-size:11px;
-  color:#6b7280;
-  margin-top:16px;
-  line-height:1.6;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+body { background-color: #0f172a; background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent 40%), radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.15), transparent 40%); min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 15px; }
+.login-card { background: #ffffff; width: 100%; max-width: 320px; padding: 24px 18px; border-radius: 16px; box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; align-items: center; }
+.logo-container { text-align: center; margin-bottom: 16px; }
+.logo-icon { width: 50px; height: 50px; background: linear-gradient(135deg, #3b82f6, #10b981); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 8px; box-shadow: 0 6px 12px rgba(59, 130, 246, 0.3); }
+.logo-container h1 { color: #0f172a; font-size: 20px; font-weight: 900; margin-bottom: 2px; }
+.logo-container p { color: #64748b; font-size: 11px; font-weight: 600; }
+.form-group { width: 100%; margin-bottom: 12px; }
+.form-group label { display: block; color: #334155; font-size: 11px; font-weight: 700; margin-bottom: 4px; padding-right: 3px; }
+.form-group input { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: 'Cairo', sans-serif; background-color: #f8fafc; color: #0f172a; transition: all 0.2s ease; }
+.form-group input::placeholder { color: #94a3b8; font-weight: 400; font-size: 12px; }
+.form-group input:focus { outline: none; border-color: #3b82f6; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.btn-submit { width: 100%; padding: 11px; margin-top: 5px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #ffffff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: 'Cairo', sans-serif; cursor: pointer; box-shadow: 0 5px 12px rgba(59, 130, 246, 0.3); transition: all 0.2s ease; }
+.btn-submit:active:not(:disabled) { transform: scale(0.97); box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.error-msg { width: 100%; padding: 10px 12px; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 10px; display: none; text-align: center; line-height: 1.4; }
+.error-msg.show { display: block; }
+.success-msg { width: 100%; padding: 10px 12px; background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 10px; display: none; text-align: center; }
+.success-msg.show { display: block; }
+.divider { width: 100%; display: flex; align-items: center; gap: 8px; margin: 14px 0; color: #94a3b8; font-size: 10px; font-weight: 600; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background-color: #e2e8f0; }
+.forgot-password { color: #3b82f6; font-size: 11px; font-weight: 700; text-decoration: none; padding: 6px; border-radius: 6px; transition: background 0.2s; }
+.forgot-password:active { background-color: #eff6ff; }
+.footer-text { margin-top: 14px; color: #94a3b8; font-size: 9px; font-weight: 600; text-align: center; line-height: 1.4; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 6px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-<div class="login-box">
-  <div class="logo">
-    <span class="icon">🛒</span>
-    <h1>CHIZEN</h1>
-    <p>لوحة مدير القسم</p>
-  </div>
-
-  <div class="error" id="errorMsg"></div>
-  <div class="success" id="successMsg"></div>
-
-  <div class="form-group">
-    <label>البريد الإلكتروني</label>
-    <input type="email" id="email" placeholder="example@mail.com" autocomplete="email">
-  </div>
-
-  <div class="form-group">
-    <label>كلمة المرور</label>
-    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
-  </div>
-
-  <button class="btn" id="loginBtn" onclick="doLogin()">🔑 تسجيل الدخول</button>
-
-  <p class="hint">هذه الصفحة مخصصة لمديري الأقسام فقط</p>
+<div class="login-card">
+<div class="logo-container">
+<div class="logo-icon">🏢</div>
+<h1>شيزن</h1>
+<p>لوحة مدير القسم</p>
 </div>
-
+<div id="errorMsg" class="error-msg"></div>
+<div id="successMsg" class="success-msg"></div>
+<form id="loginForm" style="width: 100%;">
+<div class="form-group">
+<label for="email">📧 البريد الإلكتروني</label>
+<input type="email" id="email" placeholder="example@chizen.com" autocomplete="email" required>
+</div>
+<div class="form-group">
+<label for="password">🔒 كلمة المرور</label>
+<input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+</div>
+<button type="submit" class="btn-submit" id="loginBtn">🔐 تسجيل الدخول</button>
+</form>
+<div class="divider">أو</div>
+<a href="#" class="forgot-password" onclick="alert('تواصل مع الإدارة لإعادة تعيين كلمة المرور'); return false;">❓ نسيت كلمة المرور؟</a>
+<div class="footer-text">شيزن © 2025 — الإصدار 5.1<br>جميع الحقوق محفوظة</div>
+</div>
 <script>
 'use strict';
-
-// Initialize Firebase
 if (!firebase.apps.length) {
   if (window.FIREBASE_CONFIG) {
     firebase.initializeApp(window.FIREBASE_CONFIG);
   } else {
     document.getElementById('errorMsg').textContent = 'خطأ: FIREBASE_CONFIG غير موجود';
     document.getElementById('errorMsg').classList.add('show');
+    throw new Error('FIREBASE_CONFIG not found');
   }
 }
-
 var auth = firebase.auth();
 var db = firebase.firestore();
-
 function showError(msg) {
   var el = document.getElementById('errorMsg');
   el.textContent = msg;
   el.classList.add('show');
   document.getElementById('successMsg').classList.remove('show');
 }
-
 function showSuccess(msg) {
   var el = document.getElementById('successMsg');
   el.textContent = msg;
   el.classList.add('show');
   document.getElementById('errorMsg').classList.remove('show');
 }
-
+function hideMessages() {
+  document.getElementById('errorMsg').classList.remove('show');
+  document.getElementById('successMsg').classList.remove('show');
+}
+async function getUserCategory(uid) {
+  try {
+    var udoc = await db.collection('users').doc(uid).get();
+    if (udoc.exists) {
+      var d = udoc.data();
+      var cat = d.assignedCategory || d.category || d.cat;
+      if (cat) return { cat: cat, source: 'users' };
+    }
+    var adoc = await db.collection('admins').doc(uid).get();
+    if (adoc.exists) {
+      var a = adoc.data();
+      var cat2 = a.assignedCategory || a.category || a.cat;
+      if (cat2) return { cat: cat2, source: 'admins', role: a.role };
+      if (a.role === 'cat_manager') return { cat: null, source: 'admins', role: 'cat_manager' };
+    }
+    return { cat: null, source: null };
+  } catch (e) {
+    console.warn('[getUserCategory] error:', e);
+    return { cat: null, source: null };
+  }
+}
+async function isSuperAdmin(uid) {
+  try {
+    var adoc = await db.collection('admins').doc(uid).get();
+    if (adoc.exists) {
+      var role = adoc.data().role;
+      if (role === 'super_admin' || role === 'superadmin') return true;
+    }
+    var udoc = await db.collection('users').doc(uid).get();
+    if (udoc.exists && udoc.data().role === 'super_admin') return true;
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
 async function doLogin() {
+  hideMessages();
   var email = document.getElementById('email').value.trim();
   var password = document.getElementById('password').value;
   var btn = document.getElementById('loginBtn');
-  
   if (!email || !password) {
-    showError('❌ يرجى إدخال البريد وكلمة المرور');
+    showError('⚠️ يرجى إدخال البريد الإلكتروني وكلمة المرور');
     return;
   }
-  
   btn.disabled = true;
-  btn.textContent = '⏳ جاري تسجيل الدخول...';
-  
+  btn.innerHTML = '⏳ جاري تسجيل الدخول...<span class="spinner"></span>';
   try {
     var userCred = await auth.signInWithEmailAndPassword(email, password);
     var user = userCred.user;
-    
-    // البحث عن بيانات القسم في عدة أماكن
-    var cat = null;
-    var userData = {};
-    
-    // 1. users/{uid}
-    try {
-      var udoc = await db.collection('users').doc(user.uid).get();
-      if (udoc.exists) {
-        userData = udoc.data();
-        cat = userData.category || userData.cat || userData.assignedCategory || null;
-      }
-    } catch(e) {}
-    
-    // 2. admins/{uid}
-    if (!cat) {
-      try {
-        var adoc = await db.collection('admins').doc(user.uid).get();
-        if (adoc.exists) {
-          var adminData = adoc.data();
-          cat = adminData.category || adminData.cat || adminData.assignedCategory || null;
-          if (!cat && adminData.role === 'cat_manager') {
-            cat = adminData.categories ? adminData.categories[0] : 'general';
-          }
-        }
-      } catch(e) {}
-    }
-    
-    // 3. البحث عن طريق البريد
-    if (!cat) {
-      try {
-        var snap = await db.collection('users').where('email','==',user.email).limit(1).get();
-        if (!snap.empty) {
-          var d = snap.docs[0].data();
-          cat = d.category || d.cat || null;
-        }
-      } catch(e) {}
-    }
-    
-    console.log('[LOGIN] user:', user.email, 'cat:', cat);
-    
-    if (!cat) {
-      showError('❌ هذا الحساب ليس مدير قسم (لا يوجد category)');
-      await auth.signOut();
-      btn.disabled = false;
-      btn.textContent = '🔑 تسجيل الدخول';
+    console.log('[LOGIN] user:', user.email, '| uid:', user.uid);
+    var isSuper = await isSuperAdmin(user.uid);
+    if (isSuper) {
+      showSuccess('✅ مرحباً بك في لوحة الإدارة');
+      setTimeout(function() { window.location.href = 'dashboard.html'; }, 500);
       return;
     }
-    
-    showSuccess('✅ تم تسجيل الدخول! القسم: ' + cat);
-    
-    // التوجيه إلى اللوحة الجديدة
-    setTimeout(function() {
-      window.location.href = 'cat-manager-final.html';
-    }, 500);
-    
-  } catch(e) {
+    var result = await getUserCategory(user.uid);
+    if (!result.cat) {
+      showError('❌ لم يتم تعيين قسم لحسابك. تواصل مع الإدارة.');
+      await auth.signOut();
+      btn.disabled = false;
+      btn.textContent = '🔐 تسجيل الدخول';
+      return;
+    }
+    showSuccess('✅ تم تسجيل الدخول — القسم: ' + result.cat);
+    setTimeout(function() { window.location.href = 'cat-manager-final.html'; }, 600);
+  } catch (e) {
+    console.error('[LOGIN] error:', e);
     var msg = e.message || 'خطأ غير معروف';
     if (msg.indexOf('user-not-found') !== -1) msg = '❌ البريد الإلكتروني غير مسجل';
     else if (msg.indexOf('wrong-password') !== -1) msg = '❌ كلمة المرور غير صحيحة';
     else if (msg.indexOf('invalid-email') !== -1) msg = '❌ البريد الإلكتروني غير صالح';
     else if (msg.indexOf('too-many-requests') !== -1) msg = '❌ محاولات كثيرة، حاول لاحقاً';
-    
+    else if (msg.indexOf('invalid-credential') !== -1) msg = '❌ بيانات الدخول غير صحيحة';
     showError(msg);
     btn.disabled = false;
-    btn.textContent = '🔑 تسجيل الدخول';
+    btn.textContent = '🔐 تسجيل الدخول';
   }
 }
-
-// دعم Enter
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doLogin();
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  doLogin();
 });
-
-// إذا كان المستخدم مسجل بالفعل، انتقل مباشرة
-auth.onAuthStateChanged(async function(user) {
-  if (user) {
-    try {
-      var udoc = await db.collection('users').doc(user.uid).get();
-      var userData = udoc.exists ? udoc.data() : {};
-      if (userData.category || userData.cat) {
-        window.location.href = 'cat-manager-final.html';
-      }
-    } catch(e) {}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.activeElement && document.activeElement.tagName === 'INPUT') {
+    e.preventDefault();
+    doLogin();
   }
 });
-
+auth.onAuthStateChanged(async function(user) {
+  if (!user) return;
+  console.log('[AUTH-STATE] already logged in:', user.email);
+  try {
+    var isSuper = await isSuperAdmin(user.uid);
+    if (isSuper) { window.location.href = 'dashboard.html'; return; }
+    var result = await getUserCategory(user.uid);
+    if (result.cat) { window.location.href = 'cat-manager-final.html'; }
+  } catch (e) {
+    console.warn('[AUTH-STATE] error:', e);
+  }
+});
 console.log('[CAT-LOGIN-NEW] loaded');
 </script>
 </body>
