@@ -2389,27 +2389,98 @@ function renderColors(){
 
 function removeColor(i){ state.colors.splice(i, 1); renderColors(); }
 
-function handleImages(event){
-  const files = Array.from(event.target.files);
-  if(state.images.length + files.length > 5){ showToast('⚠️ حد أقصى 5', 'error'); return; }
-  files.forEach(file => {
-    if(!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = e => { state.images.push({data: e.target.result, name: file.name}); renderImages(); };
-    reader.readAsDataURL(file);
+var WORKER_URL = 'https://chizen-uploader.hazimchat.workers.dev';
+
+function compressImage(file) {
+  return new Promise(function(resolve, reject) {
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      var w = img.width, h = img.height, maxDim = 1600;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(function(blob) {
+        if (!blob) { reject(new Error('compress failed')); return; }
+        resolve(blob);
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('load failed')); };
+    img.src = url;
   });
+}
+
+async function uploadToWorker(file) {
+  var compressed = await compressImage(file);
+  var res = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'image/jpeg' },
+    body: compressed
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  var data = await res.json();
+  if (!data.url) throw new Error('لا رابط عائد');
+  return data.url;
+}
+
+async function handleImages(event){
+  const files = Array.from(event.target.files);
+  if (state.images.length + files.length > 5) {
+    showToast('⚠️ حد أقصى 5 صور', 'error');
+    event.target.value = '';
+    return;
+  }
+
+  var preview = document.getElementById('pf-images-preview');
+  var uploadIndicator = document.createElement('div');
+  uploadIndicator.id = 'upload-indicator';
+  uploadIndicator.style.cssText = 'padding:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;text-align:center;font-size:12px;font-weight:700;color:#2563eb;margin-top:8px;';
+  uploadIndicator.textContent = '⏳ جاري رفع ' + files.length + ' صورة...';
+  if (preview) preview.parentNode.insertBefore(uploadIndicator, preview.nextSibling);
+
+  var uploaded = 0;
+  var failed = 0;
+
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      var url = await uploadToWorker(file);
+      state.images.push({ url: url, name: file.name });
+      uploaded++;
+      renderImages();
+      uploadIndicator.textContent = '⏳ تم رفع ' + uploaded + ' من ' + files.length + '...';
+    } catch(e) {
+      console.error('[upload] error:', e);
+      failed++;
+    }
+  }
+
+  if (uploadIndicator.parentNode) uploadIndicator.remove();
+
+  if (uploaded > 0) showToast('✅ تم رفع ' + uploaded + ' صورة', 'success');
+  if (failed > 0) showToast('⚠️ فشل رفع ' + failed + ' صورة', 'error');
+
   event.target.value = '';
 }
 
 function renderImages(){
   const preview = document.getElementById('pf-images-preview');
-  if(state.images.length === 0){ preview.innerHTML = ''; return; }
-  preview.innerHTML = state.images.map((img, i) => `
-    <div class="image-preview-item">
-      <img src="${img.data}">
-      ${i === 0 ? '<span class="main-badge">رئيسية</span>' : ''}
-      <button class="remove-img" onclick="removeImage(${i})">✕</button>
-    </div>`).join('');
+  if (!preview) return;
+  if (state.images.length === 0) { preview.innerHTML = ''; return; }
+  preview.innerHTML = state.images.map((img, i) => {
+    var src = img.url || img.data || '';
+    return '<div class="image-preview-item">' +
+      '<img src="' + src + '">' +
+      (i === 0 ? '<span class="main-badge">رئيسية</span>' : '') +
+      '<button class="remove-img" onclick="removeImage(' + i + ')">✕</button>' +
+      '</div>';
+  }).join('');
 }
 
 function removeImage(i){ state.images.splice(i, 1); renderImages(); }
@@ -2444,7 +2515,7 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     weight: parseFloat(document.getElementById('pf-weight').value) || null,
     sizes: [...state.selectedSizes],
     colors: [...state.colors],
-    images: state.images.map(i => i.data),
+    images: state.images.map(i => i.url || i.data).filter(Boolean),
     featured: document.getElementById('pf-featured').checked,
     freeShip: document.getElementById('pf-free-ship').checked,
     flashEnabled: document.getElementById('pf-flash-enabled').checked,
