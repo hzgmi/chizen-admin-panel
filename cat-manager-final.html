@@ -1273,11 +1273,13 @@ function filterOrdersList() {
 async function confirmOrder(id) {
   if (!confirm('تأكيد توفر منتجات هذا الطلب؟')) return;
   try {
-    await db.collection('orders').doc(id).set({
+    await db.collection('orders').doc(id).update({
       status: 'confirmed',
+      workflowStatus: 'ready_for_pickup',
+      fulfillmentStage: 'ready_for_pickup',
       confirmedBy: state.user ? state.user.email : '',
       confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    });
     alert('✅ تم تأكيد الطلب');
     await loadOrders();
     renderOrdersList();
@@ -1294,7 +1296,7 @@ async function rejectOrder(id) {
       rejectReason: reason,
       rejectedBy: state.user ? state.user.email : '',
       rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    });
     alert('✅ تم رفض الطلب');
     await loadOrders();
     renderOrdersList();
