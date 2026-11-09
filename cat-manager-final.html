@@ -448,6 +448,9 @@ setTimeout(function() { loadRates(); }, 500);
 auth.onAuthStateChanged(async function(user) {
   console.log('[AUTH] user:', user ? user.uid : 'null');
   if (!user) {
+    console.log('[AUTH] no user — redirecting to cat-login-new.html');
+    window.location.href = 'cat-login-new.html';
+    return;
     document.getElementById('catName').textContent = 'غير مسجل';
     document.getElementById('ordersContainer').innerHTML = 
       '<div style="text-align:center;padding:30px;">' +
