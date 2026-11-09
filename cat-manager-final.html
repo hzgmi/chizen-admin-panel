@@ -52,6 +52,7 @@ body { background:#f4f6fb; min-height:100vh; padding-bottom:100px; color:#1a1a2e
 
 /* ═══ Actions ═══ */
 .actions { padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+button.action-btn { all: unset; border-radius:18px; padding:18px 14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform 0.15s; color:#fff; box-shadow:0 6px 20px rgba(0,0,0,0.15); box-sizing:border-box; width:100%; text-align:right; font-family:inherit; }
 .action-btn { border-radius:18px; padding:18px 14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform 0.15s; color:#fff; box-shadow:0 6px 20px rgba(0,0,0,0.15); }
 .action-btn:active { transform:scale(0.97); }
 .action-btn .icon-box { width:48px; height:48px; background:rgba(255,255,255,0.25); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:26px; }
@@ -260,16 +261,16 @@ body.dark-mode .size-btn {
 
 <!-- Actions -->
 <div class="actions">
-  <div class="action-btn add" onclick="openProductModal()">
-    <div class="icon-box">📦</div>
+  <button class="action-btn add" onclick="openProductModal()" type="button">
+    <div class="icon-box">📦</button>
     <div class="text">
       <div class="t">إضافة منتج</div>
       <div class="s">إضافة منتج جديد للقسم</div>
     </div>
     <div class="chevron">›</div>
   </div>
-  <div class="action-btn view" onclick="openProductsView()">
-    <div class="icon-box">👁️</div>
+  <button class="action-btn view" onclick="openProductsView()" type="button">
+    <div class="icon-box">👁️</button>
     <div class="text">
       <div class="t">معاينة منتجاتي</div>
       <div class="s">عرض المنتجات في التطبيق</div>
