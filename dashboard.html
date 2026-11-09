@@ -995,6 +995,16 @@ async function verifyPayment(orderId){
       console.warn('[verifyPayment] reload failed:', re);
     }
 
+    // ═══ تحديث العداد فوراً (لأن onSnapshot قد لا يُطلق عند اختفاء الطلب) ═══
+    var badge = document.querySelector('[data-tab="payments"] .nav-badge');
+    if (badge) {
+      var pendingCount = state.orders.filter(function(o){
+        return (o.payment && o.payment.status === 'pending') || o.workflowStatus === 'awaiting_verification';
+      }).length;
+      badge.textContent = pendingCount;
+      badge.style.display = pendingCount > 0 ? 'block' : 'none';
+    }
+
     // ═══ إشعار العميل بتأكيد الدفع ═══
     try {
       await db.collection("push_queue").add({
