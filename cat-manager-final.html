@@ -1647,28 +1647,30 @@ function viewOrderItems(orderId){
   if(!order) return;
   state.currentViewingOrderId = orderId;
 
-  const okCount = order.items.filter(i => getItemStatus(i) === 'ok').length;
-  const noCount = order.items.filter(i => getItemStatus(i) === 'no').length;
-  const waitCount = order.items.filter(i => getItemStatus(i) === 'pending').length;
+  const items = getOrderItems(order);
+  const okCount = items.filter(i => getItemStatus(i) === 'ok').length;
+  const noCount = items.filter(i => getItemStatus(i) === 'no').length;
+  const waitCount = items.filter(i => getItemStatus(i) === 'pending').length;
 
-  document.getElementById('itemsModalTitle').textContent = `📦 أصناف الطلب ${order.id}`;
+  document.getElementById('itemsModalTitle').textContent = '📦 أصناف الطلب ' + (order.id || '');
 
   const body = document.getElementById('itemsModalBody');
-  let html = `
-    <div class="modal-summary">
-      <div class="s ok"><div class="v">${okCount}</div>✅ متوفر</div>
-      <div class="s no"><div class="v">${noCount}</div>❌ غير متوفر</div>
-      <div class="s wait"><div class="v">${waitCount}</div>⚪ لم يُفحص</div>
-    </div>
-    <div style="font-size:11px;color:#64748b;margin-bottom:10px;text-align:center;background:#fef3c7;padding:8px;border-radius:8px;border:1px solid #fcd34d">
-      💡 اضغط على أي صنف لتبديل حالته: ⚪ → ✅ → ❌
-    </div>
-  `;
+  let html = '<div class="modal-summary">' +
+    '<div class="s ok"><div class="v">' + okCount + '</div>✅ متوفر</div>' +
+    '<div class="s no"><div class="v">' + noCount + '</div>❌ غير متوفر</div>' +
+    '<div class="s wait"><div class="v">' + waitCount + '</div>⚪ لم يُفحص</div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:#64748b;margin-bottom:10px;text-align:center;background:#fef3c7;padding:8px;border-radius:8px;border:1px solid #fcd34d">💡 اضغط على أي صنف لتبديل حالته: ⚪ → ✅ → ❌</div>';
 
-  order.items.forEach((item, idx) => {
+  if (!items.length) {
+    html += '<div style="text-align:center;padding:30px;color:#94a3b8;">لا توجد أصناف</div>';
+  }
+
+  items.forEach((item, idx) => {
     const product = getProduct(item.productId);
-    const img = product && product.images && product.images.length > 0 ? product.images[0] : null;
-    const sup = getSupplier(item.supplier);
+    const img = (product && product.images && product.images[0]) || item.image || item.img || null;
+    const sup = getSupplier(item.supplier || item.supplierId);
+    const supName = (sup && sup.name) || item.supplierName || '—';
     const ist = getItemStatus(item);
 
     let rowClass = '';
@@ -1678,37 +1680,37 @@ function viewOrderItems(orderId){
     if(ist === 'ok'){ rowClass = 'ok'; btnClass = 'ok'; btnIcon = '✓'; labelText = 'متوفر'; }
     else if(ist === 'no'){ rowClass = 'no'; btnClass = 'no'; btnIcon = '✕'; labelText = 'غير متوفر'; }
 
-    html += `
-      <div class="item-row ${rowClass}" onclick="toggleItemStatus('${order.id}', ${idx})">
-        <div class="item-img">
-          ${img ? `<img src="${img}" onerror="this.parentElement.innerHTML='🛍️'">` : '🛍️'}
-        </div>
-        <div class="item-info">
-          <div class="item-name">${item.name}</div>
-          <div class="item-brand">🏷️ ${item.brand || 'بدون ماركة'} • 🚚 ${sup ? sup.name : '—'}</div>
-          <div class="item-details">
-            <span class="item-chip">💰 ${item.price} ر.س</span>
-            <span class="item-chip">🔢 × ${item.qty}</span>
-          </div>
-        </div>
-        <div class="item-status">
-          <button class="status-btn ${btnClass}" onclick="event.stopPropagation();toggleItemStatus('${order.id}', ${idx})">${btnIcon}</button>
-          <div class="status-label">${labelText}</div>
-        </div>
-      </div>
-    `;
+    html += '<div class="item-row ' + rowClass + '" onclick="toggleItemStatus(\'' + order.id + '\', ' + idx + ')">' +
+      '<div class="item-img">' + (img ? '<img src="' + img + '" onerror="this.parentElement.innerHTML=\'🛍️\'">' : '🛍️') + '</div>' +
+      '<div class="item-info">' +
+        '<div class="item-name">' + (item.name || 'منتج') + '</div>' +
+        '<div class="item-brand">🏷️ ' + (item.brand || 'بدون ماركة') + ' • 🚚 ' + supName + '</div>' +
+        '<div class="item-details">' +
+          '<span class="item-chip">💰 ' + (item.price || 0) + ' ر.س</span>' +
+          '<span class="item-chip">🔢 × ' + (item.qty || 1) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="item-status">' +
+        '<button class="status-btn ' + btnClass + '" onclick="event.stopPropagation();toggleItemStatus(\'' + order.id + '\', ' + idx + ')">' + btnIcon + '</button>' +
+        '<div class="status-label">' + labelText + '</div>' +
+      '</div>' +
+    '</div>';
   });
 
   body.innerHTML = html;
 
-  const footer = document.getElementById('itemsModalFooter');
-  footer.innerHTML = `
-    <button class="btn btn-whatsapp" onclick="sendAllSuppliers('${order.id}')" style="flex:2">📱 إرسال للموردين</button>
-    ${order.status === 'pending' ? `
-      <button class="btn btn-success" onclick="approveOrder('${order.id}');closeItemsModal()">✅ تأكيد</button>
-      <button class="btn btn-danger" onclick="rejectOrder('${order.id}');closeItemsModal()">❌ رفض</button>
-    ` : ''}
-  `;
+  // footer
+  var footer = document.getElementById('itemsModalFooter');
+  if (footer) {
+    var st = order.status || order.workflowStatus || 'pending';
+    var isPending = st === 'pending' || st === 'awaiting_verification' || st === 'payment_verified';
+    footer.innerHTML =
+      '<button class="btn btn-whatsapp" onclick="sendAllSuppliers(\'' + order.id + '\')" style="flex:2">📱 إرسال للموردين</button>' +
+      (isPending ?
+        '<button class="btn btn-success" onclick="approveOrder(\'' + order.id + '\');closeItemsModal()">✅ تأكيد</button>' +
+        '<button class="btn btn-danger" onclick="rejectOrder(\'' + order.id + '\');closeItemsModal()">❌ رفض</button>'
+        : '');
+  }
 
   document.getElementById('itemsModal').classList.add('show');
 }
@@ -1716,17 +1718,50 @@ function viewOrderItems(orderId){
 function toggleItemStatus(orderId, itemIndex){
   const order = orders.find(o => o.id === orderId);
   if(!order) return;
-  const item = order.items[itemIndex];
+  const items = getOrderItems(order);
+  const item = items[itemIndex];
   if(!item) return;
 
   const current = getItemStatus(item);
-  if(current === 'pending') item.status = 'ok';
-  else if(current === 'ok') item.status = 'no';
-  else item.status = 'pending';
+  var newStatus = 'ok';
+  if(current === 'pending') newStatus = 'ok';
+  else if(current === 'ok') newStatus = 'no';
+  else newStatus = 'pending';
+  item.status = newStatus;
 
-  save();
+  // حفظ في Firestore (نحدّث items كاملة)
+  var updateData = {};
+  if (Array.isArray(order.items) && order.items.length) {
+    updateData.items = order.items;
+  } else if (order.categories && typeof order.categories === 'object') {
+    // نحدّث داخل categories
+    for (var k in order.categories) {
+      if (order.categories[k] && order.categories[k].items) {
+        updateData['categories.' + k + '.items'] = order.categories[k].items;
+      }
+    }
+  }
+  updateData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+
+  db.collection('orders').doc(orderId).update(updateData).catch(function(e){
+    console.error('[toggleItemStatus] firestore error:', e);
+    showToast('❌ فشل الحفظ: ' + e.message, 'error');
+  });
+
   viewOrderItems(orderId);
   renderOrders();
+}
+
+function getOrderItems(order) {
+  if (Array.isArray(order.items) && order.items.length) return order.items;
+  if (order.categories && typeof order.categories === 'object') {
+    var all = [];
+    for (var k in order.categories) {
+      if (order.categories[k] && order.categories[k].items) all = all.concat(order.categories[k].items);
+    }
+    if (all.length) return all;
+  }
+  return [];
 }
 
 function closeItemsModal(){
@@ -1739,31 +1774,46 @@ function closeItemsModal(){
 // ============================================
 function sendToSupplier(orderId, supplierId){
   const order = orders.find(o => o.id === orderId);
-  const supplier = getSupplier(supplierId);
-  if(!order || !supplier) return;
+  if(!order) return;
 
-  const supplierItems = order.items.filter(i => i.supplier === supplierId);
+  const items = getOrderItems(order);
+  const supplierItems = items.filter(i => (i.supplier || i.supplierId) === supplierId);
+  if (!supplierItems.length) {
+    showToast('⚠️ لا أصناف لهذا المورد', 'error');
+    return;
+  }
 
-  let msg = `السلام عليكم ورحمة الله 🌹\n\n`;
-  msg += `نرجو تجهيز الطلب التالي:\n\n`;
+  var supplier = getSupplier(supplierId);
+  var supplierName = (supplier && supplier.name) || supplierItems[0].supplierName || 'مورد';
+  var phone = (supplier && supplier.phone) || supplierItems[0].supplierPhone || '';
+
+  // إذا لا رقم → عرض رسالة
+  if (!phone) {
+    showToast('⚠️ لا يوجد رقم واتساب لهذا المورد', 'error');
+    return;
+  }
+
+  let msg = 'السلام عليكم ورحمة الله 🌹\n\n';
+  msg += 'نرجو تجهيز الطلب التالي:\n\n';
+  msg += '📦 رقم الطلب: ' + (order.id || '') + '\n\n';
 
   supplierItems.forEach((item, idx) => {
-    msg += `${idx+1}. ${item.name}\n`;
-    if(item.brand) msg += `   🏷️ ${item.brand}\n`;
-    msg += `   🔢 الكمية: ${item.qty}\n`;
-    msg += `   💰 السعر: ${item.price} ر.س\n\n`;
+    msg += (idx+1) + '. ' + (item.name || 'منتج') + '\n';
+    if(item.brand) msg += '   🏷️ ' + item.brand + '\n';
+    msg += '   🔢 الكمية: ' + (item.qty || 1) + '\n';
+    msg += '   💰 السعر: ' + (item.price || 0) + ' ر.س\n\n';
   });
 
-  msg += `──────────────\n`;
-  msg += `📦 عدد الأصناف: ${supplierItems.length}\n\n`;
-  msg += `شكراً لتعاونكم 🌸`;
+  msg += '──────────────\n';
+  msg += '📦 عدد الأصناف: ' + supplierItems.length + '\n\n';
+  msg += 'شكراً لتعاونكم 🌸';
 
-  const phone = supplier.phone.replace(/[^0-9]/g, '');
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const url = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(msg);
   window.open(url, '_blank');
 
-  addNotif('success', 'إرسال للمورد', `تم إرسال طلب ${orderId} إلى ${supplier.name}`);
-  showToast(`📱 تم فتح واتساب لـ ${supplier.name}`, 'success');
+  addNotif('success', 'إرسال للمورد', 'تم إرسال طلب ' + orderId + ' إلى ' + supplierName);
+  showToast('📱 تم فتح واتساب لـ ' + supplierName, 'success');
 }
 
 function sendAllSuppliers(orderId){
