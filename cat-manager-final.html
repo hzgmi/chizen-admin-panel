@@ -1824,14 +1824,34 @@ function notifyCustomerUnavailable(orderId){
 function approveOrder(id){
   const order = orders.find(o => o.id === id);
   if(!order) return;
-  showConfirm('✅ تأكيد الطلب', `تأكيد الطلب ${id}؟`, () => {
-    order.status = 'approved';
-    addNotif('success', 'تم تأكيد الطلب', id + ' من ' + order.customer);
-    updateOrderStatus(id, 'approved').then(function(ok) {
-      if (ok) {
-        updateStats(); renderOrders(); closeModal();
-        showToast('✅ تم تأكيد الطلب', 'success');
-      }
+
+  showConfirm('✅ تأكيد الطلب', 'تأكيد توفر منتجات الطلب ' + id + '؟', function() {
+    // نحدّث الحالة + fulfillmentStage (ليصل للمندوب)
+    var updates = {
+      status: 'approved',
+      workflowStatus: 'ready_for_pickup',
+      fulfillmentStage: 'ready_for_pickup',
+      catManagerId: state.user ? state.user.uid : null,
+      catManagerEmail: state.user ? state.user.email : null,
+      confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    db.collection('orders').doc(id).update(updates).then(function() {
+      // تحديث محلي
+      order.status = 'approved';
+      order.workflowStatus = 'ready_for_pickup';
+      order.fulfillmentStage = 'ready_for_pickup';
+
+      addNotif('success', 'تم تأكيد الطلب', id + ' من ' + (order.customerName || order.name || 'عميل'));
+
+      updateStats();
+      renderOrders();
+      closeModal();
+      showToast('✅ تم تأكيد الطلب — سيظهر للمندوب', 'success');
+
+    }).catch(function(e) {
+      console.error('[approveOrder] error:', e);
+      showToast('❌ فشل التأكيد: ' + e.message, 'error');
     });
   });
 }
