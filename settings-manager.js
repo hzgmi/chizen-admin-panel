@@ -27,6 +27,15 @@
       
       html += '<div style="font-weight:900;color:#a78bfa;margin-bottom:8px">🏪 معلومات المتجر</div>';
       html += field('s-store-name', 'اسم المتجر', s.storeName || 'CHIZEN');
+
+      // ═══ العملة الأساسية ═══
+      var cur = s.currency || 'SAR';
+      html += '<label style="display:block;font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:6px">💱 العملة الأساسية للعرض</label>';
+      html += '<select id="s-currency" style="width:100%;padding:12px 14px;background:rgba(10,8,37,0.7);border:1px solid rgba(155,77,255,0.3);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;margin-bottom:12px;box-sizing:border-box">';
+      html += '<option value="SAR"' + (cur === 'SAR' ? ' selected' : '') + '>🇸🇦 ريال سعودي (SAR)</option>';
+      html += '<option value="YER"' + (cur === 'YER' ? ' selected' : '') + '>🇾🇪 ريال يمني (YER)</option>';
+      html += '<option value="USD"' + (cur === 'USD' ? ' selected' : '') + '>🇺🇸 دولار أمريكي (USD)</option>';
+      html += '</select>';
       html += field('s-slogan', 'الشعار (Tagline)', s.slogan || 'متجرك الموثوق');
       html += field('s-contact-phone', 'هاتف التواصل', s.contactPhone || '');
       html += field('s-contact-wa', 'واتساب التواصل', s.contactWhatsapp || '');
@@ -117,6 +126,7 @@
       
       var data = {
         storeName: document.getElementById('s-store-name').value.trim(),
+        currency: (document.getElementById('s-currency') ? document.getElementById('s-currency').value : 'SAR'),
         slogan: document.getElementById('s-slogan').value.trim(),
         contactPhone: document.getElementById('s-contact-phone').value.trim(),
         contactWhatsapp: document.getElementById('s-contact-wa').value.trim(),
