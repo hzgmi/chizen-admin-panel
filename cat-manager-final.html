@@ -2716,6 +2716,7 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     sizes: [...state.selectedSizes],
     colors: [...state.colors],
     images: state.images.map(i => i.url || i.data).filter(Boolean),
+    img: state.images.length > 0 ? (state.images[0].url || state.images[0].data) : null,
     featured: document.getElementById('pf-featured').checked,
     freeShip: document.getElementById('pf-free-ship').checked,
     flashEnabled: document.getElementById('pf-flash-enabled').checked,
