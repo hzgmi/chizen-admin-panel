@@ -1597,7 +1597,14 @@ function renderOrders(){
     if (s === 'pending' || s === 'awaiting_verification' || s === 'payment_verified') {
       return {text: '⏳ انتظار', cls: 'status-pending', card: 'pending'};
     }
-    if (s === 'approved' || s === 'confirmed' || s === 'ready_for_pickup' || s === 'preparing') {
+    if (s === 'approved') {
+      return {text: '✅ مقبولة', cls: 'status-approved', card: 'approved'};
+    }
+    if (s === 'confirmed' || s === 'awaiting_categories') {
+      // تم تأكيد الدفع من الأدمن — بانتظار مدير القسم
+      return {text: '💳 تم الدفع — بانتظار التأكيد', cls: 'status-pending', card: 'pending'};
+    }
+    if (s === 'ready_for_pickup' || s === 'preparing') {
       return {text: '✅ مقبولة', cls: 'status-approved', card: 'approved'};
     }
     if (s === 'rejected' || s === 'payment_rejected' || s === 'category_rejected') {
