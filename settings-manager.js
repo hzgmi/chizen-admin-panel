@@ -85,6 +85,31 @@
     } catch(e){ toast('❌ ' + e.message, 'error'); }
   };
   
+  window.__saveRates = async function(){
+    try {
+      var sarSouth = Number(document.getElementById('s-rate-sar-south').value) || 350;
+      var usdSouth = Number(document.getElementById('s-rate-usd-south').value) || 1300;
+      var sarNorth = Number(document.getElementById('s-rate-sar-north').value) || 500;
+      var usdNorth = Number(document.getElementById('s-rate-usd-north').value) || 2000;
+
+      await db.collection('config').doc('settings').set({
+        rates: {
+          sarSouth: sarSouth,
+          usdSouth: usdSouth,
+          sarNorth: sarNorth,
+          usdNorth: usdNorth
+        },
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      toast('✅ تم حفظ أسعار الصرف', 'success');
+      console.log('[RATES] saved:', { sarSouth, usdSouth, sarNorth, usdNorth });
+    } catch(e) {
+      toast('❌ فشل الحفظ: ' + e.message, 'error');
+      console.error('[__saveRates] error:', e);
+    }
+  };
+
   window.__saveSettingsFull = async function(){
     try {
       var pms = [];
