@@ -1278,16 +1278,9 @@ async function loadOrders() {
       if (hasMyCat) { orders.push(x); matched++; }
     });
 
-    // إذا لم نجد أي تطابق — نعرض كل الطلبات (للتشخيص) + رسالة واضحة
-    if (matched === 0 && snap.size > 0) {
-      console.warn('[FIRESTORE] ⚠️ No orders matched cat:', cat, '| showing all orders for debug');
-      snap.forEach(function(d) { var x = d.data(); x.id = d.id; orders.push(x); });
-      window.__DEBUG_NO_MATCH__ = { cat: cat, total: snap.size };
-      // عرض رسالة مرئية
-      showDebugBanner('⚠️ لا طلبات مطابقة للقسم "' + cat + '". يتم عرض كل الطلبات (' + snap.size + ') للتشخيص.');
-    } else {
-      window.__DEBUG_ORDERS__ = { cat: cat, matched: matched, total: snap.size };
-    }
+    // إذا لم نجد أي تطابق — لا نعرض شيئاً (الطلبات لا تنتمي لقسمنا)
+    window.__DEBUG_ORDERS__ = { cat: cat, matched: matched, total: snap.size };
+    console.log('[FIRESTORE] orders matched:', matched, '/', snap.size, 'for cat:', cat);
 
     // ترتيب حسب createdAt
     orders.sort(function(a, b) {
