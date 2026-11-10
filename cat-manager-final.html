@@ -71,7 +71,7 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
 
 /* MAIN */
 .main{padding-top:calc(var(--topbar-h) + 12px);padding-bottom:16px;
-  padding-inline:10px;min-height:100vh}
+  padding-inline:10px;min-height:100vh;overflow-x:hidden;max-width:100vw;box-sizing:border-box}
 
 /* STATS */
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
@@ -126,7 +126,7 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
 
 /* ORDERS - عمود واحد */
 .orders-grid{display:grid;grid-template-columns:1fr;gap:12px}
-.products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;min-width:0;max-width:100%;box-sizing:border-box}
 
 /* ORDER CARD */
 .order-card{
@@ -255,7 +255,7 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
 .product-card{
   background:white;border-radius:var(--radius);padding:9px;
   box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid var(--border);
-  transition:.25s;position:relative;
+  transition:.25s;position:relative;min-width:0;overflow:hidden;max-width:100%;box-sizing:border-box;
 }
 .product-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
 .product-card.hidden{opacity:.55;filter:grayscale(.4)}
