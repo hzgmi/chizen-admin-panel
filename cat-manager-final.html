@@ -907,6 +907,24 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
             <div class="checkbox-item">
               <input type="checkbox" id="pf-flash-enabled">
               <label for="pf-flash-enabled"><span class="icon">⚡</span> فلاش</label>
+            <div id="flash-fields-box" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin:10px 0; grid-column:1/-1;">
+              <h4 style="margin:0 0 10px; color:#e11d48;">⚡ بيانات العرض الخاطف</h4>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div>
+                  <label style="font-size:12px; font-weight:bold;">سعر العرض (YER)</label>
+                  <input type="number" id="pf-flash-price" placeholder="مثال: 5000" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px;">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:bold;">كمية العرض (العداد)</label>
+                  <input type="number" id="pf-flash-stock" placeholder="مثال: 10" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px;">
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label style="font-size:12px; font-weight:bold;">تاريخ ووقت انتهاء العرض</label>
+                  <input type="datetime-local" id="pf-flash-ends" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px;">
+                </div>
+              </div>
+            </div>
+
             </div>
             <div class="checkbox-item">
               <input type="checkbox" id="pf-active" checked>
@@ -2699,6 +2717,23 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
   if(isNaN(stock) || stock < 0){ showToast('⚠️ المخزون مطلوب', 'error'); return; }
   if(state.images.length === 0){ showToast('⚠️ ارفع صورة', 'error'); return; }
 
+  // ═══ حساب الأسعار المحولة (YER / SAR / USD) ═══
+  var rates = state.exchangeRates || { YER: 1, SAR: 135, USD: 505 };
+  var priceYER = price;
+  if (currency === 'SAR') priceYER = price * (rates.SAR || 135);
+  else if (currency === 'USD') priceYER = price * (rates.USD || 505);
+  // إذا currency === 'YER' → priceYER = price (بدون تغيير)
+
+  var oldPriceRaw = parseFloat(document.getElementById('pf-oldprice').value) || 0;
+  var oldPriceYER = oldPriceRaw;
+  if (oldPriceRaw > 0) {
+    if (currency === 'SAR') oldPriceYER = oldPriceRaw * (rates.SAR || 135);
+    else if (currency === 'USD') oldPriceYER = oldPriceRaw * (rates.USD || 505);
+  }
+
+  var priceSAR = priceYER / (rates.SAR || 135);
+  var priceUSD = priceYER / (rates.USD || 505);
+
   const product = {
     id: 'P' + Date.now(),
     name,
@@ -2707,7 +2742,11 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     supplier,
     desc: document.getElementById('pf-desc').value.trim(),
     currency, price, stock,
-    oldPrice: parseFloat(document.getElementById('pf-oldprice').value) || null,
+    priceYER: Math.round(priceYER),
+    priceSAR: parseFloat(priceSAR.toFixed(2)),
+    priceUSD: parseFloat(priceUSD.toFixed(2)),
+    oldPrice: oldPriceRaw > 0 ? oldPriceRaw : null,
+    oldPriceYER: oldPriceYER > 0 ? Math.round(oldPriceYER) : null,
     wholesale: parseFloat(document.getElementById('pf-wholesale').value) || null,
     cost: parseFloat(document.getElementById('pf-cost').value) || null,
     minOrder: parseInt(document.getElementById('pf-minorder').value) || 1,
@@ -2720,6 +2759,9 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     featured: document.getElementById('pf-featured').checked,
     freeShip: document.getElementById('pf-free-ship').checked,
     flashEnabled: document.getElementById('pf-flash-enabled').checked,
+    flashPrice: parseFloat(document.getElementById('pf-flash-price')?.value) || null,
+    flashStock: parseInt(document.getElementById('pf-flash-stock')?.value) || null,
+    flashEndsAt: document.getElementById('pf-flash-ends')?.value || null,
     active: document.getElementById('pf-active').checked,
     createdAt: new Date().toISOString()
   };
@@ -2871,6 +2913,18 @@ window.onAuthReady = function(user, cat) {
 };
 
 console.log('[APP] ready — waiting for auth');
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var chk = document.getElementById('pf-flash-enabled');
+  var box = document.getElementById('flash-fields-box');
+  if (chk && box) {
+    chk.addEventListener('change', function() {
+      box.style.display = this.checked ? 'block' : 'none';
+    });
+  }
+});
 </script>
 </body>
 </html>
