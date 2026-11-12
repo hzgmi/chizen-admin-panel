@@ -783,6 +783,16 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
             <label for="pf-desc">📄 الوصف</label>
             <textarea id="pf-desc" placeholder="وصف المنتج..."></textarea>
           </div>
+          <div class="form-field">
+            <label for="pf-features">✨ المميزات (كل سطر = ميزة)</label>
+            <textarea id="pf-features" placeholder="بطارية تدوم 48 ساعة&#10;مقاوم للماء&#10;ضمان سنة كاملة" rows="4"></textarea>
+            <small style="color:#64748b; font-size:11px;">اكتب كل ميزة في سطر منفصل. ستظهر كنقاط سريعة في صفحة المنتج.</small>
+          </div>
+          <div class="form-field">
+            <label>📋 المواصفات (جدول)</label>
+            <div id="pf-specs-list" style="margin-bottom:8px;"></div>
+            <button type="button" onclick="addSpecRow()" style="padding:8px 12px; background:#eff6ff; color:#2563eb; border:1px dashed #bfdbfe; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; width:100%;">➕ إضافة مواصفة</button>
+          </div>
         </div>
 
         <div class="form-section">
@@ -2843,6 +2853,8 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     sku: document.getElementById('pf-sku').value.trim(),
     supplier,
     desc: document.getElementById('pf-desc').value.trim(),
+    features: document.getElementById('pf-features') ? document.getElementById('pf-features').value.trim().split('\n').filter(function(l){return l.trim();}) : [],
+    specs: getSpecs(),
     currency, price, stock,
     priceYER: Math.round(priceYER),
     priceSAR: parseFloat(priceSAR.toFixed(2)),
@@ -2886,6 +2898,33 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     showToast('❌ فشل: ' + e.message, 'error');
   });
 });
+
+
+function addSpecRow(key, value) {
+  var list = document.getElementById('pf-specs-list');
+  if (!list) return;
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; align-items:center;';
+  row.innerHTML = '<input type="text" class="spec-key" placeholder="اسم الخاصية (مثل: البطارية)" value="' + (key || '') + '" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
+                  '<input type="text" class="spec-val" placeholder="القيمة (مثل: 4000mAh)" value="' + (value || '') + '" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
+                  '<button type="button" onclick="this.parentNode.remove()" style="padding:8px 10px; background:#ef4444; color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer;">×</button>';
+  list.appendChild(row);
+}
+
+function getSpecs() {
+  var list = document.getElementById('pf-specs-list');
+  if (!list) return {};
+  var specs = {};
+  var rows = list.querySelectorAll('div');
+  rows.forEach(function(row) {
+    var k = row.querySelector('.spec-key');
+    var v = row.querySelector('.spec-val');
+    if (k && v && k.value.trim() && v.value.trim()) {
+      specs[k.value.trim()] = v.value.trim();
+    }
+  });
+  return specs;
+}
 
 function saveDraft(){
   const draft = {
