@@ -864,7 +864,7 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
         <div class="form-section">
           <div class="form-section-title"><span class="num">4</span> المقاسات</div>
           <div class="form-field">
-            <label>المقاسات</label>
+            <label>مقاسات الملابس (XS - XXL)</label>
             <div class="sizes-grid">
               <button type="button" class="size-btn" data-size="XS">XS</button>
               <button type="button" class="size-btn" data-size="S">S</button>
@@ -873,6 +873,24 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
               <button type="button" class="size-btn" data-size="XL">XL</button>
               <button type="button" class="size-btn" data-size="XXL">XXL</button>
             </div>
+          </div>
+          <div class="form-field">
+            <label>مقاسات الأحذية (38 - 45)</label>
+            <div class="sizes-grid" id="shoeSizesGrid">
+              <button type="button" class="size-btn" data-size="38">38</button>
+              <button type="button" class="size-btn" data-size="39">39</button>
+              <button type="button" class="size-btn" data-size="40">40</button>
+              <button type="button" class="size-btn" data-size="41">41</button>
+              <button type="button" class="size-btn" data-size="42">42</button>
+              <button type="button" class="size-btn" data-size="43">43</button>
+              <button type="button" class="size-btn" data-size="44">44</button>
+              <button type="button" class="size-btn" data-size="45">45</button>
+            </div>
+          </div>
+          <div class="form-field">
+            <label>📦 عدد البوكسات (للعروض)</label>
+            <input type="number" id="pf-boxes" placeholder="مثال: 6" min="1" value="1">
+            <small style="color:#64748b; font-size:11px;">عدد البوكسات في العرض الواحد (مثل: بوكس مسك 6 علب).</small>
           </div>
         </div>
 
@@ -2867,6 +2885,8 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     threshold: parseInt(document.getElementById('pf-threshold').value) || 5,
     weight: parseFloat(document.getElementById('pf-weight').value) || null,
     sizes: [...state.selectedSizes],
+    shoeSizes: [...(state.selectedShoeSizes || [])],
+    boxes: parseInt(document.getElementById('pf-boxes')?.value) || 1,
     colors: [...state.colors],
     images: state.images.map(i => i.url || i.data).filter(Boolean),
     img: state.images.length > 0 ? (state.images[0].url || state.images[0].data) : null,
