@@ -892,6 +892,14 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
             <input type="number" id="pf-boxes" placeholder="مثال: 6" min="1" value="1">
             <small style="color:#64748b; font-size:11px;">عدد البوكسات في العرض الواحد (مثل: بوكس مسك 6 علب).</small>
           </div>
+          <div class="form-field">
+            <label>🛒 طريقة البيع</label>
+            <select id="pf-sale-type">
+              <option value="box_only">بوكس كامل فقط</option>
+              <option value="box_and_piece">بوكس كامل + قطعة فردية</option>
+            </select>
+            <small style="color:#64748b; font-size:11px;">إذا اخترت "بوكس + قطعة"، سيظهر للعميل خياران: بوكس كامل أو قطعة فردية.</small>
+          </div>
         </div>
 
         <div class="form-section">
@@ -2887,6 +2895,7 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     sizes: [...state.selectedSizes],
     shoeSizes: [...(state.selectedShoeSizes || [])],
     boxes: parseInt(document.getElementById('pf-boxes')?.value) || 1,
+    saleType: document.getElementById('pf-sale-type')?.value || 'box_only',
     colors: [...state.colors],
     images: state.images.map(i => i.url || i.data).filter(Boolean),
     img: state.images.length > 0 ? (state.images[0].url || state.images[0].data) : null,
