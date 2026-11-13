@@ -1515,15 +1515,16 @@ async function updateOrderStatus(orderId, newStatus) {
 
 async function saveProductToFirestore(product) {
   try {
-    if (product.id && !product.id.startsWith('P' + Date.now().toString().slice(0, 10))) {
-      // تعديل
+    if (product.id && typeof product.id === 'string' && product.id.length > 5) {
+      // تعديل منتج موجود
       await db.collection('products').doc(product.id).update(product);
       return product.id;
     } else {
-      // إضافة
-      product.id = null; // Firestore سيولّد ID
-      var ref = await db.collection('products').add(product);
-      return ref.id;
+      // إضافة منتج جديد: نولّد ID فريداً ونضعه داخل الكائن قبل الحفظ
+      var newId = db.collection('products').doc().id;
+      product.id = newId;
+      await db.collection('products').doc(newId).set(product);
+      return newId;
     }
   } catch(e) {
     console.error('[FIRESTORE] saveProduct error:', e);
