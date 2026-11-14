@@ -196,13 +196,23 @@ function showError(title, msg, btn){
 }
 
 function showMain(){
+  // 1. أخفِ loading فوراً
+  var loadingEl = document.getElementById('loading');
+  if (loadingEl) loadingEl.style.display = 'none';
+  // 2. أخفِ error
+  var errEl = document.getElementById('error');
+  if (errEl) errEl.style.display = 'none';
+  // 3. أظهر main
+  var mainEl = document.getElementById('main');
+  if (mainEl) {
+    mainEl.style.display = 'block';
+    mainEl.style.visibility = 'visible';
+    mainEl.style.opacity = '1';
+  }
+  // 4. حدّث الشريط (تأثير بصري فقط)
   if (typeof window.__completeLoad === 'function') {
     window.__completeLoad();
-  } else {
-    document.getElementById('loading').style.display = 'none';
   }
-  document.getElementById('error').style.display = 'none';
-  document.getElementById('main').style.display = 'block';
 }
 
 function logout(){
