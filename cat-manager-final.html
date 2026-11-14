@@ -902,18 +902,6 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
           </div>
         </div>
 
-        <div class="form-section">
-          <div class="form-section-title"><span class="num">5</span> الألوان</div>
-          <div class="form-field">
-            <label>الألوان</label>
-            <div class="color-input-row">
-              <input type="text" id="color-name" placeholder="اسم اللون">
-              <div class="color-preview"><input type="color" id="color-hex" value="#ef4444"></div>
-              <button type="button" class="btn btn-primary btn-sm" onclick="addColor()">➕</button>
-            </div>
-            <div class="colors-list" id="colorsList"></div>
-          </div>
-        </div>
 
         <div class="form-section">
           <div class="form-section-title"><span class="num">6</span> الصور</div>
@@ -3269,7 +3257,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const modal = document.createElement("div");
     modal.id = "my-color-modal";
-    modal.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    modal.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;pointer-events:auto;";
     
     modal.innerHTML = 
       "<div style=\"background:#0f172a;border-radius:20px;padding:24px;max-width:360px;width:100%;color:#fff;box-shadow:0 20px 40px rgba(0,0,0,0.6);border:1px solid #1e293b;\">" +
