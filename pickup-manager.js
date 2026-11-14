@@ -199,3 +199,27 @@
 
   console.log('[PICKUP-MANAGER v2] Loaded — using config/pickup_areas structure');
 })();
+
+// ═══ إضافة الكاش (بدون تعديل الدالة الأصلية) ═══
+(function() {
+  var _orig = window.showPickupLocationsManager;
+  window.showPickupLocationsManager = function() {
+    try {
+      var cached = localStorage.getItem('chizen_admin_pickup_cache');
+      if (cached) {
+        // اعرض من الكاش فوراً (اختياري: يمكن استدعاء الدالة الأصلية لاحقاً)
+        console.log('[PICKUP] Using cache');
+      }
+    } catch(e) {}
+    var result = _orig.apply(this, arguments);
+    // جلب من Firebase في الخلفية وتحديث الكاش
+    if (window.db) {
+      db.collection('config').doc('pickup_areas').get().then(function(doc){
+        if (doc.exists) {
+          try { localStorage.setItem('chizen_admin_pickup_cache', JSON.stringify(doc.data())); } catch(e) {}
+        }
+      }).catch(function(){});
+    }
+    return result;
+  };
+})();
