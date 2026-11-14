@@ -2886,7 +2886,7 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     boxes: parseInt(document.getElementById('pf-boxes')?.value) || 1,
     saleType: document.getElementById('pf-sale-type')?.value || 'box_only',
     colors: [...state.colors],
-    images: state.images.map(i => i.url || i.data).filter(Boolean),
+    images: state.images.map(i => ({ url: i.url || i.data, color: i.color || null })).filter(i => i.url),
     img: state.images.length > 0 ? (state.images[0].url || state.images[0].data) : null,
     featured: document.getElementById('pf-featured').checked,
     freeShip: document.getElementById('pf-free-ship').checked,
