@@ -275,14 +275,15 @@ auth.onAuthStateChanged(function(u){
 initAdminDashboard();
 
 async function loadAll(){
-  // ═══ نستخدم allSettled بدلاً من all — لا تفشل الدالة إذا فشل استعلام واحد ═══
+  // ★ المرحلة 1: جلب الإحصائيات فقط (counts) — سريع جداً
+  if (window.__setStage) window.__setStage('📊 جلب الإحصائيات...', 40);
   var queries = [
-    db.collection('orders').orderBy('createdAt','desc').limit(300).get(),
-    db.collection('products').get(),
-    db.collection('users').get(),
-    db.collection('bookings').get(),
-    db.collection('listings').get(),
-    db.collection('payments').get()
+    db.collection('orders').count().get(),
+    db.collection('products').count().get(),
+    db.collection('users').count().get(),
+    db.collection('bookings').count().get(),
+    db.collection('listings').count().get(),
+    db.collection('payments').count().get()
   ];
   
   var results = await Promise.allSettled(queries);
@@ -299,12 +300,29 @@ async function loadAll(){
     return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
   }
   
-  state.orders = mapDocs(safeGet(0, {docs:[]}));
-  state.products = mapDocs(safeGet(1, {docs:[]}));
-  state.users = mapDocs(safeGet(2, {docs:[]}));
-  state.bookings = mapDocs(safeGet(3, {docs:[]}));
-  state.listings = mapDocs(safeGet(4, {docs:[]}));
-  state.payments = mapDocs(safeGet(5, {docs:[]}));
+  // ★ المرحلة 1: تخزين العدادات فقط
+  function safeCount(idx) {
+    var r = results[idx];
+    if (r.status === 'fulfilled' && r.value && r.value.data) {
+      return r.value.data().count || 0;
+    }
+    return 0;
+  }
+  state.stats = {
+    orders: safeCount(0),
+    products: safeCount(1),
+    users: safeCount(2),
+    bookings: safeCount(3),
+    listings: safeCount(4),
+    payments: safeCount(5)
+  };
+  // المصفوفات فارغة الآن (تُملأ عند فتح التبويبات)
+  state.orders = [];
+  state.products = [];
+  state.users = [];
+  state.bookings = [];
+  state.listings = [];
+  state.payments = [];
   
   // فحص إضافي: هل أي استعلام فشل؟
   var failed = results.filter(function(r){ return r.status === 'rejected'; }).length;
@@ -377,13 +395,9 @@ function renderHome(){
   var greet = hour < 12 ? 'صباح الخير' : (hour < 18 ? 'مساء النور' : 'مساء الخير');
   var emoji = hour < 12 ? '☀️' : (hour < 18 ? '🌤️' : '🌙');
   
+  // ★ المرحلة 1: نستخدم العدادات من state.stats
   var totalSales = 0, completed = 0, pending = 0;
-  state.orders.forEach(function(o){
-    if (o.status === 'completed'){ totalSales += Number(o.total) || 0; completed++; }
-    else if (o.status === 'pending') pending++;
-  });
-  
-  var recentOrders = state.orders.slice(0, 5);
+  var recentOrders = [];
   var recentHtml = recentOrders.map(function(o){
     var cls = o.status === 'completed' ? 'done' : (o.status === 'cancelled' ? 'rejected' : (o.status === 'shipped' ? 'shipped' : 'pending'));
     var lbl = o.status === 'completed' ? 'مكتمل' : (o.status === 'cancelled' ? 'ملغى' : (o.status === 'shipped' ? 'مشحون' : 'معلق'));
@@ -409,9 +423,9 @@ function renderHome(){
     + '<div class="vst">📊 الإحصائيات</div>'
     + '<div class="vkg">'
     +   '<div class="vk sales"><div class="vk-icon">💰</div><div class="vk-num">' + Math.round(totalSales).toLocaleString('ar-EG') + '</div><div class="vk-lbl">إجمالي المبيعات</div><div class="vk-trend">' + completed + ' مكتمل</div></div>'
-    +   '<div class="vk orders"><div class="vk-icon">📦</div><div class="vk-num">' + state.orders.length + '</div><div class="vk-lbl">الطلبات</div><div class="vk-trend">' + pending + ' معلق</div></div>'
-    +   '<div class="vk products"><div class="vk-icon">🛍️</div><div class="vk-num">' + state.products.length + '</div><div class="vk-lbl">المنتجات</div><div class="vk-trend">' + state.products.filter(function(p){return p.status==='live'}).length + ' منشور</div></div>'
-    +   '<div class="vk users"><div class="vk-icon">👥</div><div class="vk-num">' + state.users.length + '</div><div class="vk-lbl">المستخدمين</div><div class="vk-trend">مسجل</div></div>'
+    +   '<div class="vk orders"><div class="vk-icon">📦</div><div class="vk-num">' + (state.stats ? state.stats.orders : 0) + '</div><div class="vk-lbl">الطلبات</div><div class="vk-trend">' + pending + ' معلق</div></div>'
+    +   '<div class="vk products"><div class="vk-icon">🛍️</div><div class="vk-num">' + (state.stats ? state.stats.products : 0) + '</div><div class="vk-lbl">المنتجات</div><div class="vk-trend">' + state.products.filter(function(p){return p.status==='live'}).length + ' منشور</div></div>'
+    +   '<div class="vk users"><div class="vk-icon">👥</div><div class="vk-num">' + (state.stats ? state.stats.users : 0) + '</div><div class="vk-lbl">المستخدمين</div><div class="vk-trend">مسجل</div></div>'
     + '</div>'
     + '<div class="vst">🕐 آخر الطلبات</div>'
     + '<div class="vlist">' + (recentHtml || '<div class="vempty"><div class="vempty-icon">✨</div><div class="vempty-txt">لا توجد طلبات بعد</div></div>') + '</div>';
@@ -452,7 +466,7 @@ function renderOrders(){
     return o.status === filter;
   });
   
-  var counts = { all: state.orders.length, pending: 0, shipped: 0, completed: 0, cancelled: 0 };
+  var counts = { all: (state.stats ? state.stats.orders : 0), pending: 0, shipped: 0, completed: 0, cancelled: 0 };
   state.orders.forEach(function(o){ if (counts[o.status] !== undefined) counts[o.status]++; });
   
   var chips = [
@@ -538,7 +552,7 @@ function renderTeam(){
   };
   
   var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px">'
-    + '<div class="vst" style="margin:0">👥 الفريق (' + state.users.length + ')</div>'
+    + '<div class="vst" style="margin:0">👥 الفريق (' + (state.stats ? state.stats.users : 0) + ')</div>'
     + '<button onclick="__addEmployee()" style="background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;border:none;padding:10px 16px;border-radius:12px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap">➕ إضافة موظف</button>'
     + '</div>';
   
@@ -990,7 +1004,7 @@ async function verifyPayment(orderId){
       } else if (typeof render === 'function') {
         render();
       }
-      console.log('[verifyPayment] orders reloaded:', state.orders.length);
+      console.log('[verifyPayment] orders reloaded:', (state.stats ? state.stats.orders : 0));
     } catch(re) {
       console.warn('[verifyPayment] reload failed:', re);
     }
@@ -1899,7 +1913,7 @@ function showReports(){
     + '</div>'
     + '<div class="vkg">'
     + '<div class="vk products"><div class="vk-icon">🟡</div><div class="vk-num">' + pending + '</div><div class="vk-lbl">معلقة</div></div>'
-    + '<div class="vk users"><div class="vk-icon">🛍️</div><div class="vk-num">' + state.products.length + '</div><div class="vk-lbl">منتجات</div></div>'
+    + '<div class="vk users"><div class="vk-icon">🛍️</div><div class="vk-num">' + (state.stats ? state.stats.products : 0) + '</div><div class="vk-lbl">منتجات</div></div>'
     + '</div>'
     + '<div style="padding:16px;background:rgba(155,77,255,0.05);border-radius:14px;text-align:center;color:#a78bfa;font-size:12px;margin-top:16px">📊 تقارير مفصلة بالرسوم البيانية قريباً</div>';
   showModal('📊 تقارير', html);
