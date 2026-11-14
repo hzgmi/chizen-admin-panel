@@ -2832,12 +2832,54 @@ function renderImages(){
   if (state.images.length === 0) { preview.innerHTML = ''; return; }
   preview.innerHTML = state.images.map((img, i) => {
     var src = img.url || img.data || '';
-    return '<div class="image-preview-item">' +
+    var colorBadge = '';
+    if (img.color && img.color.hex) {
+      colorBadge = '<span class="color-badge" style="position:absolute;bottom:6px;right:6px;width:22px;height:22px;border-radius:50%;background:' + img.color.hex + ';border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);" title="' + (img.color.name || img.color.hex) + '"></span>';
+    }
+    return '<div class="image-preview-item" style="position:relative;">' +
       '<img src="' + src + '">' +
       (i === 0 ? '<span class="main-badge">رئيسية</span>' : '') +
+      colorBadge +
       '<button class="remove-img" onclick="removeImage(' + i + ')">✕</button>' +
+      '<button class="link-color-btn" onclick="openColorPicker(' + i + ')" style="position:absolute;bottom:6px;left:6px;padding:4px 8px;border-radius:6px;border:none;background:rgba(0,0,0,.7);color:#fff;font-size:10px;cursor:pointer;">🎨 لون</button>' +
       '</div>';
   }).join('');
+}
+
+// نافذة اختيار اللون
+function openColorPicker(imgIndex) {
+  var img = state.images[imgIndex];
+  if (!img) return;
+  var currentHex = img.color && img.color.hex ? img.color.hex : '#ff0000';
+  var currentName = img.color && img.color.name ? img.color.name : '';
+  
+  var modal = document.createElement('div');
+  modal.id = 'color-picker-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = '<div style="background:#1e293b;border-radius:16px;padding:20px;max-width:320px;width:100%;color:#fff;">' +
+    '<h3 style="margin:0 0 15px;font-size:15px;">🎨 ربط الصورة بلون</h3>' +
+    '<label style="display:block;margin-bottom:8px;font-size:12px;">اسم اللون (اختياري)</label>' +
+    '<input type="text" id="cp-name" value="' + currentName + '" placeholder="مثال: أحمر" style="width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#fff;margin-bottom:12px;box-sizing:border-box;">' +
+    '<label style="display:block;margin-bottom:8px;font-size:12px;">كود اللون</label>' +
+    '<input type="color" id="cp-hex" value="' + currentHex + '" style="width:100%;height:60px;border:none;border-radius:8px;cursor:pointer;margin-bottom:15px;">' +
+    '<div style="display:flex;gap:8px;">' +
+      '<button onclick="saveColorToImage(' + imgIndex + ')" style="flex:1;padding:12px;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-weight:700;cursor:pointer;">حفظ</button>' +
+      '<button onclick="document.getElementById('color-picker-modal').remove()" style="flex:1;padding:12px;border:none;border-radius:8px;background:#475569;color:#fff;font-weight:700;cursor:pointer;">إلغاء</button>' +
+    '</div>' +
+    '<div id="cp-status" style="margin-top:10px;font-size:11px;color:#94a3b8;text-align:center;"></div>' +
+  '</div>';
+  document.body.appendChild(modal);
+}
+
+function saveColorToImage(imgIndex) {
+  var name = document.getElementById('cp-name').value.trim();
+  var hex = document.getElementById('cp-hex').value;
+  var img = state.images[imgIndex];
+  if (!img) return;
+  img.color = { name: name || null, hex: hex };
+  document.getElementById('color-picker-modal').remove();
+  renderImages();
+  showToast('✅ تم ربط اللون بالصورة', 'success');
 }
 
 function removeImage(i){ state.images.splice(i, 1); renderImages(); }
