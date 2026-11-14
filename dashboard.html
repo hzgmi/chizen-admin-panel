@@ -196,23 +196,12 @@ function showError(title, msg, btn){
 }
 
 function showMain(){
-  // 1. أخفِ loading فوراً
-  var loadingEl = document.getElementById('loading');
-  if (loadingEl) loadingEl.style.display = 'none';
-  // 2. أخفِ error
+  // أظهر main (لكن loading لا تزال ظاهرة بشفافية)
   var errEl = document.getElementById('error');
   if (errEl) errEl.style.display = 'none';
-  // 3. أظهر main
   var mainEl = document.getElementById('main');
-  if (mainEl) {
-    mainEl.style.display = 'block';
-    mainEl.style.visibility = 'visible';
-    mainEl.style.opacity = '1';
-  }
-  // 4. حدّث الشريط (تأثير بصري فقط)
-  if (typeof window.__completeLoad === 'function') {
-    window.__completeLoad();
-  }
+  if (mainEl) mainEl.style.display = 'block';
+  // loading تُخفى لاحقاً بعد renderTab
 }
 
 function logout(){
@@ -278,6 +267,10 @@ async function initAdminDashboard(){
     renderTab('home');
     updateReviewBadge();
     updatePaymentsBadge();
+    // الآن أخفِ loading بعد أن امتلأ main
+    if (typeof window.__completeLoad === 'function') {
+      window.__completeLoad();
+    }
   } catch(e){
     console.error('Init failed:', e);
     showError('خطأ', e.message || 'فشل تحميل البيانات', '🔄 إعادة المحاولة');
