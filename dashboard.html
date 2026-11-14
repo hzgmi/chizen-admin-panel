@@ -224,6 +224,27 @@ async function waitForAuth(){
   });
 }
 
+async function loadMoreOrders(){
+  if (!state.ordersLastDoc) { toast('لا توجد طلبات أخرى', 'info'); return; }
+  if (window.__setStage) window.__setStage('📥 تحميل المزيد من الطلبات...', 50);
+  try {
+    var snap = await db.collection('orders').orderBy('createdAt','desc').startAfter(state.ordersLastDoc).limit(20).get();
+    if (snap.docs.length === 0) {
+      state.hasMoreOrders = false;
+      toast('✅ لا توجد طلبات أخرى', 'info');
+      return;
+    }
+    var newOrders = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+    state.orders = state.orders.concat(newOrders);
+    state.ordersLastDoc = snap.docs[snap.docs.length - 1];
+    state.hasMoreOrders = (snap.docs.length === 20);
+    renderTab('orders');
+    toast('✅ تم تحميل ' + newOrders.length + ' طلب إضافي', 'success');
+  } catch(e) {
+    toast('❌ ' + e.message, 'error');
+  }
+}
+
 async function initAdminDashboard(){
   var errEl = document.getElementById('error');
   if(errEl) errEl.style.display = 'none';
@@ -300,6 +321,10 @@ async function loadAll(){
   }
   
   state.orders = mapDocs(safeGet(0, {docs:[]}));
+  // حفظ آخر مستند لتحميل المزيد
+  var ordersSnap = safeGet(0, {docs:[]});
+  state.ordersLastDoc = (ordersSnap.docs && ordersSnap.docs.length > 0) ? ordersSnap.docs[ordersSnap.docs.length - 1] : null;
+  state.hasMoreOrders = (ordersSnap.docs && ordersSnap.docs.length === 20);
   state.products = mapDocs(safeGet(1, {docs:[]}));
   state.users = mapDocs(safeGet(2, {docs:[]}));
   state.bookings = mapDocs(safeGet(3, {docs:[]}));
