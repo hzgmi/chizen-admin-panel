@@ -902,6 +902,18 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
           </div>
         </div>
 
+        <div class="form-section">
+          <div class="form-section-title"><span class="num">5</span> الألوان</div>
+          <div class="form-field">
+            <label>الألوان</label>
+            <div class="color-input-row">
+              <input type="text" id="color-name" placeholder="اسم اللون">
+              <div class="color-preview"><input type="color" id="color-hex" value="#ef4444"></div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="addColor()">➕</button>
+            </div>
+            <div class="colors-list" id="colorsList"></div>
+          </div>
+        </div>
 
         <div class="form-section">
           <div class="form-section-title"><span class="num">6</span> الصور</div>
@@ -2886,7 +2898,7 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     boxes: parseInt(document.getElementById('pf-boxes')?.value) || 1,
     saleType: document.getElementById('pf-sale-type')?.value || 'box_only',
     colors: [...state.colors],
-    images: state.images.map(i => ({ url: i.url || i.data, color: i.color || null })).filter(i => i.url),
+    images: state.images.map(i => i.url || i.data).filter(Boolean),
     img: state.images.length > 0 ? (state.images[0].url || state.images[0].data) : null,
     featured: document.getElementById('pf-featured').checked,
     freeShip: document.getElementById('pf-free-ship').checked,
@@ -3181,7 +3193,5 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 // ═══════════════════════════════════════════════════
 </script>
-
-
 </body>
 </html>
