@@ -215,6 +215,7 @@ function logout(){
 var __dashInitDone = false;
 
 async function waitForAuth(){
+  if (window.__setLoadStage) window.__setLoadStage('🔐 التحقق من المصادقة...', 10);
   if (auth.currentUser) return auth.currentUser;
   return new Promise(function(resolve){
     var settled = false;
@@ -232,6 +233,7 @@ async function initAdminDashboard(){
   var errEl = document.getElementById('error');
   if(errEl) errEl.style.display = 'none';
 
+  if (window.__setLoadStage) window.__setLoadStage('👤 جلب بيانات المستخدم...', 25);
   var user = await waitForAuth();
 
   if (!user) {
@@ -260,6 +262,7 @@ async function initAdminDashboard(){
     sessionStorage.removeItem('__dashLoop');
     __dashInitDone = true;
     state.user = user;
+    if (window.__setLoadStage) window.__setLoadStage('🎨 عرض الواجهة...', 95);
     await loadAll();
     showMain();
     renderTab('home');
@@ -279,6 +282,7 @@ auth.onAuthStateChanged(function(u){
 initAdminDashboard();
 
 async function loadAll(){
+  if (window.__setLoadStage) window.__setLoadStage('📊 جلب البيانات (6 استعلامات)...', 30);
   // ═══ نستخدم allSettled بدلاً من all — لا تفشل الدالة إذا فشل استعلام واحد ═══
   var queries = [
     db.collection('orders').orderBy('createdAt','desc').limit(300).get(),
@@ -289,7 +293,22 @@ async function loadAll(){
     db.collection('payments').get()
   ];
   
-  var results = await Promise.allSettled(queries);
+  // تتبع التقدم: كل استعلام يكتمل يزيد الشريط
+  var completed = 0;
+  var trackedQueries = queries.map(function(q, i) {
+    return q.then(function(r) {
+      completed++;
+      var pct = 30 + Math.round((completed / queries.length) * 60);
+      if (window.__setLoadStage) window.__setLoadStage('📊 جلب البيانات (' + completed + '/' + queries.length + ')...', pct);
+      return r;
+    }).catch(function(e) {
+      completed++;
+      var pct = 30 + Math.round((completed / queries.length) * 60);
+      if (window.__setLoadStage) window.__setLoadStage('📊 جلب البيانات (' + completed + '/' + queries.length + ')...', pct);
+      return { docs: [] };
+    });
+  });
+  var results = await Promise.allSettled(trackedQueries);
   
   function safeGet(idx, defaultVal){
     var r = results[idx];
