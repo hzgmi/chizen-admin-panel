@@ -64,7 +64,8 @@
         h += '<div style="background:rgba(155,77,255,0.05);border:1px solid rgba(155,77,255,0.2);border-radius:12px;padding:12px;margin-bottom:10px">';
         h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">';
         h += '<div style="flex:1;min-width:0">';
-        h += '<div style="font-size:13px;font-weight:800;color:#fff">' + (area.icon||'📍') + ' ' + esc(area.name||'—') + '</div>';
+        var areaLabel = (area.country ? '[' + esc(area.country) + '] ' : '') + esc(area.name||'—');
+        h += '<div style="font-size:13px;font-weight:800;color:#fff">' + (area.icon||'📍') + ' ' + areaLabel + '</div>';
         h += '<div style="font-size:11px;color:#a78bfa;margin-top:2px">📍 ' + esc(area.city||'—') + ' · ' + points.length + ' نقطة</div>';
         h += '</div></div>';
         
@@ -125,14 +126,27 @@
   }
 
   window.__pickupAddArea = function(region){
-    var name = prompt('اسم المنطقة:');
+    var name = prompt('اسم المدينة:');
     if (!name || !name.trim()) return;
-    var city = prompt('المدينة:', region === 'aden' ? 'عدن' : 'صنعاء');
-    if (!city || !city.trim()) return;
-    var icon = prompt('أيقونة (🌊 🏛️ 🏢 🏪 💊 📍):', '📍') || '📍';
-    var lat = parseFloat(prompt('Latitude (اختياري):') || '0') || 0;
-    var lng = parseFloat(prompt('Longitude (اختياري):') || '0') || 0;
-    var area = { name: name.trim(), city: city.trim(), icon: icon.trim(), lat: lat, lng: lng, points: [] };
+    var area = { name: name.trim(), points: [] };
+    if (region === 'international') {
+      var country = prompt('الدولة:', 'السعودية');
+      if (!country || !country.trim()) return;
+      area.country = country.trim();
+      area.city = name.trim();
+      area.icon = '🌍';
+      area.lat = 0; area.lng = 0;
+    } else {
+      var city = prompt('المدينة:', region === 'aden' ? 'عدن' : 'صنعاء');
+      if (!city || !city.trim()) return;
+      var icon = prompt('أيقونة (🌊 🏛️ 🏢 🏪 💊 📍):', '📍') || '📍';
+      var lat = parseFloat(prompt('Latitude (اختياري):') || '0') || 0;
+      var lng = parseFloat(prompt('Longitude (اختياري):') || '0') || 0;
+      area.city = city.trim();
+      area.icon = icon.trim();
+      area.lat = lat;
+      area.lng = lng;
+    }
     var newList = (window.__pickupData[region] || []).slice();
     newList.push(area);
     __pickupSave(region, newList);
