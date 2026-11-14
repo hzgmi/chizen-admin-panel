@@ -262,7 +262,7 @@ async function initAdminDashboard(){
     __dashInitDone = true;
     state.user = user;
     if (window.__setLoadStage) window.__setLoadStage('🎨 عرض الواجهة...', 95);
-    await loadAll();
+    await loadQuickStats();
     showMain();
     renderTab('home');
     updateReviewBadge();
@@ -284,16 +284,15 @@ auth.onAuthStateChanged(function(u){
 
 initAdminDashboard();
 
-async function loadAll(){
-  if (window.__setLoadStage) window.__setLoadStage('📊 جلب البيانات (6 استعلامات)...', 30);
-  // ═══ نستخدم allSettled بدلاً من all — لا تفشل الدالة إذا فشل استعلام واحد ═══
+async function loadQuickStats(){
+  if (window.__setLoadStage) window.__setLoadStage('📊 جلب الإحصائيات السريعة...', 40);
+  // جلب عدادات فقط (بدون مستندات كاملة - أسرع بكثير)
   var queries = [
-    db.collection('orders').orderBy('createdAt','desc').limit(300).get(),
-    db.collection('products').get(),
-    db.collection('users').get(),
-    db.collection('bookings').get(),
-    db.collection('listings').get(),
-    db.collection('payments').get()
+    db.collection('orders').where('status','==','pending').get(),
+    db.collection('products').where('active','==',true).get(),
+    db.collection('products').where('status','==','pending_review').get(),
+    db.collection('bookings').where('status','==','pending').get(),
+    db.collection('payments').where('verified','==',false).get()
   ];
   
   // تتبع التقدم: كل استعلام يكتمل يزيد الشريط
@@ -325,12 +324,21 @@ async function loadAll(){
     return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
   }
   
-  state.orders = mapDocs(safeGet(0, {docs:[]}));
-  state.products = mapDocs(safeGet(1, {docs:[]}));
-  state.users = mapDocs(safeGet(2, {docs:[]}));
-  state.bookings = mapDocs(safeGet(3, {docs:[]}));
-  state.listings = mapDocs(safeGet(4, {docs:[]}));
-  state.payments = mapDocs(safeGet(5, {docs:[]}));
+  // تخزين الإحصائيات فقط (بدون المستندات الكاملة)
+  state.stats = {
+    pendingOrders: safeGet(0, {size:0}).size || 0,
+    activeProducts: safeGet(1, {size:0}).size || 0,
+    pendingReview: safeGet(2, {size:0}).size || 0,
+    pendingBookings: safeGet(3, {size:0}).size || 0,
+    pendingPayments: safeGet(4, {size:0}).size || 0
+  };
+  // مسح البيانات القديمة (ستُجلب عند فتح التبويبات)
+  state.orders = [];
+  state.products = [];
+  state.users = [];
+  state.bookings = [];
+  state.listings = [];
+  state.payments = [];
   
   // فحص إضافي: هل أي استعلام فشل؟
   var failed = results.filter(function(r){ return r.status === 'rejected'; }).length;
