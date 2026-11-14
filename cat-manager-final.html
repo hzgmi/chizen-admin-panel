@@ -3097,9 +3097,166 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+
 // ═══════════════════════════════════════════════════
-// ميزة ربط اللون بالصور (مستقلة وآمنة - لا تلمس الكود الأصلي)
+// ميزة ربط اللون بالصور (نسخة محسّنة)
 // ═══════════════════════════════════════════════════
+(function() {
+  const PREDEFINED_COLORS = [
+    { name: "أحمر", hex: "#ef4444" },
+    { name: "أزرق", hex: "#3b82f6" },
+    { name: "أخضر", hex: "#10b981" },
+    { name: "أسود", hex: "#000000" },
+    { name: "أبيض", hex: "#ffffff" },
+    { name: "رمادي", hex: "#6b7280" },
+    { name: "ذهبي", hex: "#f59e0b" },
+    { name: "فضي", hex: "#cbd5e1" },
+    { name: "بنفسجي", hex: "#8b5cf6" },
+    { name: "وردي", hex: "#ec4899" },
+    { name: "بني", hex: "#92400e" },
+    { name: "بيج", hex: "#fcd34d" }
+  ];
+
+  function attachColorButtons() {
+    var preview = document.getElementById("pf-images-preview");
+    if (!preview) return;
+    var items = preview.querySelectorAll(".image-preview-item");
+    items.forEach(function(item, idx) {
+      if (item.querySelector(".safe-link-color-btn")) return;
+      if (typeof state === "undefined" || !state.images || !state.images[idx]) return;
+      
+      var btn = document.createElement("button");
+      btn.className = "safe-link-color-btn";
+      btn.type = "button";
+      btn.innerHTML = "🎨 لون";
+      // تحسين شكل الزر
+      btn.style.cssText = "position:absolute;bottom:8px;left:8px;padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);background:rgba(15,23,42,0.85);color:#fff;font-size:11px;font-weight:700;cursor:pointer;z-index:5;backdrop-filter:blur(4px);box-shadow:0 4px 10px rgba(0,0,0,0.3);transition:all 0.2s;";
+      
+      // تأثير عند المرور
+      btn.onmouseover = function() { this.style.transform = "scale(1.05)"; this.style.background = "rgba(59,130,246,0.9)"; };
+      btn.onmouseout = function() { this.style.transform = "scale(1)"; this.style.background = "rgba(15,23,42,0.85)"; };
+      
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        openSafeColorPicker(idx);
+      };
+      item.style.position = "relative";
+      item.appendChild(btn);
+      
+      var img = state.images[idx];
+      if (img && img.color && img.color.hex && !item.querySelector(".safe-color-badge")) {
+        var badge = document.createElement("span");
+        badge.className = "safe-color-badge";
+        badge.title = img.color.name || img.color.hex;
+        badge.style.cssText = "position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:50%;background:" + img.color.hex + ";border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);z-index:5;";
+        item.appendChild(badge);
+      }
+    });
+  }
+  
+  function openSafeColorPicker(idx) {
+    var img = state.images[idx];
+    if (!img) return;
+    var curHex = (img.color && img.color.hex) ? img.color.hex : "#ef4444";
+    var curName = (img.color && img.color.name) ? img.color.name : "";
+    
+    // بناء قائمة الألوان الجاهزة
+    var colorChipsHtml = PREDEFINED_COLORS.map(function(c) {
+      return "<button type=\"button\" class=\"safe-color-chip\" data-hex=\"" + c.hex + "\" data-name=\"" + c.name + "\" style=\"width:32px;height:32px;border-radius:50%;border:2px solid #334155;background:" + c.hex + ";cursor:pointer;transition:transform 0.2s;\" title=\"" + c.name + "\"></button>";
+    }).join("");
+    
+    var modal = document.createElement("div");
+    modal.id = "safe-color-modal";
+    modal.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    
+    // تحسين التصميم الداخلي
+    modal.innerHTML = "<div style=\"background:#0f172a;border-radius:20px;padding:24px;max-width:340px;width:100%;color:#fff;box-shadow:0 20px 40px rgba(0,0,0,0.5);border:1px solid #1e293b;\">" +
+      "<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;\">" +
+        "<h3 style=\"margin:0;font-size:16px;font-weight:800;\">🎨 ربط الصورة بلون</h3>" +
+        "<button id=\"safe-cp-x\" style=\"background:transparent;border:none;color:#94a3b8;font-size:20px;cursor:pointer;\">✕</button>" +
+      "</div>" +
+      
+      "<label style=\"display:block;margin-bottom:10px;font-size:12px;color:#94a3b8;\">اختر لوناً جاهزاً</label>" +
+      "<div style=\"display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;\">" + colorChipsHtml + "</div>" +
+      
+      "<label style=\"display:block;margin-bottom:6px;font-size:12px;color:#94a3b8;\">اسم اللون</label>" +
+      "<input id=\"safe-cp-name\" type=\"text\" value=\"" + curName + "\" placeholder=\"مثال: أحمر\" style=\"width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#fff;margin-bottom:12px;box-sizing:border-box;font-size:14px;\">" +
+      
+      "<label style=\"display:block;margin-bottom:6px;font-size:12px;color:#94a3b8;\">كود اللون (Hex)</label>" +
+      "<input id=\"safe-cp-hex\" type=\"color\" value=\"" + curHex + "\" style=\"width:100%;height:60px;border:none;border-radius:10px;cursor:pointer;margin-bottom:20px;\">" +
+      
+      "<div style=\"display:flex;gap:10px;\">" +
+        "<button id=\"safe-cp-save\" type=\"button\" style=\"flex:1;padding:14px;border:none;border-radius:10px;background:#ec4899;color:#fff;font-weight:800;font-size:14px;cursor:pointer;\">حفظ اللون</button>" +
+        "<button id=\"safe-cp-cancel\" type=\"button\" style=\"flex:1;padding:14px;border:none;border-radius:10px;background:#334155;color:#fff;font-weight:700;font-size:14px;cursor:pointer;\">إلغاء</button>" +
+        (img.color && img.color.hex ? "<button id=\"safe-cp-remove\" type=\"button\" style=\"padding:14px;border:none;border-radius:10px;background:#ef4444;color:#fff;font-weight:700;cursor:pointer;\">🗑️</button>" : "") +
+      "</div>" +
+    "</div>";
+    
+    document.body.appendChild(modal);
+    
+    var hexInput = document.getElementById("safe-cp-hex");
+    var nameInput = document.getElementById("safe-cp-name");
+    
+    // مزامنة ذكية: عند اختيار لون من القائمة -> تحديث الكود والاسم
+    modal.querySelectorAll(".safe-color-chip").forEach(function(chip) {
+      chip.onclick = function() {
+        hexInput.value = this.dataset.hex;
+        nameInput.value = this.dataset.name;
+        // إبراز الدائرة المختارة
+        modal.querySelectorAll(".safe-color-chip").forEach(function(c) { c.style.transform = "scale(1)"; c.style.border = "2px solid #334155"; });
+        this.style.transform = "scale(1.15)";
+        this.style.border = "2px solid #ec4899";
+      };
+      // إذا كان اللون الحالي مطابقاً، أبرزه
+      if (this.dataset.hex === curHex) {
+        chip.style.transform = "scale(1.15)";
+        chip.style.border = "2px solid #ec4899";
+      }
+    });
+    
+    // مزامنة عكسية: عند تغيير الاسم، ابحث عن اللون
+    nameInput.oninput = function() {
+      var val = this.value.trim();
+      var found = PREDEFINED_COLORS.find(function(c) { return c.name === val; });
+      if (found) hexInput.value = found.hex;
+    };
+    
+    // إغلاق النافذة
+    document.getElementById("safe-cp-x").onclick = function() { modal.remove(); };
+    document.getElementById("safe-cp-cancel").onclick = function() { modal.remove(); };
+    
+    // حفظ اللون
+    document.getElementById("safe-cp-save").onclick = function() {
+      var n = nameInput.value.trim();
+      var x = hexInput.value;
+      state.images[idx].color = { name: n || null, hex: x };
+      modal.remove();
+      attachColorButtons();
+      if (typeof showToast === "function") showToast("✅ تم ربط اللون", "success");
+    };
+    
+    // حذف اللون
+    var rm = document.getElementById("safe-cp-remove");
+    if (rm) rm.onclick = function() {
+      state.images[idx].color = null;
+      modal.remove();
+      attachColorButtons();
+      if (typeof showToast === "function") showToast("🗑️ تم حذف اللون", "success");
+    };
+  }
+  
+  document.addEventListener("DOMContentLoaded", function() {
+    var preview = document.getElementById("pf-images-preview");
+    if (!preview) return;
+    var obs = new MutationObserver(function() { setTimeout(attachColorButtons, 100); });
+    obs.observe(preview, { childList: true, subtree: true });
+    setTimeout(attachColorButtons, 500);
+    setInterval(attachColorButtons, 2000);
+  });
+})();
+// ═══════════════════════════════════════════════════
+
 (function() {
   function attachColorButtons() {
     var preview = document.getElementById("pf-images-preview");
