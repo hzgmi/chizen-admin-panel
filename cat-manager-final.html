@@ -2847,6 +2847,15 @@ function renderImages(){
   }).join('');
 }
 
+var PREDEFINED_COLORS = [
+  { name: "أحمر", hex: "#ef4444" }, { name: "أزرق", hex: "#3b82f6" },
+  { name: "أخضر", hex: "#10b981" }, { name: "أسود", hex: "#000000" },
+  { name: "أبيض", hex: "#ffffff" }, { name: "رمادي", hex: "#6b7280" },
+  { name: "ذهبي", hex: "#f59e0b" }, { name: "فضي", hex: "#cbd5e1" },
+  { name: "بنفسجي", hex: "#8b5cf6" }, { name: "وردي", hex: "#ec4899" },
+  { name: "بني", hex: "#92400e" }, { name: "بيج", hex: "#fcd34d" }
+];
+
 function openColorPicker(idx) {
   var img = state.images[idx];
   if (!img) return;
