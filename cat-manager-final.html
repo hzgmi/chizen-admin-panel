@@ -2832,12 +2832,59 @@ function renderImages(){
   if (state.images.length === 0) { preview.innerHTML = ''; return; }
   preview.innerHTML = state.images.map((img, i) => {
     var src = img.url || img.data || '';
-    return '<div class="image-preview-item">' +
+    var colorBtn = '<button type="button" class="stage2-color-btn" onclick="openColorPicker(' + i + ')" style="position:absolute;bottom:6px;left:6px;padding:4px 8px;border-radius:12px;border:1px solid rgba(255,255,255,0.3);background:rgba(15,23,42,0.85);color:#fff;font-size:10px;font-weight:700;cursor:pointer;z-index:5;">🎨 لون</button>';
+    var colorBadge = '';
+    if (img.color && img.color.hex) {
+      colorBadge = '<span style="position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:50%;background:' + img.color.hex + ';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);z-index:5;" title="' + (img.color.name || img.color.hex) + '"></span>';
+    }
+    return '<div class="image-preview-item" style="position:relative;">' +
       '<img src="' + src + '">' +
       (i === 0 ? '<span class="main-badge">رئيسية</span>' : '') +
+      colorBadge +
       '<button class="remove-img" onclick="removeImage(' + i + ')">✕</button>' +
+      colorBtn +
       '</div>';
   }).join('');
+}
+
+function openColorPicker(idx) {
+  var img = state.images[idx];
+  if (!img) return;
+  var curHex = (img.color && img.color.hex) ? img.color.hex : '#ef4444';
+  var curName = (img.color && img.color.name) ? img.color.name : '';
+  var modal = document.createElement('div');
+  modal.id = 'stage2-color-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML =
+    '<div style="background:#0f172a;border-radius:20px;padding:24px;max-width:340px;width:100%;color:#fff;border:1px solid #1e293b;">' +
+      '<h3 style="margin:0 0 16px;font-size:16px;font-weight:800;">🎨 ربط الصورة بلون</h3>' +
+      '<label style="display:block;margin-bottom:6px;font-size:12px;color:#94a3b8;">اسم اللون</label>' +
+      '<input id="stage2-cp-name" type="text" value="' + curName + '" placeholder="أحمر" style="width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#fff;margin-bottom:12px;box-sizing:border-box;font-size:14px;">' +
+      '<label style="display:block;margin-bottom:6px;font-size:12px;color:#94a3b8;">كود اللون</label>' +
+      '<input id="stage2-cp-hex" type="color" value="' + curHex + '" style="width:100%;height:60px;border:none;border-radius:10px;cursor:pointer;margin-bottom:20px;">' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button id="stage2-cp-save" type="button" style="flex:1;padding:14px;border:none;border-radius:10px;background:#ec4899;color:#fff;font-weight:800;font-size:14px;cursor:pointer;">حفظ</button>' +
+        '<button id="stage2-cp-cancel" type="button" style="flex:1;padding:14px;border:none;border-radius:10px;background:#334155;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">إلغاء</button>' +
+        (img.color && img.color.hex ? '<button id="stage2-cp-remove" type="button" style="padding:14px;border:none;border-radius:10px;background:#ef4444;color:#fff;font-weight:700;cursor:pointer;">🗑️</button>' : '') +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  document.getElementById('stage2-cp-cancel').onclick = function() { modal.remove(); };
+  document.getElementById('stage2-cp-save').onclick = function() {
+    var n = document.getElementById('stage2-cp-name').value.trim();
+    var x = document.getElementById('stage2-cp-hex').value;
+    state.images[idx].color = { name: n || null, hex: x };
+    modal.remove();
+    renderImages();
+    if (typeof showToast === 'function') showToast('✅ تم ربط اللون', 'success');
+  };
+  var rm = document.getElementById('stage2-cp-remove');
+  if (rm) rm.onclick = function() {
+    state.images[idx].color = null;
+    modal.remove();
+    renderImages();
+    if (typeof showToast === 'function') showToast('🗑️ تم حذف اللون', 'success');
+  };
 }
 
 function removeImage(i){ state.images.splice(i, 1); renderImages(); }
