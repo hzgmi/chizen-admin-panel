@@ -123,7 +123,7 @@ body{background:radial-gradient(ellipse at 50% 0%,rgba(124,58,237,0.18) 0%,trans
 </head>
 <body>
 
-<div class="vloading" id="loading"><div style="width:280px;max-width:85vw;"><div style="text-align:center;margin-bottom:20px;"><div style="font-size:32px;margin-bottom:8px;">⏳</div><div style="font-size:15px;font-weight:900;color:#fff;margin-bottom:4px;">جاري تحميل لوحة التحكم</div><div id="vload-stage" style="font-size:12px;color:#a78bfa;margin-top:6px;">جاري التهيئة...</div></div><div style="height:8px;background:rgba(155,77,255,0.15);border-radius:4px;overflow:hidden;margin-bottom:10px;"><div id="vload-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#a855f7,#ec4899);border-radius:4px;transition:width 0.4s ease;"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:#a78bfa;"><span id="vload-percent">0%</span><span id="vload-time">منذ 0 ثانية</span></div></div></div>
+<div class="vloading" id="loading"><div class="vspin"></div><div class="vload-txt">جاري التحميل...</div></div>
 <div class="verror" id="error" style="display:none"><div class="verror-box"><div class="verror-icon" id="errIcon">⚠️</div><div class="verror-title" id="errTitle">خطأ</div><div class="verror-msg" id="errMsg"></div><a href="admin-login.html" class="verror-btn" id="errBtn">🔐 تسجيل الدخول</a></div></div>
 
 <div id="main" style="display:none">
@@ -196,12 +196,9 @@ function showError(title, msg, btn){
 }
 
 function showMain(){
-  // أظهر main (لكن loading لا تزال ظاهرة بشفافية)
-  var errEl = document.getElementById('error');
-  if (errEl) errEl.style.display = 'none';
-  var mainEl = document.getElementById('main');
-  if (mainEl) mainEl.style.display = 'block';
-  // loading تُخفى لاحقاً بعد renderTab
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
 }
 
 function logout(){
@@ -214,7 +211,6 @@ function logout(){
 var __dashInitDone = false;
 
 async function waitForAuth(){
-  if (window.__setLoadStage) window.__setLoadStage('🔐 التحقق من المصادقة...', 10);
   if (auth.currentUser) return auth.currentUser;
   return new Promise(function(resolve){
     var settled = false;
@@ -232,7 +228,6 @@ async function initAdminDashboard(){
   var errEl = document.getElementById('error');
   if(errEl) errEl.style.display = 'none';
 
-  if (window.__setLoadStage) window.__setLoadStage('👤 جلب بيانات المستخدم...', 25);
   var user = await waitForAuth();
 
   if (!user) {
@@ -261,16 +256,11 @@ async function initAdminDashboard(){
     sessionStorage.removeItem('__dashLoop');
     __dashInitDone = true;
     state.user = user;
-    if (window.__setLoadStage) window.__setLoadStage('🎨 عرض الواجهة...', 95);
-    await loadQuickStats();
+    await loadAll();
     showMain();
     renderTab('home');
     updateReviewBadge();
     updatePaymentsBadge();
-    // الآن أخفِ loading بعد أن امتلأ main
-    if (typeof window.__completeLoad === 'function') {
-      window.__completeLoad();
-    }
   } catch(e){
     console.error('Init failed:', e);
     showError('خطأ', e.message || 'فشل تحميل البيانات', '🔄 إعادة المحاولة');
@@ -284,33 +274,18 @@ auth.onAuthStateChanged(function(u){
 
 initAdminDashboard();
 
-async function loadQuickStats(){
-  if (window.__setLoadStage) window.__setLoadStage('📊 جلب الإحصائيات السريعة...', 40);
-  // جلب عدادات فقط (بدون مستندات كاملة - أسرع بكثير)
+async function loadAll(){
+  // ═══ نستخدم allSettled بدلاً من all — لا تفشل الدالة إذا فشل استعلام واحد ═══
   var queries = [
-    db.collection('orders').where('status','==','pending').get(),
-    db.collection('products').where('active','==',true).get(),
-    db.collection('products').where('status','==','pending_review').get(),
-    db.collection('bookings').where('status','==','pending').get(),
-    db.collection('payments').where('verified','==',false).get()
+    db.collection('orders').orderBy('createdAt','desc').limit(300).get(),
+    db.collection('products').get(),
+    db.collection('users').get(),
+    db.collection('bookings').get(),
+    db.collection('listings').get(),
+    db.collection('payments').get()
   ];
   
-  // تتبع التقدم: كل استعلام يكتمل يزيد الشريط
-  var completed = 0;
-  var trackedQueries = queries.map(function(q, i) {
-    return q.then(function(r) {
-      completed++;
-      var pct = 30 + Math.round((completed / queries.length) * 60);
-      if (window.__setLoadStage) window.__setLoadStage('📊 جلب البيانات (' + completed + '/' + queries.length + ')...', pct);
-      return r;
-    }).catch(function(e) {
-      completed++;
-      var pct = 30 + Math.round((completed / queries.length) * 60);
-      if (window.__setLoadStage) window.__setLoadStage('📊 جلب البيانات (' + completed + '/' + queries.length + ')...', pct);
-      return { docs: [] };
-    });
-  });
-  var results = await Promise.allSettled(trackedQueries);
+  var results = await Promise.allSettled(queries);
   
   function safeGet(idx, defaultVal){
     var r = results[idx];
@@ -324,21 +299,12 @@ async function loadQuickStats(){
     return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
   }
   
-  // تخزين الإحصائيات فقط (بدون المستندات الكاملة)
-  state.stats = {
-    pendingOrders: safeGet(0, {size:0}).size || 0,
-    activeProducts: safeGet(1, {size:0}).size || 0,
-    pendingReview: safeGet(2, {size:0}).size || 0,
-    pendingBookings: safeGet(3, {size:0}).size || 0,
-    pendingPayments: safeGet(4, {size:0}).size || 0
-  };
-  // مسح البيانات القديمة (ستُجلب عند فتح التبويبات)
-  state.orders = [];
-  state.products = [];
-  state.users = [];
-  state.bookings = [];
-  state.listings = [];
-  state.payments = [];
+  state.orders = mapDocs(safeGet(0, {docs:[]}));
+  state.products = mapDocs(safeGet(1, {docs:[]}));
+  state.users = mapDocs(safeGet(2, {docs:[]}));
+  state.bookings = mapDocs(safeGet(3, {docs:[]}));
+  state.listings = mapDocs(safeGet(4, {docs:[]}));
+  state.payments = mapDocs(safeGet(5, {docs:[]}));
   
   // فحص إضافي: هل أي استعلام فشل؟
   var failed = results.filter(function(r){ return r.status === 'rejected'; }).length;
@@ -3297,52 +3263,5 @@ window.showPaymentsManager = showPaymentsManager;
         
 
 <script src="payments-v2.js?v=2"></script>
-
-<script>
-// ★ شريط تقدم التحميل ★
-(function() {
-  var startTime = Date.now();
-  var currentProgress = 0;
-  var targetProgress = 0;
-  var timer = null;
-  var bar = document.getElementById('vload-bar');
-  var percent = document.getElementById('vload-percent');
-  var timeEl = document.getElementById('vload-time');
-  var stage = document.getElementById('vload-stage');
-  
-  window.__setLoadStage = function(txt, pct) {
-    if (stage) stage.textContent = txt;
-    if (pct !== undefined) targetProgress = Math.max(targetProgress, pct);
-  };
-  
-  window.__completeLoad = function() {
-    targetProgress = 100;
-    currentProgress = 100;
-    if (bar) bar.style.width = '100%';
-    if (percent) percent.textContent = '100%';
-    if (stage) stage.textContent = 'جاهز';
-    setTimeout(function() {
-      var loading = document.getElementById('loading');
-      if (loading) loading.style.display = 'none';
-    }, 300);
-  };
-  
-  timer = setInterval(function() {
-    var elapsed = Math.floor((Date.now() - startTime) / 1000);
-    if (timeEl) timeEl.textContent = 'منذ ' + elapsed + ' ثانية';
-    if (currentProgress < targetProgress) {
-      currentProgress += Math.max(1, (targetProgress - currentProgress) / 10);
-      if (currentProgress > targetProgress) currentProgress = targetProgress;
-    } else if (currentProgress < 95) {
-      currentProgress += 0.3;
-    }
-    if (bar) bar.style.width = Math.min(99, currentProgress) + '%';
-    if (percent) percent.textContent = Math.round(Math.min(99, currentProgress)) + '%';
-    if (elapsed > 15 && currentProgress < 100) {
-      window.__completeLoad();
-    }
-  }, 300);
-})();
-</script>
 </body>
 </html>
