@@ -3096,6 +3096,102 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// ═══════════════════════════════════════════════════
+// ميزة ربط اللون بالصور (مستقلة وآمنة - لا تلمس الكود الأصلي)
+// ═══════════════════════════════════════════════════
+(function() {
+  function attachColorButtons() {
+    var preview = document.getElementById("pf-images-preview");
+    if (!preview) return;
+    var items = preview.querySelectorAll(".image-preview-item");
+    items.forEach(function(item, idx) {
+      // إذا كان الزر موجوداً، لا نضيفه مرة أخرى
+      if (item.querySelector(".safe-link-color-btn")) return;
+      // نتحقق أن الصورة لها بيانات في state.images
+      if (typeof state === "undefined" || !state.images || !state.images[idx]) return;
+      
+      var btn = document.createElement("button");
+      btn.className = "safe-link-color-btn";
+      btn.type = "button";
+      btn.textContent = "🎨 لون";
+      btn.style.cssText = "position:absolute;bottom:6px;left:6px;padding:4px 8px;border-radius:6px;border:none;background:rgba(59,130,246,.9);color:#fff;font-size:10px;cursor:pointer;z-index:5;";
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        openSafeColorPicker(idx);
+      };
+      item.style.position = "relative";
+      item.appendChild(btn);
+      
+      // إظهار شارة اللون إن وُجد
+      var img = state.images[idx];
+      if (img && img.color && img.color.hex && !item.querySelector(".safe-color-badge")) {
+        var badge = document.createElement("span");
+        badge.className = "safe-color-badge";
+        badge.title = img.color.name || img.color.hex;
+        badge.style.cssText = "position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:50%;background:" + img.color.hex + ";border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);z-index:5;";
+        item.appendChild(badge);
+      }
+    });
+  }
+  
+  function openSafeColorPicker(idx) {
+    var img = state.images[idx];
+    if (!img) return;
+    var curHex = (img.color && img.color.hex) ? img.color.hex : "#ff0000";
+    var curName = (img.color && img.color.name) ? img.color.name : "";
+    
+    var modal = document.createElement("div");
+    modal.id = "safe-color-modal";
+    modal.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    modal.innerHTML = "<div style=\"background:#1e293b;border-radius:16px;padding:20px;max-width:320px;width:100%;color:#fff;\">" +
+      "<h3 style=\"margin:0 0 15px;font-size:15px;\">🎨 ربط الصورة بلون</h3>" +
+      "<label style=\"display:block;margin-bottom:6px;font-size:12px;\">اسم اللون (اختياري)</label>" +
+      "<input id=\"safe-cp-name\" type=\"text\" value=\"" + curName + "\" placeholder=\"مثال: أحمر\" style=\"width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#fff;margin-bottom:12px;box-sizing:border-box;\">" +
+      "<label style=\"display:block;margin-bottom:6px;font-size:12px;\">كود اللون</label>" +
+      "<input id=\"safe-cp-hex\" type=\"color\" value=\"" + curHex + "\" style=\"width:100%;height:60px;border:none;border-radius:8px;cursor:pointer;margin-bottom:15px;\">" +
+      "<div style=\"display:flex;gap:8px;\">" +
+        "<button id=\"safe-cp-save\" type=\"button\" style=\"flex:1;padding:12px;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-weight:700;cursor:pointer;\">حفظ</button>" +
+        "<button id=\"safe-cp-cancel\" type=\"button\" style=\"flex:1;padding:12px;border:none;border-radius:8px;background:#475569;color:#fff;font-weight:700;cursor:pointer;\">إلغاء</button>" +
+        (img.color && img.color.hex ? "<button id=\"safe-cp-remove\" type=\"button\" style=\"padding:12px;border:none;border-radius:8px;background:#ef4444;color:#fff;font-weight:700;cursor:pointer;\">حذف اللون</button>" : "") +
+      "</div>" +
+    "</div>";
+    document.body.appendChild(modal);
+    
+    document.getElementById("safe-cp-cancel").onclick = function() { modal.remove(); };
+    document.getElementById("safe-cp-save").onclick = function() {
+      var n = document.getElementById("safe-cp-name").value.trim();
+      var x = document.getElementById("safe-cp-hex").value;
+      state.images[idx].color = { name: n || null, hex: x };
+      modal.remove();
+      attachColorButtons();
+      if (typeof showToast === "function") showToast("✅ تم ربط اللون", "success");
+    };
+    var rm = document.getElementById("safe-cp-remove");
+    if (rm) rm.onclick = function() {
+      state.images[idx].color = null;
+      modal.remove();
+      attachColorButtons();
+      if (typeof showToast === "function") showToast("🗑️ تم حذف اللون", "success");
+    };
+  }
+  
+  // نراقب أي تغيير في قائمة الصور ونضيف الأزرار تلقائياً
+  document.addEventListener("DOMContentLoaded", function() {
+    var preview = document.getElementById("pf-images-preview");
+    if (!preview) return;
+    var obs = new MutationObserver(function() {
+      setTimeout(attachColorButtons, 100);
+    });
+    obs.observe(preview, { childList: true, subtree: true });
+    // تطبيق أولي
+    setTimeout(attachColorButtons, 500);
+    // فحص دوري احتياطي (كل 2 ثانية)
+    setInterval(attachColorButtons, 2000);
+  });
+})();
+// ═══════════════════════════════════════════════════
 </script>
 </body>
 </html>
