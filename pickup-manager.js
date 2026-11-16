@@ -92,26 +92,31 @@
   }
 
   window.__pickupSwitchTab = function(tab){
-    var aden = document.getElementById('pkm-aden-panel');
-    var yemen = document.getElementById('pkm-yemen-panel');
-    var btA = document.getElementById('pkm-tab-aden');
-    var btY = document.getElementById('pkm-tab-yemen');
-    if (!aden || !yemen) return;
-    if (tab === 'aden') {
-      aden.style.display = 'block';
-      yemen.style.display = 'none';
-      btA.style.background = 'linear-gradient(135deg,#a855f7,#7c3aed)';
-      btA.style.color = '#fff'; btA.style.borderColor = '#a855f7';
-      btY.style.background = 'rgba(0,0,0,0.3)';
-      btY.style.color = '#a78bfa'; btY.style.borderColor = 'rgba(155,77,255,0.3)';
-    } else {
-      aden.style.display = 'none';
-      yemen.style.display = 'block';
-      btY.style.background = 'linear-gradient(135deg,#a855f7,#7c3aed)';
-      btY.style.color = '#fff'; btY.style.borderColor = '#a855f7';
-      btA.style.background = 'rgba(0,0,0,0.3)';
-      btA.style.color = '#a78bfa'; btA.style.borderColor = 'rgba(155,77,255,0.3)';
-    }
+    var panels = {
+      aden: document.getElementById('pkm-aden-panel'),
+      yemen: document.getElementById('pkm-yemen-panel'),
+      international: document.getElementById('pkm-intl-panel')
+    };
+    var tabs = {
+      aden: document.getElementById('pkm-tab-aden'),
+      yemen: document.getElementById('pkm-tab-yemen'),
+      international: document.getElementById('pkm-tab-intl')
+    };
+    if (!panels.aden || !panels.yemen || !panels.international) return;
+    Object.keys(panels).forEach(function(k) {
+      if (panels[k]) panels[k].style.display = (k === tab) ? 'block' : 'none';
+      if (tabs[k]) {
+        if (k === tab) {
+          tabs[k].style.background = 'linear-gradient(135deg,#a855f7,#7c3aed)';
+          tabs[k].style.color = '#fff';
+          tabs[k].style.borderColor = '#a855f7';
+        } else {
+          tabs[k].style.background = 'rgba(0,0,0,0.3)';
+          tabs[k].style.color = '#a78bfa';
+          tabs[k].style.borderColor = 'rgba(155,77,255,0.3)';
+        }
+      }
+    });
   };
 
   async function __pickupSave(region, newList){
