@@ -37,6 +37,12 @@
       html += '<button id="pkm-tab-intl" onclick="window.__pickupSwitchTab(\'international\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🌍 دولي (' + (Array.isArray(data.international) ? data.international.length : 0) + ')</button>';
       html += '</div>';
 
+      // ★ زر إيقاف/تشغيل الدولي ★
+      var intlEnabled = data.internationalEnabled !== false;
+      html += '<div style="margin-bottom:14px;display:flex;justify-content:flex-end;">';
+      html += '<button onclick="window.__toggleInternational()" style="padding:10px 16px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;border:1.5px solid ' + (intlEnabled ? '#ef4444' : '#22c55e') + ';background:' + (intlEnabled ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)') + ';color:' + (intlEnabled ? '#f87171' : '#4ade80') + ';">' + (intlEnabled ? '⏸️ إيقاف الدولي مؤقتاً' : '▶️ تشغيل الدولي') + '</button>';
+      html += '</div>';
+
       html += '<div id="pkm-aden-panel" style="display:block">';
       html += __renderTab(aden, 'aden');
       html += '</div>';
@@ -125,6 +131,19 @@
         }
       }
     });
+  };
+
+  window.__toggleInternational = async function() {
+    if (!confirm('هل تريد تغيير حالة الدولي؟')) return;
+    try {
+      var doc = await db.collection('config').doc('pickup_areas').get();
+      var data = doc.exists ? doc.data() : {};
+      var current = data.internationalEnabled !== false;
+      data.internationalEnabled = !current;
+      await db.collection('config').doc('pickup_areas').set({ internationalEnabled: data.internationalEnabled }, { merge: true });
+      toast(data.internationalEnabled ? '✅ تم تشغيل الدولي' : '⏸️ تم إيقاف الدولي', 'success');
+      window.showPickupLocationsManager();
+    } catch(e) { toast('❌ ' + e.message, 'error'); }
   };
 
   async function __pickupSave(region, newList){
