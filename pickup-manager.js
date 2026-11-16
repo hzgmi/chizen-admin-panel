@@ -102,7 +102,7 @@
       yemen: document.getElementById('pkm-tab-yemen'),
       international: document.getElementById('pkm-tab-intl')
     };
-    if (!panels.aden || !panels.yemen || !panels.international) return;
+    // لا نتوقف إذا كان أحد التبويبات غير موجود (نتعامل مع الموجود فقط)
     Object.keys(panels).forEach(function(k) {
       if (panels[k]) panels[k].style.display = (k === tab) ? 'block' : 'none';
       if (tabs[k]) {
