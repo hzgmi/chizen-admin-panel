@@ -232,23 +232,34 @@
     var list = (window.__pickupData[region] || []).slice();
     var a = list[idx];
     if (!a) return;
-    var name = prompt('اسم المنطقة:', a.name);
-    if (name === null) return;
-    var city = prompt('المدينة:', a.city);
-    if (city === null) return;
-    var icon = prompt('أيقونة:', a.icon || '📍') || a.icon || '📍';
-    var shippingFee = parseFloat(prompt('سعر الشحن (ر.س):', a.shippingFee || 0)) || 0;
-    var deliveryTime = prompt('وقت التوصيل:', a.deliveryTime || '') || '';
-    if (region === 'international') {
-      var country = prompt('الدولة:', a.country || '');
-      if (country !== null) a.country = country.trim() || a.country;
+    var isIntl = region === 'international';
+    var fields = [
+      { id: 'name', label: 'اسم المنطقة', type: 'text', value: a.name || '' },
+      { id: 'city', label: 'المدينة', type: 'text', value: a.city || '' }
+    ];
+    if (isIntl) {
+      fields.push({ id: 'country', label: 'الدولة', type: 'select', value: a.country || 'السعودية', options: [
+        { value: 'السعودية', label: 'السعودية' }, { value: 'الإمارات', label: 'الإمارات' },
+        { value: 'الكويت', label: 'الكويت' }, { value: 'قطر', label: 'قطر' },
+        { value: 'البحرين', label: 'البحرين' }, { value: 'عمان', label: 'عمان' },
+        { value: 'الأردن', label: 'الأردن' }, { value: 'مصر', label: 'مصر' }
+      ]});
     }
-    a.name = name.trim() || a.name;
-    a.city = city.trim() || a.city;
-    a.icon = icon.trim();
-    a.shippingFee = shippingFee;
-    a.deliveryTime = deliveryTime.trim();
-    __pickupSave(region, list);
+    fields.push({ id: 'shippingFee', label: 'سعر الشحن (ر.س)', type: 'number', value: a.shippingFee || 0 });
+    fields.push({ id: 'deliveryTime', label: 'وقت التوصيل', type: 'text', value: a.deliveryTime || '' });
+    
+    window.__showPickupForm({
+      title: '✏️ تعديل ' + (isIntl ? 'مدينة دولية' : 'منطقة'),
+      fields: fields,
+      submitLabel: 'حفظ التعديلات'
+    }, function(data) {
+      a.name = (data.name || '').trim() || a.name;
+      a.city = (data.city || '').trim() || a.city;
+      if (isIntl && data.country) a.country = data.country;
+      a.shippingFee = parseFloat(data.shippingFee) || 0;
+      a.deliveryTime = (data.deliveryTime || '').trim();
+      __pickupSave(region, list);
+    });
   };
 
   window.__pickupDelArea = function(region, idx){
@@ -262,14 +273,21 @@
     var list = (window.__pickupData[region] || []).slice();
     var area = list[areaIdx];
     if (!area) return;
-    var name = prompt('اسم النقطة:');
-    if (!name || !name.trim()) return;
-    var icon = prompt('أيقونة (🏪 🏢 🏬 📦):', '📦') || '📦';
-    var lat = parseFloat(prompt('Latitude (اختياري):') || '0') || (area.lat || 0);
-    var lng = parseFloat(prompt('Longitude (اختياري):') || '0') || (area.lng || 0);
-    area.points = area.points || [];
-    area.points.push({ name: name.trim(), icon: icon.trim(), lat: lat, lng: lng });
-    __pickupSave(region, list);
+    window.__showPickupForm({
+      title: '➕ إضافة نقطة في ' + (area.name || ''),
+      fields: [
+        { id: 'name', label: 'اسم النقطة', type: 'text', placeholder: 'مثال: بقالة الشعب' },
+        { id: 'icon', label: 'أيقونة', type: 'text', value: '📦' }
+      ],
+      submitLabel: 'إضافة النقطة'
+    }, function(data) {
+      var name = (data.name || '').trim();
+      if (!name) { toast('❌ اسم النقطة مطلوب', 'error'); return; }
+      var icon = (data.icon || '📦').trim();
+      area.points = area.points || [];
+      area.points.push({ name: name, icon: icon, lat: area.lat || 0, lng: area.lng || 0 });
+      __pickupSave(region, list);
+    });
   };
 
   window.__pickupDelPoint = function(region, areaIdx, pointIdx){
