@@ -33,7 +33,8 @@
       
       html += '<div style="display:flex;gap:6px;margin-bottom:14px">';
       html += '<button id="pkm-tab-aden" onclick="window.__pickupSwitchTab(\'aden\')" style="flex:1;padding:10px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid #a855f7;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff">🌊 عدن (' + aden.length + ')</button>';
-      html += '<button id="pkm-tab-yemen" onclick="window.__pickupSwitchTab(\'yemen\')" style="flex:1;padding:10px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🏛️ اليمن (' + yemen.length + ')</button>';
+      html += '<button id="pkm-tab-yemen" onclick="window.__pickupSwitchTab(\'yemen\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🏛️ اليمن (' + yemen.length + ')</button>';
+      html += '<button id="pkm-tab-intl" onclick="window.__pickupSwitchTab(\'international\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🌍 دولي (' + (Array.isArray(data.international) ? data.international.length : 0) + ')</button>';
       html += '</div>';
 
       html += '<div id="pkm-aden-panel" style="display:block">';
@@ -44,7 +45,11 @@
       html += __renderTab(yemen, 'yemen');
       html += '</div>';
 
-      window.__pickupData = { aden: aden, yemen: yemen };
+      html += '<div id="pkm-intl-panel" style="display:none">';
+      html += __renderTab(Array.isArray(data.international) ? data.international : [], 'international');
+      html += '</div>';
+
+      window.__pickupData = { aden: aden, yemen: yemen, international: Array.isArray(data.international) ? data.international : [] };
       showModal('📍 مواقع التسليم', html);
     } catch(e){ toast('❌ ' + e.message, 'error'); }
   };
@@ -203,28 +208,4 @@
   };
 
   console.log('[PICKUP-MANAGER v2] Loaded — using config/pickup_areas structure');
-})();
-
-// ═══ إضافة الكاش (بدون تعديل الدالة الأصلية) ═══
-(function() {
-  var _orig = window.showPickupLocationsManager;
-  window.showPickupLocationsManager = function() {
-    try {
-      var cached = localStorage.getItem('chizen_admin_pickup_cache');
-      if (cached) {
-        // اعرض من الكاش فوراً (اختياري: يمكن استدعاء الدالة الأصلية لاحقاً)
-        console.log('[PICKUP] Using cache');
-      }
-    } catch(e) {}
-    var result = _orig.apply(this, arguments);
-    // جلب من Firebase في الخلفية وتحديث الكاش
-    if (window.db) {
-      db.collection('config').doc('pickup_areas').get().then(function(doc){
-        if (doc.exists) {
-          try { localStorage.setItem('chizen_admin_pickup_cache', JSON.stringify(doc.data())); } catch(e) {}
-        }
-      }).catch(function(){});
-    }
-    return result;
-  };
 })();
