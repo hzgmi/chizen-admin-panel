@@ -69,13 +69,10 @@
 
     window.__pickupData = { aden: aden, yemen: yemen, international: international, internationalEnabled: intlEnabled };
     
+    // ★ نغلق أي نافذة قديمة ونفتح جديدة (لتجنب مشاكل العناصر القديمة) ★
     var existingModal = document.querySelector('.vmodal-ov, .vmodal');
-    if (existingModal) {
-      var body = existingModal.querySelector('.vmodal-body') || existingModal;
-      body.innerHTML = html;
-    } else {
-      showModal('📍 مواقع التسليم', html);
-    }
+    if (existingModal) existingModal.remove();
+    showModal('📍 مواقع التسليم', html);
   };
 
   function __renderTab(list, region){
