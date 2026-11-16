@@ -72,6 +72,9 @@
         var areaLabel = (area.country ? '[' + esc(area.country) + '] ' : '') + esc(area.name||'—');
         h += '<div style="font-size:13px;font-weight:800;color:#fff">' + (area.icon||'📍') + ' ' + areaLabel + '</div>';
         h += '<div style="font-size:11px;color:#a78bfa;margin-top:2px">📍 ' + esc(area.city||'—') + ' · ' + points.length + ' نقطة</div>';
+        if (area.shippingFee !== undefined || area.deliveryTime) {
+          h += '<div style="font-size:10px;color:#fbbf24;margin-top:2px">🚚 ' + (area.shippingFee ? area.shippingFee + ' ر.س' : 'مجاني') + (area.deliveryTime ? ' · ⏱ ' + esc(area.deliveryTime) : '') + '</div>';
+        }
         h += '</div></div>';
         
         if (points.length) {
@@ -139,24 +142,34 @@
     var name = prompt('اسم المدينة:');
     if (!name || !name.trim()) return;
     var area = { name: name.trim(), points: [] };
+    
     if (region === 'international') {
       var country = prompt('الدولة:', 'السعودية');
       if (!country || !country.trim()) return;
+      var shippingFee = parseFloat(prompt('سعر الشحن (ر.س):', '30')) || 0;
+      var deliveryTime = prompt('وقت التوصيل:', '3-5 أيام') || '';
       area.country = country.trim();
       area.city = name.trim();
       area.icon = '🌍';
+      area.shippingFee = shippingFee;
+      area.deliveryTime = deliveryTime.trim();
       area.lat = 0; area.lng = 0;
     } else {
       var city = prompt('المدينة:', region === 'aden' ? 'عدن' : 'صنعاء');
       if (!city || !city.trim()) return;
       var icon = prompt('أيقونة (🌊 🏛️ 🏢 🏪 💊 📍):', '📍') || '📍';
+      var shippingFee = parseFloat(prompt('سعر الشحن (ر.س) - 0 للمجاني:', '0')) || 0;
+      var deliveryTime = prompt('وقت التوصيل:', '2-4 ساعات') || '';
       var lat = parseFloat(prompt('Latitude (اختياري):') || '0') || 0;
       var lng = parseFloat(prompt('Longitude (اختياري):') || '0') || 0;
       area.city = city.trim();
       area.icon = icon.trim();
+      area.shippingFee = shippingFee;
+      area.deliveryTime = deliveryTime.trim();
       area.lat = lat;
       area.lng = lng;
     }
+    
     var newList = (window.__pickupData[region] || []).slice();
     newList.push(area);
     __pickupSave(region, newList);
@@ -171,9 +184,17 @@
     var city = prompt('المدينة:', a.city);
     if (city === null) return;
     var icon = prompt('أيقونة:', a.icon || '📍') || a.icon || '📍';
+    var shippingFee = parseFloat(prompt('سعر الشحن (ر.س):', a.shippingFee || 0)) || 0;
+    var deliveryTime = prompt('وقت التوصيل:', a.deliveryTime || '') || '';
+    if (region === 'international') {
+      var country = prompt('الدولة:', a.country || '');
+      if (country !== null) a.country = country.trim() || a.country;
+    }
     a.name = name.trim() || a.name;
     a.city = city.trim() || a.city;
     a.icon = icon.trim();
+    a.shippingFee = shippingFee;
+    a.deliveryTime = deliveryTime.trim();
     __pickupSave(region, list);
   };
 
