@@ -21,45 +21,61 @@
     { key: 'yemen', label: '🏛️ اليمن' }
   ];
 
-  window.showPickupLocationsManager = async function(){
-    try {
-      var doc = await db.collection('config').doc('pickup_areas').get();
+  window.showPickupLocationsManager = function(){
+    // ★ عرض فوري من الكاش (بدون انتظار) ★
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem('chizen_pickup_cache') || 'null'); } catch(e) {}
+    
+    if (cached) {
+      __renderPickupModal(cached);
+    } else {
+      showModal('📍 مواقع التسليم', '<div style="text-align:center;padding:40px;color:#a78bfa">⏳ جاري التحميل...</div>');
+    }
+    
+    // ★ جلب التحديثات في الخلفية ★
+    db.collection('config').doc('pickup_areas').get().then(function(doc) {
       var data = doc.exists ? doc.data() : {};
-      var aden = Array.isArray(data.aden) ? data.aden : [];
-      var yemen = Array.isArray(data.yemen) ? data.yemen : [];
+      try { localStorage.setItem('chizen_pickup_cache', JSON.stringify(data)); } catch(e) {}
+      __renderPickupModal(data);
+    }).catch(function(e) {
+      if (!cached) toast('❌ ' + e.message, 'error');
+    });
+  };
+  
+  function __renderPickupModal(data) {
+    var aden = Array.isArray(data.aden) ? data.aden : [];
+    var yemen = Array.isArray(data.yemen) ? data.yemen : [];
+    var international = Array.isArray(data.international) ? data.international : [];
+    var intlEnabled = data.internationalEnabled !== false;
+    
+    var html = '';
+    html += '<div style="font-size:12px;color:#a78bfa;margin-bottom:10px;text-align:center;line-height:1.5">إدارة مناطق الاستلام والنقاط التي يراها العميل في تطبيقه</div>';
+    
+    // شريط البحث
+    html += '<div style="position:relative;margin-bottom:12px;">';
+    html += '<input type="text" id="pkm-search" placeholder="🔍 ابحث عن مدينة أو منطقة..." oninput="window.__pickupSearch(this.value)" style="width:100%;padding:12px 40px 12px 14px;border-radius:12px;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;">';
+    html += '<span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">🔍</span>';
+    html += '</div>';
 
-      var html = '';
-      html += '<div style="font-size:12px;color:#a78bfa;margin-bottom:10px;text-align:center;line-height:1.5">إدارة مناطق الاستلام والنقاط التي يراها العميل في تطبيقه</div>';
-      
-      // ★ شريط البحث ★
-      html += '<div style="position:relative;margin-bottom:12px;">';
-      html += '<input type="text" id="pkm-search" placeholder="🔍 ابحث عن مدينة أو منطقة..." oninput="window.__pickupSearch(this.value)" style="width:100%;padding:12px 40px 12px 14px;border-radius:12px;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;">';
-      html += '<span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">🔍</span>';
-      html += '</div>';
-      
-      html += '<div style="display:flex;gap:6px;margin-bottom:14px">';
-      html += '<button id="pkm-tab-aden" onclick="window.__pickupSwitchTab(\'aden\')" style="flex:1;padding:10px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid #a855f7;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff">🌊 عدن (' + aden.length + ')</button>';
-      html += '<button id="pkm-tab-yemen" onclick="window.__pickupSwitchTab(\'yemen\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🏛️ اليمن (' + yemen.length + ')</button>';
-      html += '<button id="pkm-tab-intl" onclick="window.__pickupSwitchTab(\'international\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🌍 دولي (' + (Array.isArray(data.international) ? data.international.length : 0) + ')</button>';
-      html += '</div>';
+    html += '<div style="display:flex;gap:6px;margin-bottom:14px">';
+    html += '<button id="pkm-tab-aden" onclick="window.__pickupSwitchTab(\'aden\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid #a855f7;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff">🌊 عدن (' + aden.length + ')</button>';
+    html += '<button id="pkm-tab-yemen" onclick="window.__pickupSwitchTab(\'yemen\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🏛️ اليمن (' + yemen.length + ')</button>';
+    html += '<button id="pkm-tab-intl" onclick="window.__pickupSwitchTab(\'international\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🌍 دولي (' + international.length + ')</button>';
+    html += '</div>';
 
+    html += '<div id="pkm-aden-panel" style="display:block">' + __renderTab(aden, 'aden') + '</div>';
+    html += '<div id="pkm-yemen-panel" style="display:none">' + __renderTab(yemen, 'yemen') + '</div>';
+    html += '<div id="pkm-intl-panel" style="display:none">' + __renderTab(international, 'international') + '</div>';
 
-
-      html += '<div id="pkm-aden-panel" style="display:block">';
-      html += __renderTab(aden, 'aden');
-      html += '</div>';
-
-      html += '<div id="pkm-yemen-panel" style="display:none">';
-      html += __renderTab(yemen, 'yemen');
-      html += '</div>';
-
-      html += '<div id="pkm-intl-panel" style="display:none">';
-      html += __renderTab(Array.isArray(data.international) ? data.international : [], 'international');
-      html += '</div>';
-
-      window.__pickupData = { aden: aden, yemen: yemen, international: Array.isArray(data.international) ? data.international : [] };
+    window.__pickupData = { aden: aden, yemen: yemen, international: international, internationalEnabled: intlEnabled };
+    
+    var existingModal = document.querySelector('.vmodal-ov, .vmodal');
+    if (existingModal) {
+      var body = existingModal.querySelector('.vmodal-body') || existingModal;
+      body.innerHTML = html;
+    } else {
       showModal('📍 مواقع التسليم', html);
-    } catch(e){ toast('❌ ' + e.message, 'error'); }
+    }
   };
 
   function __renderTab(list, region){
