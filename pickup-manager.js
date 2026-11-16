@@ -31,6 +31,12 @@
       var html = '';
       html += '<div style="font-size:12px;color:#a78bfa;margin-bottom:10px;text-align:center;line-height:1.5">إدارة مناطق الاستلام والنقاط التي يراها العميل في تطبيقه</div>';
       
+      // ★ شريط البحث ★
+      html += '<div style="position:relative;margin-bottom:12px;">';
+      html += '<input type="text" id="pkm-search" placeholder="🔍 ابحث عن مدينة أو منطقة..." oninput="window.__pickupSearch(this.value)" style="width:100%;padding:12px 40px 12px 14px;border-radius:12px;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none;">';
+      html += '<span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">🔍</span>';
+      html += '</div>';
+      
       html += '<div style="display:flex;gap:6px;margin-bottom:14px">';
       html += '<button id="pkm-tab-aden" onclick="window.__pickupSwitchTab(\'aden\')" style="flex:1;padding:10px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid #a855f7;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff">🌊 عدن (' + aden.length + ')</button>';
       html += '<button id="pkm-tab-yemen" onclick="window.__pickupSwitchTab(\'yemen\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🏛️ اليمن (' + yemen.length + ')</button>';
@@ -131,6 +137,69 @@
         }
       }
     });
+  };
+
+  function __renderTabContent(list, region) {
+    var h = '';
+    if (!list.length) {
+      return '<div style="text-align:center;padding:30px 20px;color:#a78bfa;font-size:13px">لا توجد نتائج</div>';
+    }
+    list.forEach(function(area, i) {
+      var points = area.points || [];
+      h += '<div style="background:rgba(155,77,255,0.05);border:1px solid rgba(155,77,255,0.2);border-radius:12px;padding:12px;margin-bottom:10px">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">';
+      h += '<div style="flex:1;min-width:0">';
+      var areaLabel = (area.country ? '[' + esc(area.country) + '] ' : '') + esc(area.name||'—');
+      h += '<div style="font-size:13px;font-weight:800;color:#fff">' + (area.icon||'📍') + ' ' + areaLabel + '</div>';
+      h += '<div style="font-size:11px;color:#a78bfa;margin-top:2px">📍 ' + esc(area.city||'—') + ' · ' + points.length + ' نقطة</div>';
+      if (area.shippingFee !== undefined || area.deliveryTime) {
+        h += '<div style="font-size:10px;color:#fbbf24;margin-top:2px">🚚 ' + (area.shippingFee ? area.shippingFee + ' ر.س' : 'مجاني') + (area.deliveryTime ? ' · ⏱ ' + esc(area.deliveryTime) : '') + '</div>';
+      }
+      h += '</div></div>';
+      if (points.length) {
+        h += '<div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:8px;margin-bottom:8px">';
+        points.forEach(function(pt, pi) {
+          h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(155,77,255,0.08);gap:6px">';
+          h += '<div style="flex:1;min-width:0;font-size:11px;color:#e5e7eb">' + (pt.icon||'📦') + ' ' + esc(pt.name||'—') + '</div>';
+          h += '<button onclick="window.__pickupDelPoint(\'' + region + '\',' + i + ',' + pi + ')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:3px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">✕</button>';
+          h += '</div>';
+        });
+        h += '</div>';
+      }
+      h += '<div style="display:flex;gap:6px">';
+      h += '<button onclick="window.__pickupEditArea(\'' + region + '\',' + i + ')" style="flex:1;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:8px;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit">✏️ تعديل</button>';
+      h += '<button onclick="window.__pickupAddPoint(\'' + region + '\',' + i + ')" style="flex:1;background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3);padding:8px;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit">➕ نقطة</button>';
+      h += '<button onclick="window.__pickupDelArea(\'' + region + '\',' + i + ')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">🗑</button>';
+      h += '</div></div>';
+    });
+    return h;
+  }
+
+  window.__pickupSearch = function(query) {
+    query = (query || '').trim().toLowerCase();
+    var currentTab = document.querySelector('.pkm-tab-active') ? document.querySelector('.pkm-tab-active').id.replace('pkm-tab-', '') : 'aden';
+    var regionMap = { 'aden': 'aden', 'yemen': 'yemen', 'intl': 'international' };
+    var region = regionMap[currentTab] || 'aden';
+    var list = (window.__pickupData[region] || []);
+    var filtered = query ? list.filter(function(a) {
+      return (a.name && a.name.toLowerCase().indexOf(query) !== -1) ||
+             (a.city && a.city.toLowerCase().indexOf(query) !== -1) ||
+             (a.country && a.country.toLowerCase().indexOf(query) !== -1) ||
+             (a.points && a.points.some(function(p) { return p.name && p.name.toLowerCase().indexOf(query) !== -1; }));
+    }) : list;
+    
+    // نعيد رسم المحتوى في اللوحة النشطة
+    var panel = document.getElementById('pkm-' + currentTab + '-panel');
+    if (panel) {
+      var contentDiv = panel.querySelector('[id^="pkm-content-"]');
+      if (!contentDiv) {
+        // نبحث عن الحاوية داخل اللوحة
+        var innerDiv = panel.querySelector('div[style*="max-height"]');
+        if (innerDiv) {
+          innerDiv.innerHTML = __renderTabContent(filtered, region);
+        }
+      }
+    }
   };
 
   window.__toggleInternational = async function() {
