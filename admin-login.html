@@ -37,6 +37,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(1
     <input id="password" type="password" placeholder="••••••••" autocomplete="current-password">
   </div>
   <button class="btn" id="login-btn">🔐 دخول آمن</button>
+  <div style="text-align:center;margin-top:14px;"><a href="#" id="forgot-link" style="color:#f59e0b;font-size:13px;text-decoration:none;font-weight:700;">نسيت كلمة المرور؟</a></div>
   <div id="err"></div>
   <div class="foot">هذه البوابة مخصصة للإدارة العامة فقط</div>
 </div>
@@ -99,6 +100,20 @@ auth.onAuthStateChanged(async function(u){
   } catch(e){}
 });
 })();
+
+// ★ إعادة تعيين كلمة المرور ★
+document.getElementById('forgot-link').addEventListener('click', function(e) {
+  e.preventDefault();
+  var email = prompt('أدخل بريدك الإلكتروني لإرسال رابط إعادة تعيين كلمة المرور:');
+  if (!email || !email.trim()) return;
+  var em = email.trim();
+  if (em.indexOf('@') === -1) { alert('❌ بريد إلكتروني غير صالح'); return; }
+  auth.sendPasswordResetEmail(em).then(function() {
+    alert('✅ تم إرسال رابط إعادة التعيين إلى ' + em + '\n\nافتح بريدك واضغط على الرابط لتعيين كلمة مرور جديدة.');
+  }).catch(function(e) {
+    alert('❌ فشل: ' + (e.code || e.message));
+  });
+});
 </script>
 </body>
 </html>
