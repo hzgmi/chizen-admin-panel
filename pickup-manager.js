@@ -43,11 +43,7 @@
       html += '<button id="pkm-tab-intl" onclick="window.__pickupSwitchTab(\'international\')" style="flex:1;padding:8px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.3);color:#a78bfa">🌍 دولي (' + (Array.isArray(data.international) ? data.international.length : 0) + ')</button>';
       html += '</div>';
 
-      // ★ زر إيقاف/تشغيل الدولي ★
-      var intlEnabled = data.internationalEnabled !== false;
-      html += '<div style="margin-bottom:14px;display:flex;justify-content:flex-end;">';
-      html += '<button onclick="window.__toggleInternational()" style="padding:10px 16px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;border:1.5px solid ' + (intlEnabled ? '#ef4444' : '#22c55e') + ';background:' + (intlEnabled ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)') + ';color:' + (intlEnabled ? '#f87171' : '#4ade80') + ';">' + (intlEnabled ? '⏸️ إيقاف الدولي مؤقتاً' : '▶️ تشغيل الدولي') + '</button>';
-      html += '</div>';
+
 
       html += '<div id="pkm-aden-panel" style="display:block">';
       html += __renderTab(aden, 'aden');
@@ -68,6 +64,13 @@
 
   function __renderTab(list, region){
     var h = '';
+    // ★ زر إيقاف/تشغيل الدولي (فقط للدولي) ★
+    if (region === 'international') {
+      var intlEnabled = window.__pickupData && window.__pickupData.internationalEnabled !== false;
+      h += '<div style="margin-bottom:10px;display:flex;justify-content:flex-end;">';
+      h += '<button onclick="window.__toggleInternational()" style="padding:8px 14px;border-radius:10px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;border:1.5px solid ' + (intlEnabled ? '#ef4444' : '#22c55e') + ';background:' + (intlEnabled ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)') + ';color:' + (intlEnabled ? '#f87171' : '#4ade80') + ';">' + (intlEnabled ? '⏸️ إيقاف الدولي' : '▶️ تشغيل الدولي') + '</button>';
+      h += '</div>';
+    }
     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
     h += '<div style="font-size:13px;color:#a78bfa;font-weight:800">' + list.length + ' منطقة</div>';
     h += '<button onclick="window.__pickupAddArea(\'' + region + '\')" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;padding:9px 14px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">➕ منطقة</button>';
@@ -177,10 +180,19 @@
 
   window.__pickupSearch = function(query) {
     query = (query || '').trim().toLowerCase();
-    var currentTab = document.querySelector('.pkm-tab-active') ? document.querySelector('.pkm-tab-active').id.replace('pkm-tab-', '') : 'aden';
-    var regionMap = { 'aden': 'aden', 'yemen': 'yemen', 'intl': 'international' };
-    var region = regionMap[currentTab] || 'aden';
-    var list = (window.__pickupData[region] || []);
+    // نحدد التبويب النشط من خلال الزر النشط
+    var activeTab = 'aden';
+    ['aden', 'yemen', 'international'].forEach(function(t) {
+      var btn = document.getElementById('pkm-tab-' + (t === 'international' ? 'intl' : t));
+      if (btn && btn.style.background && btn.style.background.indexOf('linear-gradient') !== -1) {
+        activeTab = t;
+      }
+    });
+    var panelId = 'pkm-' + (activeTab === 'international' ? 'intl' : activeTab) + '-panel';
+    var panel = document.getElementById(panelId);
+    if (!panel) return;
+    
+    var list = (window.__pickupData[activeTab] || []);
     var filtered = query ? list.filter(function(a) {
       return (a.name && a.name.toLowerCase().indexOf(query) !== -1) ||
              (a.city && a.city.toLowerCase().indexOf(query) !== -1) ||
@@ -188,17 +200,10 @@
              (a.points && a.points.some(function(p) { return p.name && p.name.toLowerCase().indexOf(query) !== -1; }));
     }) : list;
     
-    // نعيد رسم المحتوى في اللوحة النشطة
-    var panel = document.getElementById('pkm-' + currentTab + '-panel');
-    if (panel) {
-      var contentDiv = panel.querySelector('[id^="pkm-content-"]');
-      if (!contentDiv) {
-        // نبحث عن الحاوية داخل اللوحة
-        var innerDiv = panel.querySelector('div[style*="max-height"]');
-        if (innerDiv) {
-          innerDiv.innerHTML = __renderTabContent(filtered, region);
-        }
-      }
+    // نجد الحاوية (آخر div في اللوحة)
+    var container = panel.querySelector('div[style*="max-height"]');
+    if (container) {
+      container.innerHTML = __renderTabContent(filtered, activeTab);
     }
   };
 
@@ -212,6 +217,12 @@
       await db.collection('config').doc('pickup_areas').set({ internationalEnabled: data.internationalEnabled }, { merge: true });
       toast(data.internationalEnabled ? '✅ تم تشغيل الدولي' : '⏸️ تم إيقاف الدولي', 'success');
       window.showPickupLocationsManager();
+      // ★ الانتقال إلى اليمن بعد الإيقاف ★
+      if (!data.internationalEnabled) {
+        setTimeout(function() {
+          window.__pickupSwitchTab('yemen');
+        }, 100);
+      }
     } catch(e) { toast('❌ ' + e.message, 'error'); }
   };
 
@@ -231,7 +242,7 @@
     // opts: { title, fields: [{id, label, type, value, placeholder, options}], submitLabel }
     var overlay = document.createElement('div');
     overlay.className = 'pkm-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:999999999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
     
     var fieldsHtml = opts.fields.map(function(f) {
       var inputHtml = '';
