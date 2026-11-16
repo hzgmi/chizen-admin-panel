@@ -138,41 +138,94 @@
     } catch(e){ toast('❌ ' + e.message, 'error'); }
   }
 
+  // ★ نافذة إدخال أنيقة (بدلاً من prompt) ★
+  window.__showPickupForm = function(opts, onSubmit) {
+    // opts: { title, fields: [{id, label, type, value, placeholder, options}], submitLabel }
+    var overlay = document.createElement('div');
+    overlay.className = 'pkm-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    
+    var fieldsHtml = opts.fields.map(function(f) {
+      var inputHtml = '';
+      if (f.type === 'select') {
+        inputHtml = '<select id="pkm-f-' + f.id + '" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.4);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box;">' +
+          f.options.map(function(o) { return '<option value="' + o.value + '"' + (o.value === f.value ? ' selected' : '') + '>' + o.label + '</option>'; }).join('') +
+          '</select>';
+      } else if (f.type === 'number') {
+        inputHtml = '<input id="pkm-f-' + f.id + '" type="number" value="' + (f.value || '') + '" placeholder="' + (f.placeholder || '') + '" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.4);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box;">';
+      } else {
+        inputHtml = '<input id="pkm-f-' + f.id + '" type="text" value="' + (f.value || '') + '" placeholder="' + (f.placeholder || '') + '" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(155,77,255,0.3);background:rgba(0,0,0,0.4);color:#fff;font-family:inherit;font-size:14px;box-sizing:border-box;">';
+      }
+      return '<div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:800;color:#a78bfa;margin-bottom:5px;">' + f.label + '</label>' + inputHtml + '</div>';
+    }).join('');
+    
+    overlay.innerHTML = '<div style="background:#1a1535;border-radius:20px;padding:24px;max-width:400px;width:100%;color:#fff;border:1px solid rgba(155,77,255,0.3);box-shadow:0 20px 60px rgba(0,0,0,0.6);direction:rtl;font-family:Tajawal,sans-serif;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">' +
+        '<h3 style="margin:0;font-size:16px;font-weight:900;color:#fff;">' + opts.title + '</h3>' +
+        '<button onclick="this.closest(\'.pkm-overlay\').remove()" style="background:transparent;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">✕</button>' +
+      '</div>' +
+      fieldsHtml +
+      '<div style="display:flex;gap:10px;margin-top:16px;">' +
+        '<button id="pkm-submit" style="flex:1;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;">' + (opts.submitLabel || 'حفظ') + '</button>' +
+        '<button onclick="this.closest(\'.pkm-overlay\').remove()" style="flex:1;padding:14px;border:none;border-radius:12px;background:rgba(0,0,0,0.3);color:#a78bfa;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;">إلغاء</button>' +
+      '</div>' +
+    '</div>';
+    
+    document.body.appendChild(overlay);
+    
+    document.getElementById('pkm-submit').onclick = function() {
+      var result = {};
+      opts.fields.forEach(function(f) {
+        var el = document.getElementById('pkm-f-' + f.id);
+        if (el) result[f.id] = el.value;
+      });
+      overlay.remove();
+      onSubmit(result);
+    };
+  };
+
   window.__pickupAddArea = function(region){
-    var name = prompt('اسم المدينة:');
-    if (!name || !name.trim()) return;
-    var area = { name: name.trim(), points: [] };
-    
-    if (region === 'international') {
-      var country = prompt('الدولة:', 'السعودية');
-      if (!country || !country.trim()) return;
-      var shippingFee = parseFloat(prompt('سعر الشحن (ر.س):', '30')) || 0;
-      var deliveryTime = prompt('وقت التوصيل:', '3-5 أيام') || '';
-      area.country = country.trim();
-      area.city = name.trim();
-      area.icon = '🌍';
-      area.shippingFee = shippingFee;
-      area.deliveryTime = deliveryTime.trim();
-      area.lat = 0; area.lng = 0;
-    } else {
-      var city = prompt('المدينة:', region === 'aden' ? 'عدن' : 'صنعاء');
-      if (!city || !city.trim()) return;
-      var icon = prompt('أيقونة (🌊 🏛️ 🏢 🏪 💊 📍):', '📍') || '📍';
-      var shippingFee = parseFloat(prompt('سعر الشحن (ر.س) - 0 للمجاني:', '0')) || 0;
-      var deliveryTime = prompt('وقت التوصيل:', '2-4 ساعات') || '';
-      var lat = parseFloat(prompt('Latitude (اختياري):') || '0') || 0;
-      var lng = parseFloat(prompt('Longitude (اختياري):') || '0') || 0;
-      area.city = city.trim();
-      area.icon = icon.trim();
-      area.shippingFee = shippingFee;
-      area.deliveryTime = deliveryTime.trim();
-      area.lat = lat;
-      area.lng = lng;
+    var isIntl = region === 'international';
+    var fields = [
+      { id: 'name', label: 'اسم المدينة', type: 'text', placeholder: 'مثال: الرياض' }
+    ];
+    if (isIntl) {
+      fields.push({ id: 'country', label: 'الدولة', type: 'select', value: 'السعودية', options: [
+        { value: 'السعودية', label: 'السعودية' }, { value: 'الإمارات', label: 'الإمارات' },
+        { value: 'الكويت', label: 'الكويت' }, { value: 'قطر', label: 'قطر' },
+        { value: 'البحرين', label: 'البحرين' }, { value: 'عمان', label: 'عمان' },
+        { value: 'الأردن', label: 'الأردن' }, { value: 'مصر', label: 'مصر' }
+      ]});
     }
+    fields.push({ id: 'shippingFee', label: 'سعر الشحن (ر.س) - 0 للمجاني', type: 'number', value: isIntl ? 30 : 0 });
+    fields.push({ id: 'deliveryTime', label: 'وقت التوصيل', type: 'text', value: isIntl ? '3-5 أيام' : '2-4 ساعات' });
     
-    var newList = (window.__pickupData[region] || []).slice();
-    newList.push(area);
-    __pickupSave(region, newList);
+    window.__showPickupForm({
+      title: isIntl ? '➕ إضافة مدينة دولية' : '➕ إضافة منطقة',
+      fields: fields,
+      submitLabel: 'حفظ'
+    }, function(data) {
+      var area = {
+        name: (data.name || '').trim(),
+        points: [],
+        shippingFee: parseFloat(data.shippingFee) || 0,
+        deliveryTime: (data.deliveryTime || '').trim()
+      };
+      if (!area.name) { toast('❌ اسم المدينة مطلوب', 'error'); return; }
+      if (isIntl) {
+        area.country = (data.country || '').trim();
+        area.city = area.name;
+        area.icon = '🌍';
+        area.lat = 0; area.lng = 0;
+      } else {
+        area.city = area.name;
+        area.icon = region === 'aden' ? '🌊' : '🏛️';
+        area.lat = 0; area.lng = 0;
+      }
+      var newList = (window.__pickupData[region] || []).slice();
+      newList.push(area);
+      __pickupSave(region, newList);
+    });
   };
 
   window.__pickupEditArea = function(region, idx){
