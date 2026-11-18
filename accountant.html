@@ -171,11 +171,13 @@ auth.onAuthStateChanged(async function(user){
     var udoc = await db.collection('users').doc(user.uid).get();
     var adm = await db.collection('admins').doc(user.uid).get();
     var ud = udoc.exists ? udoc.data() : {};
-    var isAcc = ud.role === 'accountant';
-    var isSuper = adm.exists || ud.role === 'super_admin';
+    var adminData = adm.exists ? adm.data() : {};
+    var adminRole = adminData.role || '';
+    var isAcc = ud.role === 'accountant' || adminRole === 'accountant';
+    var isSuper = adminRole === 'super_admin' || adminRole === 'superadmin' || ud.role === 'super_admin';
     if(!isAcc && !isSuper){ showError('غير مصرح','هذه الصفحة للمحاسبين فقط'); return; }
-    state.user = user; state.userData = ud;
-    document.getElementById('user-name').textContent = ud.name || user.email;
+    state.user = user; state.userData = Object.assign({}, adminData, ud);
+    document.getElementById('user-name').textContent = state.userData.name || user.email;
     await loadAll();
     document.getElementById('loading').style.display = 'none';
     document.getElementById('main').style.display = 'block';

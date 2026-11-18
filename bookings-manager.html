@@ -199,10 +199,13 @@ auth.onAuthStateChanged(async function(u){
   if(!u){ location.href='bookings-login.html'; return; }
   try {
     var udoc = await db.collection('users').doc(u.uid).get();
-    var role = udoc.exists ? (udoc.data().role||'') : '';
-    if(role !== 'bookings_mgr'){ await auth.signOut(); location.href='bookings-login.html'; return; }
+    var adm = await db.collection('admins').doc(u.uid).get();
+    var userData = udoc.exists ? udoc.data() : {};
+    var adminData = adm.exists ? adm.data() : {};
+    var isBookingsManager = userData.role === 'bookings_mgr' || adminData.role === 'bookings_mgr';
+    if(!isBookingsManager){ await auth.signOut(); location.href='bookings-login.html'; return; }
     state.user = u;
-    state.userData = udoc.data();
+    state.userData = Object.assign({}, adminData, userData);
     document.getElementById('u-name').textContent = state.userData.name || u.email;
     document.getElementById('u-avatar').textContent = (state.userData.name||u.email||'م').charAt(0);
     var hr = new Date().getHours();

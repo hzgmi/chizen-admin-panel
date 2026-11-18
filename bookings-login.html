@@ -71,8 +71,11 @@ auth.onAuthStateChanged(async function(u){
   if(!u) return;
   try {
     var udoc = await db.collection('users').doc(u.uid).get();
-    var role = udoc.exists ? (udoc.data().role||'') : '';
-    if(role === 'bookings_mgr') location.href = 'bookings-manager.html';
+    var adoc = await db.collection('admins').doc(u.uid).get();
+    var userRole = udoc.exists ? (udoc.data().role||'') : '';
+    var adminRole = adoc.exists ? (adoc.data().role||'') : '';
+    if(userRole === 'bookings_mgr' || adminRole === 'bookings_mgr')
+      location.href = 'bookings-manager.html';
   } catch(e){}
 });
 </script>

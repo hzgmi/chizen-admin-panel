@@ -1059,6 +1059,15 @@ auth.onAuthStateChanged(async function(user) {
     var adoc = await db.collection('admins').doc(user.uid).get();
     var adminData = adoc.exists ? adoc.data() : {};
 
+    // 🔒 التحقق من صلاحية مدير القسم
+    var isCatManager = adminData.role === 'cat_manager' || userData.role === 'cat_manager';
+    if (!isCatManager) {
+      console.error('[AUTH] unauthorized role:', adminData.role || userData.role || '');
+      await auth.signOut();
+      window.location.replace('cat-login-new.html');
+      return;
+    }
+
     // البحث في كل الحقول الممكنة
     var cat = userData.assignedCategory
       || userData.category
