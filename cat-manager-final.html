@@ -1379,6 +1379,7 @@ async function loadProducts() {
     console.log('[FIRESTORE] products loaded:', products.length, '/', snap.size, 'total (filtered to cat:', cat, ')');
     renderProducts();
     updateStats();
+    alert("Category: " + cat + " | Fetched: " + snap.size + " | Matched: " + products.length);
   } catch(e) {
     console.error('[FIRESTORE] products error:', e);
     products = [];
