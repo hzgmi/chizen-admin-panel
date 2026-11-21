@@ -1300,7 +1300,7 @@ function listenToRates() {
 async function loadOrders() {
   try {
     var cat = state.cat;
-    var snap = await db.collection('orders').limit(50).get();
+    var snap = await db.collection('orders').limit(20).get();
     console.log('[FIRESTORE] orders raw:', snap.size, '| cat:', cat);
 
     orders = [];
@@ -1391,7 +1391,7 @@ async function loadNotifications() {
     if (!state.user) return;
     var snap = await db.collection('notifications')
       .where('userId', '==', state.user.uid)
-      .limit(50)
+      .limit(20)
       .get();
     notifications = [];
     snap.forEach(function(d) {
