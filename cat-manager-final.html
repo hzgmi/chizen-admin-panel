@@ -1360,7 +1360,7 @@ async function loadOrders() {
 async function loadProducts() {
   try {
     var cat = state.cat;
-    var snap = await db.collection('products').limit(100).get();
+    var snap = await db.collection('products').limit(30).get();
     console.log('[FIRESTORE] products raw:', snap.size, '| cat:', cat);
 
     products = [];
