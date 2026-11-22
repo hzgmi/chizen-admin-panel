@@ -1487,6 +1487,14 @@ function hideProgress() {
   }, 400);
 }
 
+function chzStep(name, p, ms) {
+  var t0 = Date.now();
+  window.__CHZ_STEPS__ = window.__CHZ_STEPS__ || [];
+  return Promise.race([
+    Promise.resolve(p).then(function() { window.__CHZ_STEPS__.push(name + ' ok ' + (Date.now() - t0) + 'ms'); }, function(e) { window.__CHZ_STEPS__.push(name + ' ERR ' + (e && e.message)); throw e; }),
+    new Promise(function(res) { setTimeout(function() { window.__CHZ_STEPS__.push(name + ' TIMEOUT ' + ms + 'ms'); res(); }, ms); })
+  ]);
+}
 async function initPanel(user, cat) {
   console.log('[INIT] starting panel with cat:', cat);
   showProgress();
@@ -1504,7 +1512,7 @@ async function initPanel(user, cat) {
   // 1) suppliers + rates (سريع) → 20%
   try {
     setProgress(10);
-    await Promise.all([loadSuppliers(), loadRates()]);
+    await chzStep('suppliers+rates', Promise.all([loadSuppliers(), loadRates()]), 4000);
     listenToRates();      // ← تحديث لحظي للأسعار
     listenToSuppliers();  // ← تحديث لحظي للموردين
     setProgress(30);
@@ -1512,13 +1520,13 @@ async function initPanel(user, cat) {
 
   // 2) orders (سريع) → 50%
   try {
-    await loadOrders();
+    await chzStep('orders', loadOrders(), 12000);
     setProgress(55);
   } catch(e) { console.warn('[INIT] orders:', e); }
 
   // 3) products → 80%
   try {
-    await loadProducts();
+    await chzStep('products', loadProducts(), 12000);
     setProgress(85);
   } catch(e) { console.warn('[INIT] products:', e); }
 
@@ -3355,6 +3363,7 @@ return Promise.all(q);
 setTimeout(function(){
 log('DEBUG_PRODUCTS: '+JSON.stringify(window.__DEBUG_PRODUCTS__||null));
 log('DEBUG_ORDERS: '+JSON.stringify(window.__DEBUG_ORDERS__||null));
+log('STEPS: '+JSON.stringify(window.__CHZ_STEPS__||null));
 },7000);
 }).catch(function(e){log('FATAL: '+e.message)});
 }
