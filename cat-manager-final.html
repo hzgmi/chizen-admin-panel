@@ -3328,5 +3328,43 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 // ═══════════════════════════════════════════════════
 </script>
+<script id="chz-diag-js">
+(function(){
+var box=document.createElement('div');
+box.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#111;color:#0f0;font:12px/1.5 monospace;padding:8px 10px;max-height:70vh;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap';
+box.onclick=function(){box.style.display='none'};
+var lines=[];
+function log(s){lines.push(s);box.textContent='DIAG v1 (tap to hide)\n'+lines.join('\n')}
+function run(user){
+var db=firebase.firestore();
+log('uid: ...'+user.uid.slice(-6)+' | '+(user.email||'-'));
+log('new code: '+(typeof fetchOrdersSnap==='function'?'YES':'NO')+' | initPanel: '+(typeof initPanel));
+Promise.all([db.collection('users').doc(user.uid).get(),db.collection('admins').doc(user.uid).get()]).then(function(r){
+var u=r[0].exists?r[0].data():{},a=r[1].exists?r[1].data():{};
+var cat=u.assignedCategory||u.category||u.cat||a.assignedCategory||a.category||a.cat||null;
+log('role: '+(a.role||u.role||'-')+' | cat: '+cat);
+return cat;
+}).then(function(cat){
+var q=[];
+q.push(db.collection('products').limit(50).get().then(function(s){var m={};s.forEach(function(d){var c=d.data().category;m[c]=(m[c]||0)+1});log('products(any 50): '+s.size+' | categories: '+JSON.stringify(m))}).catch(function(e){log('products(any) ERR: '+e.code+' '+e.message)}));
+if(cat)q.push(db.collection('products').where('category','==',cat).limit(50).get().then(function(s){log('products(cat==): '+s.size)}).catch(function(e){log('products(cat) ERR: '+e.code)}));
+q.push(db.collection('orders').orderBy('createdAt','desc').limit(5).get().then(function(s){log('orders(recent 5): '+s.size)}).catch(function(e){log('orders ERR: '+e.code+' '+e.message)}));
+if(cat)q.push(db.collection('orders').orderBy('categoryStatus.'+cat).limit(5).get().then(function(s){log('orders(by cat): '+s.size)}).catch(function(e){log('orders(by cat) ERR: '+e.code+' '+e.message)}));
+return Promise.all(q);
+}).then(function(){
+setTimeout(function(){
+log('DEBUG_PRODUCTS: '+JSON.stringify(window.__DEBUG_PRODUCTS__||null));
+log('DEBUG_ORDERS: '+JSON.stringify(window.__DEBUG_ORDERS__||null));
+},7000);
+}).catch(function(e){log('FATAL: '+e.message)});
+}
+function start(){
+document.body.appendChild(box);log('loading...');
+firebase.auth().onAuthStateChanged(function(u){if(u)run(u);else log('NO USER')});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
+
 </body>
 </html>
