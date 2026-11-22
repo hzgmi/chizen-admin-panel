@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script id="chz-errcap-js">
+window.__CHZ_ERRS__=[];
+window.addEventListener('error',function(e){window.__CHZ_ERRS__.push('ERR '+(e.message||'')+' @'+(e.lineno||'?')+':'+(e.colno||'?'))});
+window.addEventListener('unhandledrejection',function(e){var r=e.reason;window.__CHZ_ERRS__.push('REJ '+(r&&r.message?r.message:String(r)))});
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0f172a">
@@ -3342,7 +3347,7 @@ var box=document.createElement('div');
 box.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#111;color:#0f0;font:12px/1.5 monospace;padding:8px 10px;max-height:70vh;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap';
 box.onclick=function(){box.style.display='none'};
 var lines=[];
-function log(s){lines.push(s);box.textContent='DIAG v1 (tap to hide)\n'+lines.join('\n')}
+function log(s){lines.push(s);box.textContent='DIAG v2 (tap to hide)\n'+lines.join('\n')}
 function run(user){
 var db=firebase.firestore();
 log('uid: ...'+user.uid.slice(-6)+' | '+(user.email||'-'));
@@ -3364,6 +3369,10 @@ setTimeout(function(){
 log('DEBUG_PRODUCTS: '+JSON.stringify(window.__DEBUG_PRODUCTS__||null));
 log('DEBUG_ORDERS: '+JSON.stringify(window.__DEBUG_ORDERS__||null));
 log('STEPS: '+JSON.stringify(window.__CHZ_STEPS__||null));
+log('auth cat: '+window.__CATEGORY__+' | onAuthReady: '+typeof window.onAuthReady);
+var sv;try{sv=state.cat+' / user:'+(state.user?'set':'null')}catch(e){sv='ERR '+e.message}
+log('state: '+sv);
+log('ERRS: '+JSON.stringify(window.__CHZ_ERRS__||[]));
 },7000);
 }).catch(function(e){log('FATAL: '+e.message)});
 }
