@@ -1297,10 +1297,51 @@ function listenToRates() {
   console.log('[RATES] listener started');
 }
 
+// ═══ chz-live: جلب أدق + تحديث لحظي ═══
+function chzFail(label, e) {
+  console.warn('[' + label + ']', e && e.message);
+  if (typeof showDebugBanner === 'function') showDebugBanner('❌ ' + label + ': ' + (e && e.message));
+}
+function chzSnap(docs) {
+  return { size: docs.length, docs: docs, empty: !docs.length, forEach: function(f) { docs.forEach(f); } };
+}
+async function fetchOrdersSnap() {
+  var cat = state.cat, seen = {}, docs = [], err = null;
+  function add(s) { s.forEach(function(d) { if (!seen[d.id]) { seen[d.id] = 1; docs.push(d); } }); }
+  try { add(await db.collection('orders').orderBy('categoryStatus.' + cat).limit(300).get()); } catch (e) { err = e; console.warn('[orders] by category:', e.message); }
+  try { add(await db.collection('orders').orderBy('createdAt', 'desc').limit(100).get()); } catch (e) { err = err || e; console.warn('[orders] recent:', e.message); }
+  if (!docs.length && err) chzFail('الطلبات', err);
+  return chzSnap(docs);
+}
+async function fetchProductsSnap(cat) {
+  var seen = {}, docs = [], err = null;
+  function add(s) { s.forEach(function(d) { if (!seen[d.id]) { seen[d.id] = 1; docs.push(d); } }); }
+  try { add(await db.collection('products').where('category', '==', cat).limit(200).get()); } catch (e) { err = e; console.warn('[products] category:', e.message); }
+  try { add(await db.collection('products').where('categories', 'array-contains', cat).limit(200).get()); } catch (e) { err = err || e; console.warn('[products] categories:', e.message); }
+  if (!docs.length && err) chzFail('المنتجات', err);
+  return chzSnap(docs);
+}
+function startLive() {
+  if (window.__chzLive) return;
+  window.__chzLive = true;
+  var cat = state.cat;
+  function watch(label, q, fn) {
+    var first = true, t = null;
+    q.onSnapshot(function() {
+      if (first) { first = false; return; }
+      clearTimeout(t);
+      t = setTimeout(fn, 400);
+    }, function(e) { console.warn('[live ' + label + ']', e.message); });
+  }
+  watch('orders', db.collection('orders').orderBy('categoryStatus.' + cat).limit(300), function() { loadOrders().catch(function(e) { console.warn(e); }); });
+  watch('products', db.collection('products').where('category', '==', cat).limit(200), function() { loadProducts().catch(function(e) { console.warn(e); }); });
+  if (state.user) watch('notifs', db.collection('notifications').where('userId', '==', state.user.uid).limit(20), function() { loadNotifications().catch(function(e) { console.warn(e); }); });
+}
+
 async function loadOrders() {
   try {
     var cat = state.cat;
-    var snap = await db.collection('orders').limit(20).get();
+    var snap = await fetchOrdersSnap();
     console.log('[FIRESTORE] orders raw:', snap.size, '| cat:', cat);
 
     orders = [];
@@ -1360,7 +1401,7 @@ async function loadOrders() {
 async function loadProducts() {
   try {
     var cat = state.cat;
-    var snap = await db.collection('products').where('category', '==', cat).limit(30).get();
+    var snap = await fetchProductsSnap(cat);
     console.log('[FIRESTORE] products raw:', snap.size, '| cat:', cat);
 
     products = [];
@@ -1379,7 +1420,7 @@ async function loadProducts() {
     console.log('[FIRESTORE] products loaded:', products.length, '/', snap.size, 'total (filtered to cat:', cat, ')');
     renderProducts();
     updateStats();
-    alert("Category: " + cat + " | Fetched: " + snap.size + " | Matched: " + products.length);
+    console.log("[products] cat:", cat, "fetched:", snap.size, "matched:", products.length);
   } catch(e) {
     console.error('[FIRESTORE] products error:', e);
     products = [];
@@ -1489,6 +1530,7 @@ async function initPanel(user, cat) {
   setTimeout(function() { hideProgress(); }, 300);
 
   console.log('[INIT] panel ready (notifications loading in background)');
+  try { startLive(); } catch(e) { console.warn('[live]', e); }
 
   // 5) notifications في الخلفية (بدون انتظار)
   loadNotifications().catch(function(e) {
