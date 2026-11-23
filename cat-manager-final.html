@@ -1573,7 +1573,9 @@ async function saveProductToFirestore(product) {
   try {
     if (product.id && typeof product.id === 'string' && product.id.length > 5) {
       // تعديل منتج موجود
-      await db.collection('products').doc(product.id).update(product);
+      var chzRef = db.collection('products').doc(product.id);
+      var chzSnap = await chzRef.get();
+      if (chzSnap.exists) { await chzRef.update(product); } else { product.category = state.cat; await chzRef.set(product); }
       return product.id;
     } else {
       // إضافة منتج جديد: نولّد ID فريداً ونضعه داخل الكائن قبل الحفظ
@@ -1946,7 +1948,7 @@ function approveOrder(id){
       Object.keys(order.categories).forEach(function(k) { (k === state.cat || k.indexOf(state.cat) !== -1 ? chzMine : chzOthers).push(k); });
     }
     if (chzOthers.length) {
-      chzDone = chzOthers.every(function(k) { return order.categories[k] && order.categories[k].status === 'confirmed'; });
+      chzDone = ['ready_for_pickup','picked_up','on_the_way','delivered','completed','sent_to_customer'].indexOf(order.fulfillmentStage) === -1;
       chzMine.forEach(function(k) {
         updates['categories.' + k + '.status'] = 'confirmed';
         updates['categories.' + k + '.confirmedBy'] = state.user ? state.user.uid : null;
