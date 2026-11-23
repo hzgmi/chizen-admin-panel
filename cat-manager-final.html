@@ -1577,6 +1577,7 @@ async function saveProductToFirestore(product) {
       return product.id;
     } else {
       // إضافة منتج جديد: نولّد ID فريداً ونضعه داخل الكائن قبل الحفظ
+      product.category = state.cat;
       var newId = db.collection('products').doc().id;
       product.id = newId;
       await db.collection('products').doc(newId).set(product);
@@ -1940,11 +1941,27 @@ function approveOrder(id){
       confirmedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
+    var chzMine = [], chzOthers = [], chzDone = true;
+    if (order.categories && typeof order.categories === 'object' && !Array.isArray(order.categories)) {
+      Object.keys(order.categories).forEach(function(k) { (k === state.cat || k.indexOf(state.cat) !== -1 ? chzMine : chzOthers).push(k); });
+    }
+    if (chzOthers.length) {
+      chzDone = chzOthers.every(function(k) { return order.categories[k] && order.categories[k].status === 'confirmed'; });
+      chzMine.forEach(function(k) {
+        updates['categories.' + k + '.status'] = 'confirmed';
+        updates['categories.' + k + '.confirmedBy'] = state.user ? state.user.uid : null;
+        updates['categories.' + k + '.confirmedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+      });
+      if (!chzDone) { delete updates.status; delete updates.workflowStatus; delete updates.fulfillmentStage; delete updates.confirmedAt; }
+    }
     db.collection('orders').doc(id).update(updates).then(function() {
       // تحديث محلي
+      chzMine.forEach(function(k) { if (order.categories && order.categories[k]) order.categories[k].status = 'confirmed'; });
+      if (chzDone) {
       order.status = 'approved';
       order.workflowStatus = 'ready_for_pickup';
       order.fulfillmentStage = 'ready_for_pickup';
+      }
 
       addNotif('success', 'تم تأكيد الطلب', id + ' من ' + (order.customerName || order.name || 'عميل'));
 
@@ -2088,7 +2105,7 @@ function toggleItemStatus(orderId, itemIndex){
   } else if (order.categories && typeof order.categories === 'object') {
     // نحدّث داخل categories
     for (var k in order.categories) {
-      if (order.categories[k] && order.categories[k].items) {
+      if (order.categories[k] && order.categories[k].items && (k === state.cat || k.indexOf(state.cat) !== -1)) {
         updateData['categories.' + k + '.items'] = order.categories[k].items;
       }
     }
