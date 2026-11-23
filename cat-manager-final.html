@@ -2789,6 +2789,7 @@ function addColor(){
 
 function renderColors(){
   const list = document.getElementById('colorsList');
+  if(!list) return;
   if(state.colors.length === 0){
     list.innerHTML = '<small style="color:#94a3b8;font-size:10.5px">لم تُضف ألوان</small>';
     return;
@@ -3380,9 +3381,15 @@ function start(){
 document.body.appendChild(box);log('loading...');
 firebase.auth().onAuthStateChanged(function(u){if(u)run(u);else log('NO USER')});
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+if(location.search.indexOf('diag=1')>-1){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();}
 })();
 </script>
 
+<script id="chz-boot-js">
+if (typeof window.onAuthReady !== 'function' && typeof initPanel === 'function') {
+  window.onAuthReady = function(user, cat) { initPanel(user, cat); };
+  console.warn('[boot] onAuthReady was missing, fallback installed');
+}
+</script>
 </body>
 </html>
