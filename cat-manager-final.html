@@ -2441,12 +2441,15 @@ function deleteProduct(id){
   const p = products.find(x => x.id === id);
   if(!p) return;
   showConfirm('حذف المنتج', `حذف "${p.name}"؟`, () => {
-    addNotif('warning', 'حذف منتج', 'تم حذف "' + p.name + '"');
     deleteProductFromFirestore(id).then(function(ok) {
       if (ok) {
+        addNotif('warning', 'حذف منتج', 'تم حذف "' + p.name + '"');
         products = products.filter(x => x.id !== id);
         updateStats(); renderProducts(); closeModal();
         showToast('🗑️ تم الحذف', 'error');
+      } else {
+        showToast('فشل الحذف — راجع Console', 'error');
+        console.error('[deleteProduct] failed for id:', id, 'name:', p.name);
       }
     });
   });
