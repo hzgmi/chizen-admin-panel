@@ -94,10 +94,15 @@ window.FB = {
 
   saveUserProfile: async function(data) {
     if (!this.db || !this.currentUser) return;
-    data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-    data.email = this.currentUser.email;
-    data.uid = this.currentUser.uid;
-    await this.db.collection('users').doc(this.currentUser.uid).set(data, { merge: true });
+    var safe = {};
+    var restricted = ['role','assignedCategory','createdBy','isTemporary'];
+    for (var key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key) && restricted.indexOf(key) === -1) safe[key] = data[key];
+    }
+    safe.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    safe.email = this.currentUser.email;
+    safe.uid = this.currentUser.uid;
+    await this.db.collection('users').doc(this.currentUser.uid).set(safe, { merge: true });
   },
   getUserProfile: async function() {
     if (!this.db || !this.currentUser) return null;

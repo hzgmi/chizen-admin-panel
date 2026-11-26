@@ -650,7 +650,7 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
       <span class="icon">🔔</span> الإشعارات
     </button>
     <button class="sidebar-item danger-item" onclick="resetAllData()">
-      <span class="icon">🗑️</span> تصفير البيانات
+      <span class="icon">🧹</span> مسح البيانات المحلية
     </button>
   </nav>
   <div class="sidebar-footer">شيزن © 2025<br>الإصدار 5.1</div>
@@ -912,6 +912,18 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
         </div>
 
         <div class="form-section">
+          <div class="form-section-title"><span class="num">5</span> الألوان (تُربط بالصور)</div>
+          <div class="form-field">
+            <label>ربط اللون بصورة (إجباري عند إضافة لون)</label>
+            <small style="color:#64748b; font-size:11px; display:block; margin-bottom:8px;">
+              أضف صوراً أولاً (قسم الصور)، ثم استخدم زر <b>🎨 لون</b> على كل صورة لاختيار لونها. الألوان تُستخرج تلقائياً من الصور (لا يمكن إضافة لون بدون صورة).
+            </small>
+            <div class="colors-list" id="colorsList" style="margin-top:6px;"></div>
+            <small style="color:#94a3b8; font-size:10.5px; display:block; margin-top:6px;">الألوان المكتشفة من الصور (تُحفظ في المنتج وclient).</small>
+          </div>
+        </div>
+
+        <div class="form-section">
           <div class="form-section-title"><span class="num">6</span> الصور</div>
           <div class="form-field">
             <label>صور المنتج <span class="req">*</span> <span class="opt">(1-5)</span></label>
@@ -965,12 +977,29 @@ body{background:var(--light);color:var(--dark);overflow-x:hidden;font-size:13px}
           </div>
         </div>
 
+        <div class="form-section">
+          <div class="form-section-title"><span class="num">8</span> الإضافات / الملحقات</div>
+          <div class="form-field">
+            <label>ملحقات المنتج (اسم، سعر، مخزون)</label>
+            <div id="pf-addons-list" style="margin-bottom:8px;"></div>
+            <button type="button" onclick="addAddonRow()" style="padding:8px 12px; background:#eff6ff; color:#2563eb; border:1px dashed #bfdbfe; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; width:100%;">➕ إضافة ملحق</button>
+            <small style="color:#64748b; font-size:11px;">مثال: بطارية احتياطية، حافظة، شاحن.</small>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-draft" onclick="saveDraft()">💾 مسودة</button>
           <button type="submit" class="btn btn-success">✅ إضافة</button>
         </div>
       </form>
     </div>
+  <div class="form-card" style="margin-top:16px;">
+    <div class="form-section">
+      <div class="form-section-title"><span class="num">9</span> المنتجات المضافة (قائمة)</div>
+      <div id="recentProductsList" style="max-height:360px; overflow:auto;"></div>
+      <button type="button" onclick="renderRecentProducts()" style="margin-top:8px; padding:8px 12px; background:#f1f5f9; color:#334155; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; width:100%;">🔄 تحديث القائمة</button>
+    </div>
+  </div>
   </div>
 
   <div class="panel" id="panel-notifications">
@@ -1114,8 +1143,47 @@ const state = {
   colors: [],
   images: [],
   editingProductId: null,
-  currentViewingOrderId: null
+  currentViewingOrderId: null,
+  _booted: false
 };
+
+// ═══ أدوات مساعدة ═══
+function chzEsc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function chzMillis(v) {
+  if (!v) return 0;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') { var t = Date.parse(v); return isNaN(t) ? 0 : t; }
+  if (typeof v.toDate === 'function') { try { return v.toDate().getTime(); } catch(e) { return 0; } }
+  if (v.seconds) return v.seconds * 1000;
+  return 0;
+}
+function chzImageUrl(img) {
+  if (typeof img === 'string') return img;
+  if (img && typeof img === 'object') return img.url || img.src || img.image || '';
+  return '';
+}
+function chzNormalizeProduct(p) {
+  var imgs = Array.isArray(p.images) ? p.images : [];
+  var colors = Array.isArray(p.imageColors) ? p.imageColors.slice() : [];
+  var urls = [];
+  imgs.forEach(function(img) {
+    var u = chzImageUrl(img);
+    if (!u) return;
+    urls.push(u);
+    if (img && typeof img === 'object' && img.color && !colors.some(function(c){ return c && c.url === u; })) {
+      colors.push({ url: u, color: img.color });
+    }
+  });
+  p.images = urls;
+  p.imageColors = colors;
+  if (!p.img && urls[0]) p.img = urls[0];
+  return p;
+}
+function chzIsTempNotifId(id) { return /^N\d+$/.test(String(id || '')); }
 
 // ═══ الماركات الثابتة (لا يعدلها الأدمن) ═══
 const FIXED_BRANDS = {
@@ -1412,6 +1480,7 @@ async function loadProducts() {
     products = [];
     snap.forEach(function(d) {
       var x = d.data(); x.id = d.id;
+      chzNormalizeProduct(x);
       var hasMyCat = false;
 
       if (x.category === cat) hasMyCat = true;
@@ -1501,6 +1570,8 @@ function chzStep(name, p, ms) {
   ]);
 }
 async function initPanel(user, cat) {
+  if (state._booted) return;
+  state._booted = true;
   console.log('[INIT] starting panel with cat:', cat);
   showProgress();
 
@@ -1534,10 +1605,12 @@ async function initPanel(user, cat) {
     await chzStep('products', loadProducts(), 12000);
     setProgress(85);
   } catch(e) { console.warn('[INIT] products:', e); }
+  try { renderRecentProducts(); } catch(e) { console.warn('[recent]', e); }
 
   // 4) إخفاء الشريط فوراً (لا ننتظر notifications)
   renderColors();
   renderBrands();
+  renderColorPresets();
   calculateAutoRates();
   setProgress(100);
   setTimeout(function() { hideProgress(); }, 300);
@@ -1604,11 +1677,11 @@ async function deleteProductFromFirestore(id) {
 async function addNotificationToFirestore(notif) {
   try {
     notif.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-    await db.collection('notifications').add(notif);
-    return true;
+    var ref = await db.collection('notifications').add(notif);
+    return ref.id;
   } catch(e) {
     console.error('[FIRESTORE] addNotification error:', e);
-    return false;
+    return null;
   }
 }
 
@@ -1637,22 +1710,27 @@ function switchTab(name){
     if(t.dataset.tab) t.classList.toggle('active', t.dataset.tab === name);
   });
   if(name === 'notifications') renderNotifications();
+  if(name === 'add') { renderColors(); renderColorPresets(); renderAddons(); renderRecentProducts(); }
   closeSidebar();
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
 function updateStats(){
+  function st(o) { return o.status || o.workflowStatus || 'pending'; }
+  var pendingStates = ['pending','awaiting_verification','payment_verified','confirmed','awaiting_categories'];
+  var approvedStates = ['approved','ready_for_pickup','preparing'];
+  var rejectedStates = ['rejected','payment_rejected','category_rejected'];
   document.getElementById('statProducts').textContent = products.length;
-  document.getElementById('statPending').textContent = orders.filter(o => o.status === 'pending').length;
-  document.getElementById('statApproved').textContent = orders.filter(o => o.status === 'approved').length;
-  document.getElementById('statRejected').textContent = orders.filter(o => o.status === 'rejected').length;
+  document.getElementById('statPending').textContent = orders.filter(function(o){ return pendingStates.indexOf(st(o)) !== -1; }).length;
+  document.getElementById('statApproved').textContent = orders.filter(function(o){ return approvedStates.indexOf(st(o)) !== -1; }).length;
+  document.getElementById('statRejected').textContent = orders.filter(function(o){ return rejectedStates.indexOf(st(o)) !== -1; }).length;
 }
 
 // ============================================
 // ===== تصفير البيانات =====
 // ============================================
 function resetAllData(){
-  showConfirm('🗑️ تصفير البيانات', 'سيتم حذف كل الطلبات والمنتجات والإشعارات وإعادة التجريبية. متأكد؟', () => {
+  showConfirm('🧹 مسح البيانات المحلية', 'سيتم مسح المسودة والإعدادات المحلية فقط. لن تُحذف الطلبات أو المنتجات من قاعدة البيانات. متابعة؟', () => {
     localStorage.removeItem('shizen_products');
     localStorage.removeItem('shizen_orders');
     localStorage.removeItem('shizen_notifications');
@@ -1682,22 +1760,12 @@ function renderOrders(){
   function getCustomer(o) { return o.customerName || o.name || o.customer || o.userName || 'عميل'; }
   function getPhone(o) { return o.phone || o.customerPhone || o.userPhone || '—'; }
   function getDate(o) {
-    if (o.date) return new Date(o.date);
-    if (o.createdAt && o.createdAt.seconds) return new Date(o.createdAt.seconds * 1000);
-    if (o.createdAt && o.createdAt.toDate) return o.createdAt.toDate();
-    return new Date(0);
+    var ms = chzMillis(o.date) || chzMillis(o.createdAt);
+    return ms ? new Date(ms) : new Date(0);
   }
   function getTotal(o) { return Number(o.total) || Number(o.subtotal) || 0; }
   function getItems(o) {
-    if (Array.isArray(o.items) && o.items.length) return o.items;
-    if (o.categories && typeof o.categories === 'object') {
-      var all = [];
-      for (var k in o.categories) {
-        if (o.categories[k] && o.categories[k].items) all = all.concat(o.categories[k].items);
-      }
-      if (all.length) return all;
-    }
-    return [];
+    return getOrderItems(o);
   }
   function getStatusLabel(o) {
     var s = o.status || o.workflowStatus || 'pending';
@@ -1779,9 +1847,9 @@ function renderOrders(){
       var statusIcon = '';
       if (ist === 'ok') statusIcon = '<span class="status-icon ok">✓</span>';
       else if (ist === 'no') statusIcon = '<span class="status-icon no">✕</span>';
-      previewHtml += '<div class="thumb" onclick="viewOrderItems(\'' + o.id + '\')" title="' + (item.name || '') + '">' +
-        (img ? '<img src="' + img + '" onerror="this.parentElement.innerHTML=\'🛍️\'">' : '🛍️') +
-        '<span class="qty-badge">' + (item.qty || 1) + '</span>' +
+      previewHtml += '<div class="thumb" onclick="viewOrderItems(\'' + o.id + '\')" title="' + chzEsc(item.name || '') + '">' +
+        (img ? '<img src="' + chzEsc(img) + '" onerror="this.parentElement.innerHTML=\'🛍️\'">' : '🛍️') +
+        '<span class="qty-badge">' + chzEsc(item.qty || 1) + '</span>' +
         statusIcon +
         '</div>';
     });
@@ -1809,7 +1877,7 @@ function renderOrders(){
         // اسم المورد: من suppliers collection، أو من المنتج
         var supName = (sup && sup.name) || supItems[0].supplierName || 'مورد غير محدد';
         whatsappHtml += '<button class="wa-btn" onclick="sendToSupplier(\'' + o.id + '\',\'' + sid + '\')">' +
-          '<div class="left"><div class="icon">💬</div><span>' + supName + '</span></div>' +
+          '<div class="left"><div class="icon">💬</div><span>' + chzEsc(supName) + '</span></div>' +
           '<span class="count">' + supItems.length + ' صنف</span>' +
           '</button>';
       });
@@ -1838,12 +1906,12 @@ function renderOrders(){
 
     return '<div class="order-card ' + st.card + '">' +
       '<div class="order-head">' +
-        '<div class="order-id">' + (o.id || '') + ' <span class="time">' + timeAgo + '</span></div>' +
+        '<div class="order-id">' + chzEsc(o.id || '') + ' <span class="time">' + timeAgo + '</span></div>' +
         '<span class="order-status ' + st.cls + '">' + st.text + '</span>' +
       '</div>' +
       '<div class="order-info">' +
-        '<div class="chip">👤 <strong>العميل:</strong> ' + customer + '</div>' +
-        '<div class="chip">📞 ' + phone + '</div>' +
+        '<div class="chip">👤 <strong>العميل:</strong> ' + chzEsc(customer) + '</div>' +
+        '<div class="chip">📞 ' + chzEsc(phone) + '</div>' +
         '<div class="chip">📦 ' + items.length + ' صنف • ' + itemsCount + ' قطعة</div>' +
       '</div>' +
       '<div class="items-preview">' + previewHtml + '</div>' +
@@ -1965,7 +2033,7 @@ function approveOrder(id){
       order.fulfillmentStage = 'ready_for_pickup';
       }
 
-      addNotif('success', 'تم تأكيد الطلب', id + ' من ' + (order.customerName || order.name || 'عميل'));
+      addNotif('success', 'تم تأكيد الطلب', id + ' من ' + (order.customerName || order.name || order.customer || order.userName || 'عميل'));
 
       updateStats();
       renderOrders();
@@ -1984,7 +2052,7 @@ function rejectOrder(id){
   if(!order) return;
   showConfirm('❌ رفض الطلب', `رفض الطلب ${id}؟`, () => {
     order.status = 'rejected';
-    addNotif('danger', 'تم رفض الطلب', id + ' من ' + order.customer);
+    addNotif('danger', 'تم رفض الطلب', id + ' من ' + (order.customerName || order.name || order.customer || order.userName || 'عميل'));
     updateOrderStatus(id, 'rejected').then(function(ok) {
       if (ok) {
         updateStats(); renderOrders(); closeModal();
@@ -2052,13 +2120,15 @@ function viewOrderItems(orderId){
     else if(ist === 'no'){ rowClass = 'no'; btnClass = 'no'; btnIcon = '✕'; labelText = 'غير متوفر'; }
 
     html += '<div class="item-row ' + rowClass + '" onclick="toggleItemStatus(\'' + order.id + '\', ' + idx + ')">' +
-      '<div class="item-img">' + (img ? '<img src="' + img + '" onerror="this.parentElement.innerHTML=\'🛍️\'">' : '🛍️') + '</div>' +
+      '<div class="item-img">' + (img ? '<img src="' + chzEsc(img) + '" onerror="this.parentElement.innerHTML=\'🛍️\'">' : '🛍️') + '</div>' +
       '<div class="item-info">' +
-        '<div class="item-name">' + (item.name || 'منتج') + '</div>' +
-        '<div class="item-brand">🏷️ ' + (item.brand || 'بدون ماركة') + ' • 🚚 ' + supName + '</div>' +
+        '<div class="item-name">' + chzEsc(item.name || 'منتج') + '</div>' +
+        '<div class="item-brand">🏷️ ' + chzEsc(item.brand || 'بدون ماركة') + ' • 🚚 ' + chzEsc(supName) + '</div>' +
         '<div class="item-details">' +
-          '<span class="item-chip">💰 ' + (item.price || 0) + ' ر.س</span>' +
-          '<span class="item-chip">🔢 × ' + (item.qty || 1) + '</span>' +
+          '<span class="item-chip">💰 ' + chzEsc(item.price || 0) + ' ر.س</span>' +
+          '<span class="item-chip">🔢 × ' + chzEsc(item.qty || 1) + '</span>' +
+          (item.size ? '<span class="item-chip">📏 ' + chzEsc(item.size) + '</span>' : '') +
+          (item.color ? '<span class="item-chip">🎨 ' + chzEsc(typeof item.color === 'object' ? (item.color.name || item.color.hex || '') : item.color) + '</span>' : '') +
         '</div>' +
       '</div>' +
       '<div class="item-status">' +
@@ -2124,11 +2194,32 @@ function toggleItemStatus(orderId, itemIndex){
 }
 
 function getOrderItems(order) {
-  if (Array.isArray(order.items) && order.items.length) return order.items;
+  var cat = state.cat;
+  function keyMatches(key) {
+    return !cat || key === cat || String(key).indexOf(cat) !== -1;
+  }
+  if (Array.isArray(order.items) && order.items.length) {
+    var hasCatInfo = order.items.some(function(i) {
+      if (!i) return false;
+      if (i.category || i.cat) return true;
+      if (Array.isArray(i.categories) && i.categories.length) return true;
+      if (i.categories && typeof i.categories === 'object' && Object.keys(i.categories).length) return true;
+      return false;
+    });
+    if (!cat || !hasCatInfo) return order.items;
+    return order.items.filter(function(i) {
+      if (!i) return false;
+      if (i.category === cat || i.cat === cat) return true;
+      if (Array.isArray(i.categories) && i.categories.indexOf(cat) !== -1) return true;
+      if (i.categories && typeof i.categories === 'object' && !Array.isArray(i.categories) && i.categories[cat]) return true;
+      return false;
+    });
+  }
   if (order.categories && typeof order.categories === 'object') {
     var all = [];
     for (var k in order.categories) {
-      if (order.categories[k] && order.categories[k].items) all = all.concat(order.categories[k].items);
+      if (!keyMatches(k)) continue;
+      if (order.categories[k] && Array.isArray(order.categories[k].items)) all = all.concat(order.categories[k].items);
     }
     if (all.length) return all;
   }
@@ -2191,7 +2282,7 @@ function renderBulkSupplierButtons(){
     var itemsCount = data.items.length;
 
     html += '<button class="wa-btn" onclick="sendBulkToSupplier(\'' + sid + '\')" style="width:100%;">' +
-      '<div class="left"><div class="icon">💬</div><span>' + supName + '</span></div>' +
+      '<div class="left"><div class="icon">💬</div><span>' + chzEsc(supName) + '</span></div>' +
       '<span class="count">' + ordersCount + ' طلب • ' + itemsCount + ' صنف</span>' +
       '</button>';
   });
@@ -2348,10 +2439,19 @@ function sendAllSuppliers(orderId){
 }
 
 function exportOrders(){
-  const csv = [
+  function customer(o) { return o.customerName || o.name || o.customer || o.userName || 'عميل'; }
+  function phone(o) { return o.phone || o.customerPhone || o.userPhone || ''; }
+  function items(o) { return getOrderItems(o); }
+  function dateText(o) {
+    var ms = chzMillis(o.date) || chzMillis(o.createdAt);
+    return ms ? new Date(ms).toLocaleDateString('ar-SA') : '';
+  }
+  function cell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+  const rows = [
     ['رقم الطلب','العميل','الهاتف','عدد الأصناف','الإجمالي','الحالة','التاريخ'],
-    ...orders.map(o => [o.id, o.customer, o.phone, o.items.length, o.total, o.status, new Date(o.date).toLocaleDateString('ar-SA')])
-  ].map(r => r.join(',')).join('\n');
+    ...orders.map(o => [o.id, customer(o), phone(o), items(o).length, Number(o.total) || Number(o.subtotal) || 0, o.status || o.workflowStatus || 'pending', dateText(o)])
+  ];
+  const csv = rows.map(r => r.map(cell).join(',')).join('\n');
   downloadCSV(csv, 'orders.csv');
 }
 
@@ -2372,17 +2472,17 @@ function renderProducts(){
 
   if(search){
     filtered = filtered.filter(p =>
-      p.name.toLowerCase().includes(search) ||
+      (p.name || '').toLowerCase().includes(search) ||
       (p.brand || '').toLowerCase().includes(search) ||
       (p.sku || '').toLowerCase().includes(search)
     );
   }
 
-  if(sort === 'newest') filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-  else if(sort === 'oldest') filtered.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+  if(sort === 'newest') filtered.sort((a,b) => chzMillis(b.createdAt) - chzMillis(a.createdAt));
+  else if(sort === 'oldest') filtered.sort((a,b) => chzMillis(a.createdAt) - chzMillis(b.createdAt));
   else if(sort === 'high') filtered.sort((a,b) => b.price - a.price);
   else if(sort === 'low') filtered.sort((a,b) => a.price - b.price);
-  else if(sort === 'name') filtered.sort((a,b) => a.name.localeCompare(b.name, 'ar'));
+  else if(sort === 'name') filtered.sort((a,b) => (a.name || '').localeCompare(b.name || '', 'ar'));
 
   if(filtered.length === 0){
     grid.innerHTML = `<div class="empty-state">
@@ -2393,8 +2493,8 @@ function renderProducts(){
   }
 
   grid.innerHTML = filtered.map(p => {
-    const mainImg = p.images && p.images.length > 0 ? p.images[0] : null;
-    const oldPrice = p.oldPrice && p.oldPrice > p.price ? `<small>${p.oldPrice}</small>` : '';
+    const mainImg = p.images && p.images.length > 0 ? chzImageUrl(p.images[0]) : null;
+    const oldPrice = p.oldPrice && p.oldPrice > p.price ? `<small>${chzEsc(p.oldPrice)}</small>` : '';
     const isHidden = p.active === false;
     const isLow = p.stock <= (p.threshold || 5);
     const sup = getSupplier(p.supplier);
@@ -2402,17 +2502,17 @@ function renderProducts(){
     return `
     <div class="product-card ${isHidden ? 'hidden' : ''}">
       <div class="product-img">
-        ${mainImg ? `<img src="${mainImg}" onerror="this.parentElement.innerHTML='🛍️'">` : '🛍️'}
+        ${mainImg ? `<img src="${chzEsc(mainImg)}" onerror="this.parentElement.innerHTML='🛍️'">` : '🛍️'}
         ${p.featured ? '<span class="product-badge">⭐</span>' : ''}
         ${isHidden ? '<span class="product-badge hidden-badge">👁️</span>' : ''}
         ${isLow && !isHidden ? '<span class="product-badge low-stock">⚠️</span>' : ''}
       </div>
-      <div class="product-name">${p.name}</div>
-      <div class="product-desc">${p.desc || 'لا يوجد وصف'}</div>
-      <div class="product-price">${oldPrice}${p.price} ${p.currency || 'ر.س'}</div>
+      <div class="product-name">${chzEsc(p.name)}</div>
+      <div class="product-desc">${chzEsc(p.desc || 'لا يوجد وصف')}</div>
+      <div class="product-price">${oldPrice}${chzEsc(p.price)} ${chzEsc(p.currency || 'ر.س')}</div>
       <div class="product-meta">
-        <span class="${isLow ? 'low' : ''}">📦 ${p.stock}</span>
-        <span>🚚 ${sup ? sup.name.substring(0,10) : '—'}</span>
+        <span class="${isLow ? 'low' : ''}">📦 ${chzEsc(p.stock)}</span>
+        <span>🚚 ${sup ? chzEsc(sup.name.substring(0,10)) : '—'}</span>
       </div>
       <div class="product-actions">
         <button class="btn btn-primary btn-xs" onclick="editProduct('${p.id}')">✏️</button>
@@ -2456,10 +2556,12 @@ function deleteProduct(id){
 }
 
 function exportProducts(){
-  const csv = [
+  function cell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+  const rows = [
     ['ID','الاسم','الماركة','المورد','السعر','المخزون','الحالة'],
-    ...products.map(p => [p.id, p.name, p.brand||'', getSupplier(p.supplier)?.name||'', p.price, p.stock, p.active===false?'مخفي':'نشط'])
-  ].map(r => r.join(',')).join('\n');
+    ...products.map(p => [p.id, p.name || '', p.brand || '', (getSupplier(p.supplier) || {}).name || '', p.price, p.stock, p.active === false ? 'مخفي' : 'نشط'])
+  ];
+  const csv = rows.map(r => r.map(cell).join(',')).join('\n');
   downloadCSV(csv, 'products.csv');
 }
 
@@ -2478,10 +2580,14 @@ function downloadCSV(content, filename){
 
 async function removeEditImage(index) {
   var p = products.find(x => x.id === state.editingProductId);
-  if (!p || !p.images) return;
-  p.images.splice(index, 1);
+  if (!p || !Array.isArray(p.images)) return;
+  var removed = p.images.splice(index, 1)[0];
+  var removedUrl = chzImageUrl(removed);
+  if (Array.isArray(p.imageColors)) {
+    p.imageColors = p.imageColors.filter(function(c){ return !c || c.url !== removedUrl; });
+  }
   try {
-    await db.collection('products').doc(p.id).update({ images: p.images });
+    await db.collection('products').doc(p.id).update({ images: p.images, imageColors: p.imageColors || [] });
     editProduct(p.id); // إعادة فتح النموذج
     showToast('✅ تم حذف الصورة', 'success');
   } catch(e) {
@@ -2494,36 +2600,48 @@ function editProduct(id){
   if(!p) return;
   state.editingProductId = id;
 
+  var brandList = getCategoryBrands(state.cat).map(function(b){ return b.en; });
+  if (p.brand && brandList.indexOf(p.brand) === -1) brandList.unshift(p.brand);
+  var supplierList = state.suppliers.slice();
+  if (p.supplier && !supplierList.some(function(s){ return s.id === p.supplier; })) {
+    supplierList.unshift({ id: p.supplier, name: p.supplier });
+  }
+  var editImagesHtml = (p.images || []).map(function(img, i) {
+    var src = chzImageUrl(img);
+    return '<div style="position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #ddd;"><img src="' + chzEsc(src) + '" style="width:100%; height:100%; object-fit:cover;"><button onclick="removeEditImage(' + i + ')" style="position:absolute; top:2px; right:2px; background:#ef4444; color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; padding:0;">×</button></div>';
+  }).join('');
+
   const body = document.getElementById('editModalBody');
   body.innerHTML = `
     <div class="form-section">
       <div class="form-section-title"><span class="num">1</span> المعلومات</div>
       <div class="form-field">
         <label>📝 الاسم <span class="req">*</span></label>
-        <input type="text" id="ep-name" value="${p.name.replace(/"/g,'&quot;')}">
+        <input type="text" id="ep-name" value="${chzEsc(p.name)}">
       </div>
       <div class="form-row two">
         <div class="form-field">
           <label>🏷️ الماركة</label>
           <select id="ep-brand">
             <option value="">-- اختر --</option>
-            ${['Samsung','Apple','Xiaomi','Huawei','Sony','LG','Nike','Adidas','Other'].map(b =>
-              `<option value="${b}" ${p.brand===b?'selected':''}>${b}</option>`
+            ${brandList.map(b =>
+              `<option value="${chzEsc(b)}" ${p.brand===b?'selected':''}>${chzEsc(b)}</option>`
             ).join('')}
           </select>
         </div>
         <div class="form-field">
           <label>🚚 المورد</label>
           <select id="ep-supplier">
-            ${state.suppliers.map(s =>
-              `<option value="${s.id}" ${p.supplier===s.id?'selected':''}>${s.name}</option>`
+            <option value="">-- بدون مورد --</option>
+            ${supplierList.map(s =>
+              `<option value="${chzEsc(s.id)}" ${p.supplier===s.id?'selected':''}>${chzEsc(s.name)}</option>`
             ).join('')}
           </select>
         </div>
       </div>
       <div class="form-field">
         <label>📄 الوصف</label>
-        <textarea id="ep-desc">${(p.desc||'').replace(/</g,'&lt;')}</textarea>
+        <textarea id="ep-desc">${chzEsc(p.desc || '')}</textarea>
       </div>
     </div>
     <div class="form-section">
@@ -2531,11 +2649,11 @@ function editProduct(id){
       <div class="form-row two">
         <div class="form-field">
           <label>💰 السعر <span class="req">*</span></label>
-          <input type="number" id="ep-price" value="${p.price}" min="0" step="0.01">
+          <input type="number" id="ep-price" value="${chzEsc(p.price)}" min="0" step="0.01">
         </div>
         <div class="form-field">
           <label>🏷️ قبل الخصم</label>
-          <input type="number" id="ep-oldprice" value="${p.oldPrice||''}" min="0" step="0.01">
+          <input type="number" id="ep-oldprice" value="${chzEsc(p.oldPrice || '')}" min="0" step="0.01">
         </div>
       </div>
     </div>
@@ -2544,11 +2662,11 @@ function editProduct(id){
       <div class="form-row two">
         <div class="form-field">
           <label>📦 المخزون <span class="req">*</span></label>
-          <input type="number" id="ep-stock" value="${p.stock}" min="0">
+          <input type="number" id="ep-stock" value="${chzEsc(p.stock)}" min="0">
         </div>
         <div class="form-field">
           <label>🔔 حد التنبيه</label>
-          <input type="number" id="ep-threshold" value="${p.threshold||5}" min="0">
+          <input type="number" id="ep-threshold" value="${chzEsc(p.threshold || 5)}" min="0">
         </div>
       </div>
     </div>
@@ -2564,13 +2682,12 @@ function editProduct(id){
           <label for="ep-active"><span class="icon">✅</span> نشط</label>
         </div>
       </div>
-    
-    <div class="form-section">
-      
+    </div>
+
     <div class="form-section">
       <div class="form-section-title"><span class="num">4.5</span> 🖼️ الصور الحالية</div>
       <div id="ep-images-list" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-        ${(p.images || []).map((img, i) => `<div style="position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #ddd;"><img src="${img}" style="width:100%; height:100%; object-fit:cover;"><button onclick="removeEditImage(${i})" style="position:absolute; top:2px; right:2px; background:#ef4444; color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; padding:0;">×</button></div>`).join("")}
+        ${editImagesHtml}
         ${(!p.images || p.images.length === 0) ? '<div style="color:#94a3b8; font-size:12px;">لا توجد صور</div>' : ''}
       </div>
       <div class="form-field">
@@ -2580,7 +2697,8 @@ function editProduct(id){
       </div>
     </div>
 
-    <div class="form-section-title"><span class="num">5</span> ⚡ عرض خاطف</div>
+    <div class="form-section">
+      <div class="form-section-title"><span class="num">5</span> ⚡ عرض خاطف</div>
       <div class="checkbox-group">
         <div class="checkbox-item">
           <input type="checkbox" id="ep-flash-enabled" ${p.flashEnabled ? 'checked' : ''}>
@@ -2591,16 +2709,16 @@ function editProduct(id){
         <div class="form-row two">
           <div class="form-field">
             <label>💰 سعر الفلاش (YER)</label>
-            <input type="number" id="ep-flash-price" value="${p.flashPrice || ''}" min="0" step="0.01">
+            <input type="number" id="ep-flash-price" value="${chzEsc(p.flashPrice || '')}" min="0" step="0.01">
           </div>
           <div class="form-field">
             <label>📦 كمية الفلاش</label>
-            <input type="number" id="ep-flash-stock" value="${p.flashStock || ''}" min="0">
+            <input type="number" id="ep-flash-stock" value="${chzEsc(p.flashStock || '')}" min="0">
           </div>
         </div>
         <div class="form-field">
           <label>⏰ تاريخ انتهاء الفلاش</label>
-          <input type="datetime-local" id="ep-flash-ends" value="${p.flashEndsAt ? p.flashEndsAt.slice(0,16) : ''}">
+          <input type="datetime-local" id="ep-flash-ends" value="${chzEsc(p.flashEndsAt ? String(p.flashEndsAt).slice(0,16) : '')}">
         </div>
       </div>
     </div>
@@ -2812,15 +2930,33 @@ function addColor(){
 function renderColors(){
   const list = document.getElementById('colorsList');
   if(!list) return;
-  if(state.colors.length === 0){
-    list.innerHTML = '<small style="color:#94a3b8;font-size:10.5px">لم تُضف ألوان</small>';
+  // الألوان تُستخرج تلقائياً من ربط الصور (imageColors) — لا لون بدون صورة
+  var derived = [];
+  (state.images || []).forEach(function(img){
+    if (img && img.color && img.color.hex) {
+      if (!derived.some(function(c){ return c.hex === img.color.hex && c.name === img.color.name; })) {
+        derived.push({ name: img.color.name || img.color.hex, hex: img.color.hex });
+      }
+    }
+  });
+  state.colors = derived;
+  if (derived.length === 0) {
+    list.innerHTML = '<small style="color:#94a3b8;font-size:10.5px">لم تُضف ألوان — استخدم 🎨 لون على الصور</small>';
     return;
   }
-  list.innerHTML = state.colors.map((c, i) => `
-    <span class="color-chip">
-      <span class="dot" style="background:${c.hex}"></span>${c.name}
-      <button class="remove" onclick="removeColor(${i})">✕</button>
-    </span>`).join('');
+  list.innerHTML = derived.map(function(c, i) {
+    var count = (state.images || []).filter(function(img){ return img && img.color && img.color.hex === c.hex; }).length;
+    return '<span class="color-chip"><span class="dot" style="background:' + c.hex + '"></span>' + chzEsc(c.name) + ' <small style="color:#94a3b8">(' + count + ' صورة)</small></span>';
+  }).join('');
+}
+
+function renderColorPresets(){
+  var el = document.getElementById('color-presets');
+  if (!el) return;
+  var presets = ['#ef4444','#f97316','#f59e0b','#84cc16','#10b981','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#111827','#9ca3af','#ffffff'];
+  el.innerHTML = presets.map(function(h){
+    return '<button type="button" title="' + h + '" onclick="document.getElementById(\'color-hex\').value=\'' + h + '\';" style="width:26px;height:26px;border-radius:50%;border:1px solid #cbd5e1;background:' + h + ';cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);"></button>';
+  }).join('');
 }
 
 function removeColor(i){ state.colors.splice(i, 1); renderColors(); }
@@ -2905,6 +3041,13 @@ async function handleImages(event){
   event.target.value = '';
 }
 
+function removeImage(index){
+  if (!Array.isArray(state.images)) return;
+  if (index < 0 || index >= state.images.length) return;
+  state.images.splice(index, 1);
+  renderImages();
+}
+
 function renderImages(){
   const preview = document.getElementById('pf-images-preview');
   if (!preview) return;
@@ -2914,10 +3057,10 @@ function renderImages(){
     var colorBtn = '<button type="button" class="stage2-color-btn" onclick="openColorPicker(' + i + ')" style="position:absolute;bottom:6px;left:6px;padding:4px 8px;border-radius:12px;border:1px solid rgba(255,255,255,0.3);background:rgba(15,23,42,0.85);color:#fff;font-size:10px;font-weight:700;cursor:pointer;z-index:5;">🎨 لون</button>';
     var colorBadge = '';
     if (img.color && img.color.hex) {
-      colorBadge = '<span style="position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:50%;background:' + img.color.hex + ';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);z-index:5;" title="' + (img.color.name || img.color.hex) + '"></span>';
+      colorBadge = '<span style="position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:50%;background:' + img.color.hex + ';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);z-index:5;" title="' + chzEsc(img.color.name || img.color.hex) + '"></span>';
     }
     return '<div class="image-preview-item" style="position:relative;">' +
-      '<img src="' + src + '">' +
+      '<img src="' + chzEsc(src) + '">' +
       (i === 0 ? '<span class="main-badge">رئيسية</span>' : '') +
       colorBadge +
       '<button class="remove-img" onclick="removeImage(' + i + ')">✕</button>' +
@@ -2964,7 +3107,7 @@ function openColorPicker(idx) {
       '<label style="display:block;margin-bottom:8px;font-size:12px;color:#94a3b8;">اختر لوناً جاهزاً</label>' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">' + chipsHtml + '</div>' +
       '<label style="display:block;margin-bottom:6px;font-size:12px;color:#94a3b8;">اسم اللون (اختياري)</label>' +
-      '<input id="stage2-cp-name" type="text" value="' + curName + '" placeholder="مثال: أحمر" style="width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#fff;margin-bottom:12px;box-sizing:border-box;font-size:14px;">' +
+      '<input id="stage2-cp-name" type="text" value="' + chzEsc(curName) + '" placeholder="مثال: أحمر" style="width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#fff;margin-bottom:12px;box-sizing:border-box;font-size:14px;">' +
       '<label style="display:block;margin-bottom:6px;font-size:12px;color:#94a3b8;">كود اللون</label>' +
       '<input id="stage2-cp-hex" type="color" value="' + curHex + '" style="width:100%;height:60px;border:none;border-radius:10px;cursor:pointer;margin-bottom:20px;">' +
       '<div style="display:flex;gap:10px;">' +
@@ -3069,7 +3212,9 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     boxes: parseInt(document.getElementById('pf-boxes')?.value) || 1,
     saleType: document.getElementById('pf-sale-type')?.value || 'box_only',
     colors: [...state.colors],
-    images: state.images.map(i => ({ url: i.url || i.data, color: i.color || null })).filter(i => i.url),
+    addons: getAddons(),
+    images: state.images.map(i => i.url || i.data).filter(Boolean),
+    imageColors: state.images.filter(i => i.color && (i.url || i.data)).map(i => ({ url: i.url || i.data, color: i.color })),
     img: state.images.length > 0 ? (state.images[0].url || state.images[0].data) : null,
     featured: document.getElementById('pf-featured').checked,
     freeShip: document.getElementById('pf-free-ship').checked,
@@ -3091,7 +3236,7 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
       product.id = newId;
       products.unshift(product);
       addNotif('success', 'منتج جديد', 'تمت إضافة "' + name + '"');
-      updateStats(); renderProducts(); resetForm();
+      updateStats(); renderProducts(); resetForm(); renderRecentProducts();
       showToast('✅ تمت الإضافة', 'success');
       setTimeout(function() { switchTab('products'); }, 900);
     }
@@ -3106,8 +3251,8 @@ function addSpecRow(key, value) {
   if (!list) return;
   var row = document.createElement('div');
   row.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; align-items:center;';
-  row.innerHTML = '<input type="text" class="spec-key" placeholder="اسم الخاصية (مثل: البطارية)" value="' + (key || '') + '" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
-                  '<input type="text" class="spec-val" placeholder="القيمة (مثل: 4000mAh)" value="' + (value || '') + '" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
+  row.innerHTML = '<input type="text" class="spec-key" placeholder="اسم الخاصية (مثل: البطارية)" value="' + chzEsc(key || '') + '" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
+                  '<input type="text" class="spec-val" placeholder="القيمة (مثل: 4000mAh)" value="' + chzEsc(value || '') + '" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
                   '<button type="button" onclick="this.parentNode.remove()" style="padding:8px 10px; background:#ef4444; color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer;">×</button>';
   list.appendChild(row);
 }
@@ -3139,13 +3284,89 @@ function saveDraft(){
   showToast('💾 تم الحفظ', 'success');
 }
 
+function addAddonRow(name, price, stock) {
+  var list = document.getElementById('pf-addons-list');
+  if (!list) return;
+  var row = document.createElement('div');
+  row.style.cssText = 'display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:6px; margin-bottom:6px; align-items:center;';
+  row.innerHTML = '<input type="text" class="addon-name" placeholder="اسم الملحق" value="' + chzEsc(name || '') + '" style="padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
+                  '<input type="number" class="addon-price" placeholder="السعر" value="' + chzEsc(price || '') + '" min="0" step="0.01" style="padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
+                  '<input type="number" class="addon-stock" placeholder="المخزون" value="' + chzEsc(stock || '') + '" min="0" style="padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;">' +
+                  '<button type="button" onclick="this.parentNode.remove()" style="padding:8px 10px; background:#ef4444; color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer;">×</button>';
+  list.appendChild(row);
+}
+
+function getAddons() {
+  var list = document.getElementById('pf-addons-list');
+  if (!list) return [];
+  var addons = [];
+  var rows = list.querySelectorAll('div');
+  rows.forEach(function(row) {
+    var n = row.querySelector('.addon-name');
+    var p = row.querySelector('.addon-price');
+    var s = row.querySelector('.addon-stock');
+    if (n && n.value.trim()) {
+      addons.push({
+        name: n.value.trim(),
+        price: parseFloat(p && p.value) || 0,
+        stock: parseInt(s && s.value) || 0
+      });
+    }
+  });
+  return addons;
+}
+
+function renderAddons() {
+  // no-op placeholder: rows persist in DOM
+}
+
+function renderRecentProducts() {
+  var el = document.getElementById('recentProductsList');
+  if (!el) return;
+  if (!products || products.length === 0) {
+    el.innerHTML = '<small style="color:#94a3b8;font-size:11px">لا توجد منتجات مضافة بعد.</small>';
+    return;
+  }
+  var recent = products.slice(0, 8);
+  var html = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:11px;">' +
+    '<thead><tr style="background:#f1f5f9;">' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">الاسم</th>' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">الماركة</th>' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">المورد</th>' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">السعر</th>' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">المخزون</th>' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">صور</th>' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">ألوان</th>' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">مقاسات</th>' +
+    '<th style="padding:6px; border:1px solid #e2e8f0; text-align:right;">إجراءات</th>' +
+    '</tr></thead><tbody>';
+  recent.forEach(function(p) {
+    var sup = getSupplier(p.supplier);
+    html += '<tr>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;">' + chzEsc(p.name) + '</td>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;">' + chzEsc(p.brand || '—') + '</td>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;">' + chzEsc(sup ? sup.name : (p.supplier || '—')) + '</td>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;">' + chzEsc(p.price) + ' ' + chzEsc(p.currency || '') + '</td>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;">' + chzEsc(p.stock) + '</td>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;">' + (p.images ? p.images.length : 0) + '</td>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;">' + (p.colors && p.colors.length ? p.colors.length : 0) + '</td>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;">' + ((p.sizes || []).concat(p.shoeSizes || [])).join(', ') + '</td>' +
+      '<td style="padding:6px; border:1px solid #e2e8f0;"><button type="button" onclick="editProduct(\'' + p.id + '\'); switchTab(\'products\');" style="padding:4px 8px; background:#eff6ff; color:#2563eb; border:none; border-radius:6px; font-size:11px; cursor:pointer;">✏️</button></td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
 function resetForm(){
   document.getElementById('addProductForm').reset();
   state.selectedSizes = [];
   state.colors = [];
   state.images = [];
+  var addonsList = document.getElementById('pf-addons-list');
+  if (addonsList) addonsList.innerHTML = '';
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
-  renderColors(); renderImages(); calcProfit(); calculateAutoRates();
+  renderColors(); renderImages(); calcProfit(); calculateAutoRates(); renderRecentProducts();
 }
 
 // ============================================
@@ -3157,9 +3378,12 @@ function addNotif(type, title, text){
     type: type, title: title, text: text,
     read: false
   };
-  notifications.unshift({id:'N' + Date.now(), type, title, text, time:new Date().toISOString(), read:false});
+  var local = {id:'N' + Date.now(), type: type, title: title, text: text, time:new Date().toISOString(), read:false};
+  notifications.unshift(local);
   renderNotifications(); updateBadges();
-  addNotificationToFirestore(notif);
+  addNotificationToFirestore(notif).then(function(realId){
+    if (realId) { local.id = realId; renderNotifications(); }
+  });
 }
 
 function renderNotifications(){
@@ -3170,12 +3394,12 @@ function renderNotifications(){
   }
   const icons = {info:'ℹ️', success:'✅', warning:'⚠️', danger:'❌'};
   list.innerHTML = notifications.map(n => `
-    <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markRead('${n.id}')">
-      <div class="notif-icon ${n.type}">${icons[n.type]}</div>
+    <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markRead('${chzEsc(n.id)}')">
+      <div class="notif-icon ${chzEsc(n.type || 'info')}">${icons[n.type] || 'ℹ️'}</div>
       <div class="notif-content">
-        <div class="notif-title">${n.title}</div>
-        <div class="notif-text">${n.text}</div>
-        <div class="notif-time">${formatTime(n.time)}</div>
+        <div class="notif-title">${chzEsc(n.title)}</div>
+        <div class="notif-text">${chzEsc(n.text)}</div>
+        <div class="notif-time">${formatTime(n.createdAt || n.time)}</div>
       </div>
     </div>`).join('');
   updateBadges();
@@ -3186,6 +3410,7 @@ function markRead(id){
   if(n){
     n.read = true;
     renderNotifications();
+    if (chzIsTempNotifId(id)) return;
     db.collection('notifications').doc(id).update({ read: true }).catch(function(e){
       console.warn('[markRead]', e);
     });
@@ -3193,9 +3418,18 @@ function markRead(id){
 }
 
 function markAllRead(){
-  notifications.forEach(n => n.read = true);
-  save(); renderNotifications();
+  var updates = [];
+  notifications.forEach(function(n) {
+    if (n.read) return;
+    n.read = true;
+    if (chzIsTempNotifId(n.id)) return;
+    updates.push(db.collection('notifications').doc(n.id).update({ read: true }).catch(function(e){
+      console.warn('[markAllRead]', e);
+    }));
+  });
+  renderNotifications();
   showToast('✓ تم قراءة الكل', 'success');
+  return Promise.all(updates);
 }
 
 function updateBadges(){
@@ -3204,9 +3438,16 @@ function updateBadges(){
   if(nb){ nb.textContent = unread; nb.style.display = unread > 0 ? 'flex' : 'none'; }
 }
 
-function formatTime(iso){
-  const d = new Date(iso);
-  const diff = (Date.now() - d) / 1000;
+function formatTime(value){
+  var d;
+  if (!value) return '—';
+  if (typeof value === 'string' || typeof value === 'number') d = new Date(value);
+  else if (typeof value.toDate === 'function') { try { d = value.toDate(); } catch(e) { d = null; } }
+  else if (value.seconds) d = new Date(value.seconds * 1000);
+  else d = new Date(value);
+  if (!d || isNaN(d.getTime())) return '—';
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if(diff < 0) return d.toLocaleDateString('ar-SA');
   if(diff < 60) return 'الآن';
   if(diff < 3600) return `منذ ${Math.floor(diff/60)} د`;
   if(diff < 86400) return `منذ ${Math.floor(diff/3600)} س`;
@@ -3277,8 +3518,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!preview) return;
     var items = preview.querySelectorAll(".image-preview-item");
     items.forEach(function(item, idx) {
-      // إذا كان الزر موجوداً، لا نضيفه مرة أخرى
+      // إذا كان الزر موجوداً (أو الزر الأصلي في renderImages) لا نضيفه مرة أخرى
       if (item.querySelector(".safe-link-color-btn")) return;
+      if (item.querySelector(".stage2-color-btn")) return;
       // نتحقق أن الصورة لها بيانات في state.images
       if (typeof state === "undefined" || !state.images || !state.images[idx]) return;
       
@@ -3319,7 +3561,7 @@ document.addEventListener('DOMContentLoaded', function() {
     modal.innerHTML = "<div style=\"background:#1e293b;border-radius:16px;padding:20px;max-width:320px;width:100%;color:#fff;\">" +
       "<h3 style=\"margin:0 0 15px;font-size:15px;\">🎨 ربط الصورة بلون</h3>" +
       "<label style=\"display:block;margin-bottom:6px;font-size:12px;\">اسم اللون (اختياري)</label>" +
-      "<input id=\"safe-cp-name\" type=\"text\" value=\"" + curName + "\" placeholder=\"مثال: أحمر\" style=\"width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#fff;margin-bottom:12px;box-sizing:border-box;\">" +
+      "<input id=\"safe-cp-name\" type=\"text\" value=\"" + chzEsc(curName) + "\" placeholder=\"مثال: أحمر\" style=\"width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#fff;margin-bottom:12px;box-sizing:border-box;\">" +
       "<label style=\"display:block;margin-bottom:6px;font-size:12px;\">كود اللون</label>" +
       "<input id=\"safe-cp-hex\" type=\"color\" value=\"" + curHex + "\" style=\"width:100%;height:60px;border:none;border-radius:8px;cursor:pointer;margin-bottom:15px;\">" +
       "<div style=\"display:flex;gap:8px;\">" +
