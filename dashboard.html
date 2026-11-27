@@ -412,15 +412,15 @@ function renderHome(){
   var recentHtml = recentOrders.map(function(o){
     var cls = o.status === 'completed' ? 'done' : (o.status === 'cancelled' ? 'rejected' : (o.status === 'shipped' ? 'shipped' : 'pending'));
     var lbl = o.status === 'completed' ? 'مكتمل' : (o.status === 'cancelled' ? 'ملغى' : (o.status === 'shipped' ? 'مشحون' : 'معلق'));
-    return '<div class="vcard" onclick="showOrderDetail(\'' + o.id + '\')">'
+    return '<div class="vcard" onclick="showOrderDetail(' + JSON.stringify(o.id) + ')">'
       + '<div class="vrow">'
-      +   '<div class="vid">#' + o.id.slice(-6) + '</div>'
-      +   '<div class="vtitle">' + (o.customerName || o.customer || 'عميل') + '</div>'
+      +   '<div class="vid">#' + esc(String(o.id||'').slice(-6)) + '</div>'
+      +   '<div class="vtitle">' + esc(o.customerName || o.customer || 'عميل') + '</div>'
       +   '<div class="vtotal">' + (Number(o.total)||0).toFixed(0) + ' ر</div>'
       + '</div>'
       + '<div class="vmeta">'
-      +   '<span>' + fmtDate(o.createdAt) + '</span>'
-      +   '<span class="vbadge ' + cls + '">' + lbl + '</span>'
+      +   '<span>' + esc(fmtDate(o.createdAt)) + '</span>'
+      +   '<span class="vbadge ' + cls + '">' + esc(lbl) + '</span>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -493,9 +493,9 @@ function renderOrders(){
   var listHtml = filtered.map(function(o){
     var cls = o.status === 'completed' ? 'done' : (o.status === 'cancelled' ? 'rejected' : (o.status === 'shipped' ? 'shipped' : 'pending'));
     var lbl = o.status === 'completed' ? 'مكتمل' : (o.status === 'cancelled' ? 'ملغى' : (o.status === 'shipped' ? 'مشحون' : 'معلق'));
-    return '<div class="vcard" onclick="showOrderDetail(\'' + o.id + '\')">'
-      + '<div class="vrow"><div class="vid">#' + o.id.slice(-6) + '</div><div class="vtitle">' + (o.customerName||'عميل') + '</div><div class="vtotal">' + (Number(o.total)||0).toFixed(0) + ' ر</div></div>'
-      + '<div class="vmeta"><span>' + fmtDate(o.createdAt) + '</span><span class="vbadge ' + cls + '">' + lbl + '</span><span>' + (o.phone || '') + '</span></div>'
+    return '<div class="vcard" onclick="showOrderDetail(' + JSON.stringify(o.id) + ')">'
+      + '<div class="vrow"><div class="vid">#' + esc(String(o.id||'').slice(-6)) + '</div><div class="vtitle">' + esc(o.customerName||'عميل') + '</div><div class="vtotal">' + (Number(o.total)||0).toFixed(0) + ' ر</div></div>'
+      + '<div class="vmeta"><span>' + esc(fmtDate(o.createdAt)) + '</span><span class="vbadge ' + cls + '">' + esc(lbl) + '</span><span>' + esc(o.phone || '') + '</span></div>'
       + '</div>';
   }).join('');
   
@@ -520,8 +520,8 @@ function showOrderDetail(orderId){
   
   var items = (o.items || []).map(function(it){
     return '<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(155,77,255,0.1)">'
-      + '<img src="' + (it.img||'') + '" style="width:40px;height:40px;object-fit:cover;border-radius:8px">'
-      + '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#fff;font-weight:700">' + (it.name||'') + '</div><div style="font-size:10px;color:#a78bfa">الكمية: ' + (it.qty||1) + '</div></div>'
+      + '<img src="' + esc(it.img||'') + '" style="width:40px;height:40px;object-fit:cover;border-radius:8px">'
+      + '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#fff;font-weight:700">' + esc(it.name||'') + '</div><div style="font-size:10px;color:#a78bfa">الكمية: ' + (Number(it.qty)||1) + '</div></div>'
       + '<div style="font-size:12px;color:#a78bfa;font-weight:700">' + ((Number(it.price)||0)*(Number(it.qty)||1)).toFixed(0) + '</div>'
       + '</div>';
   }).join('');
@@ -531,11 +531,11 @@ function showOrderDetail(orderId){
   
   var content = ''
     + '<div style="text-align:right">'
-    +   '<div style="display:flex;justify-content:space-between;margin-bottom:12px"><div style="font-size:16px;font-weight:900;color:#a78bfa">#' + o.id.slice(-6) + '</div><span class="vbadge ' + cls + '">' + lbl + '</span></div>'
-    +   '<div style="font-size:12px;color:#fff;margin-bottom:4px"><b>العميل:</b> ' + (o.customerName||'—') + '</div>'
-    +   '<div style="font-size:12px;color:#a78bfa;margin-bottom:4px"><b>الهاتف:</b> ' + (o.phone||'—') + '</div>'
-    +   '<div style="font-size:12px;color:#a78bfa;margin-bottom:4px"><b>العنوان:</b> ' + (o.address||o.pickup||'—') + '</div>'
-    +   '<div style="font-size:12px;color:#a78bfa;margin-bottom:12px"><b>التاريخ:</b> ' + fmtDate(o.createdAt) + '</div>'
+    +   '<div style="display:flex;justify-content:space-between;margin-bottom:12px"><div style="font-size:16px;font-weight:900;color:#a78bfa">#' + esc(String(o.id||'').slice(-6)) + '</div><span class="vbadge ' + cls + '">' + esc(lbl) + '</span></div>'
+    +   '<div style="font-size:12px;color:#fff;margin-bottom:4px"><b>العميل:</b> ' + esc(o.customerName||'—') + '</div>'
+    +   '<div style="font-size:12px;color:#a78bfa;margin-bottom:4px"><b>الهاتف:</b> ' + esc(o.phone||'—') + '</div>'
+    +   '<div style="font-size:12px;color:#a78bfa;margin-bottom:4px"><b>العنوان:</b> ' + esc(o.address||o.pickup||'—') + '</div>'
+    +   '<div style="font-size:12px;color:#a78bfa;margin-bottom:12px"><b>التاريخ:</b> ' + esc(fmtDate(o.createdAt)) + '</div>'
     +   '<div style="border-top:1px solid rgba(155,77,255,0.2);padding-top:10px;margin-bottom:10px"><div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:8px">المنتجات:</div>' + (items || 'لا توجد') + '</div>'
     +   '<div style="display:flex;justify-content:space-between;padding:10px;background:rgba(155,77,255,0.1);border-radius:10px"><span style="color:#fff;font-weight:700">الإجمالي</span><span style="color:#ec4899;font-size:16px;font-weight:900">' + (Number(o.total)||0).toFixed(0) + ' ر.ي</span></div>'
     + '</div>';
@@ -580,8 +580,8 @@ function renderTeam(){
       var isSelf = u.id === state.user.uid;
       var actions = isSelf 
         ? '<span style="font-size:10px;color:#a78bfa;margin-left:6px;padding:4px 8px;background:rgba(168,85,247,0.15);border-radius:6px">أنت</span>'
-        : '<button onclick="__editEmployee(\'' + u.id + '\')" style="background:rgba(155,77,255,0.15);border:1px solid rgba(155,77,255,0.3);color:#a78bfa;padding:6px 10px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;margin-left:4px">✏️</button>'
-          + '<button onclick="__deleteEmployee(\'' + u.id + '\')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:6px 10px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer">🗑️</button>';
+        : '<button onclick="__editEmployee(' + JSON.stringify(u.id) + ')" style="background:rgba(155,77,255,0.15);border:1px solid rgba(155,77,255,0.3);color:#a78bfa;padding:6px 10px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;margin-left:4px">✏️</button>'
+          + '<button onclick="__deleteEmployee(' + JSON.stringify(u.id) + ')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:6px 10px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer">🗑️</button>';
       return '<div class="vteam-member">'
         + '<div class="vteam-avatar">' + esc(initial) + '</div>'
         + '<div class="vteam-info"><div class="vteam-name">' + esc(name) + ' ' + cat + '</div><div class="vteam-email">' + esc(u.email||'') + '</div></div>'
@@ -736,13 +736,13 @@ function renderReview(){
     var margin = p.price > 0 ? Math.round((profit / p.price) * 100) : 0;
     var manager = (p.submittedBy && p.submittedBy.name) || p.createdByName || '—';
     
-    return '<div class="vreview" data-pid="' + p.id + '">'
+    return '<div class="vreview" data-pid="' + esc(p.id) + '">'
       + '<div class="vreview-head">'
-      +   '<img src="' + mainImg + '" class="vreview-img" onerror="this.style.opacity=0.3">'
+      +   '<img src="' + esc(mainImg) + '" class="vreview-img" onerror="this.style.opacity=0.3">'
       +   '<div class="vreview-meta">'
-      +     '<div class="vreview-name">' + (p.name || '—') + '</div>'
-      +     '<div class="vreview-sub">🏷️ ' + normName(p.brand) + ' · 📂 ' + (p.category||'') + '</div>'
-      +     '<div class="vreview-sub">📤 ' + manager + '</div>'
+      +     '<div class="vreview-name">' + esc(p.name || '—') + '</div>'
++     '<div class="vreview-sub">🏷️ ' + esc(normName(p.brand)) + ' · 📂 ' + esc(p.category||'') + '</div>'
++     '<div class="vreview-sub">📤 ' + esc(manager) + '</div>'
       +   '</div>'
       + '</div>'
       + '<div class="vreview-stats">'
@@ -750,11 +750,11 @@ function renderReview(){
       +   '<div class="vreview-stat"><div class="vreview-stat-lbl">بيع</div><div class="vreview-stat-val" style="color:#ec4899">' + (Number(p.price)||0).toFixed(0) + '</div></div>'
       +   '<div class="vreview-stat"><div class="vreview-stat-lbl">ربح ' + margin + '%</div><div class="vreview-stat-val" style="color:#22c55e">' + profit.toFixed(0) + '</div></div>'
       + '</div>'
-      + '<div style="font-size:12px;color:#a78bfa;margin-bottom:8px">🏭 ' + (p.supplierName || normName(p.supplier) || '—') + '</div>'
-      + '<input class="vreview-reason" data-reason-for="' + p.id + '" placeholder="سبب الرفض (عند الرفض فقط)">'
+      + '<div style="font-size:12px;color:#a78bfa;margin-bottom:8px">🏭 ' + esc(p.supplierName || normName(p.supplier) || '—') + '</div>'
+      + '<input class="vreview-reason" data-reason-for="' + esc(p.id) + '" placeholder="سبب الرفض (عند الرفض فقط)">'
       + '<div class="vreview-actions">'
-      +   '<button class="vreview-btn approve" data-approve="' + p.id + '">✓ اعتماد</button>'
-      +   '<button class="vreview-btn reject" data-reject="' + p.id + '">✗ رفض</button>'
+      +   '<button class="vreview-btn approve" data-approve="' + esc(p.id) + '">✓ اعتماد</button>'
+      +   '<button class="vreview-btn reject" data-reject="' + esc(p.id) + '">✗ رفض</button>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -885,7 +885,7 @@ setTimeout(function() {
     
     var itemsHtml = allItems.map(function(item){
       return '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11px;border-bottom:1px solid rgba(155,77,255,0.1)">'
-        + '<span style="color:#fff">' + (item.name||'') + ' × ' + item.qty + '</span>'
+        + '<span style="color:#fff">' + esc(item.name||'') + ' × ' + item.qty + '</span>'
         + '<span style="color:#a78bfa">' + item.subtotal.toFixed(0) + ' ر</span>'
         + '</div>';
     }).join('');
@@ -893,11 +893,11 @@ setTimeout(function() {
     return '<div class="vreview" data-oid="' + o.id + '">'
       + '<div class="vreview-head">'
       +   (receiptUrl 
-          ? '<img src="' + receiptUrl + '" onclick="__viewReceipt(this.src)" class="vreview-img" style="cursor:pointer;object-fit:cover;border:2px solid rgba(155,77,255,0.4)" onerror="this.style.opacity=0.3">'
+          ? '<img src="' + esc(receiptUrl) + '" onclick="__viewReceipt(this.src)" class="vreview-img" style="cursor:pointer;object-fit:cover;border:2px solid rgba(155,77,255,0.4)" onerror="this.style.opacity=0.3">'
           : '<div class="vreview-img" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(155,77,255,0.1)">📄</div>')
       +   '<div class="vreview-meta">'
-      +     '<div class="vreview-name">#' + o.id.slice(-6) + ' — ' + (o.customerName || 'عميل') + '</div>'
-      +     '<div class="vreview-sub">📞 ' + (o.phone || o.customerPhone || '—') + '</div>'
+      +     '<div class="vreview-name">#' + esc(String(o.id||'').slice(-6)) + ' — ' + esc(o.customerName || 'عميل') + '</div>'
+      +     '<div class="vreview-sub">📞 ' + esc(o.phone || o.customerPhone || '—') + '</div>'
       +     '<div class="vreview-sub" style="color:#ec4899;font-weight:800;font-size:14px">💰 ' + total.toFixed(0) + ' ر.ي</div>'
       +   '</div>'
       + '</div>'
@@ -1432,8 +1432,8 @@ async function showProductsList(){
         + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.name||'—') + '</div>'
         + '<div style="font-size:10px;color:#a78bfa">' + esc(normName(p.brand)) + ' · ' + esc(p.category||'') + ' · ' + (Number(p.price)||0).toFixed(0) + ' ر</div>'
         + '<div style="font-size:10px;color:' + si.c + ';margin-top:2px;font-weight:700">' + si.i + ' ' + si.l + '</div></div>'
-        + '<button onclick="__adminEditProduct(\'' + p.id + '\')" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;flex-shrink:0">✏️</button>'
-        + '<button onclick="__adminDeleteProduct(\'' + p.id + '\')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;flex-shrink:0">🗑</button>'
+        + '<button onclick="__adminEditProduct(' + JSON.stringify(p.id) + ')" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;flex-shrink:0">✏️</button>'
+        + '<button onclick="__adminDeleteProduct(' + JSON.stringify(p.id) + ')" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:8px 10px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;flex-shrink:0">🗑</button>'
         + '</div>';
     }).join('') : '<div class="vempty-txt">لا توجد منتجات</div>';
     showModal('🛍️ المنتجات (' + products.length + ')', header + '<div style="max-height:60vh;overflow-y:auto">' + html_list + '</div>');
@@ -1933,7 +1933,7 @@ function showReports(){
 function showModal(title, content){
   var overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:99999999;background:rgba(0,0,0,0.75);display:flex;align-items:flex-end;justify-content:center';
-  overlay.innerHTML = '<div style="width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:linear-gradient(180deg,#1e1533,#0a0825);border-radius:24px 24px 0 0;border:1px solid rgba(155,77,255,0.3);border-bottom:none;color:#fff"><div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid rgba(155,77,255,0.2);position:sticky;top:0;background:#1e1533"><h3 style="margin:0;font-size:16px">' + title + '</h3><button style="background:rgba(155,77,255,0.15);color:#a78bfa;border:1px solid rgba(155,77,255,0.3);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;font-family:inherit" id="modal-close">✕</button></div><div style="padding:16px 20px 24px">' + content + '</div></div>';
+  overlay.innerHTML = '<div style="width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:linear-gradient(180deg,#1e1533,#0a0825);border-radius:24px 24px 0 0;border:1px solid rgba(155,77,255,0.3);border-bottom:none;color:#fff"><div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid rgba(155,77,255,0.2);position:sticky;top:0;background:#1e1533"><h3 style="margin:0;font-size:16px">' + esc(title) + '</h3><button style="background:rgba(155,77,255,0.15);color:#a78bfa;border:1px solid rgba(155,77,255,0.3);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;font-family:inherit" id="modal-close">✕</button></div><div style="padding:16px 20px 24px">' + content + '</div></div>';
   document.body.appendChild(overlay);
   overlay.querySelector('#modal-close').onclick = function(){ overlay.remove(); };
   overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
