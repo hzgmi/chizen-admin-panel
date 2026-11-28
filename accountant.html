@@ -312,8 +312,8 @@ function renderOrders(){
   return '<input class="acc-search" id="order-search" placeholder="🔍 ابحث بالاسم أو الهاتف أو رقم الطلب" oninput="filterOrders(this.value)">'
     + '<div id="orders-list">'
     + s.filtered.map(function(o){
-        return '<div class="acc-card" data-search="'+(o.customerName||'')+' '+(o.phone||'')+' '+o.id+'" onclick="showOrderDetails(\''+o.id+'\')" style="cursor:pointer">'
-          + '<div class="acc-tx"><div class="acc-tx-l"><div class="acc-tx-t">#'+o.id.slice(-6)+' — '+esc(o.customerName||'عميل')+'</div><div class="acc-tx-s">📞 '+esc(o.phone||'—')+' · '+fmtDate(o.createdAt)+'</div></div><div class="acc-tx-r"><div class="acc-tx-amt" style="color:#f59e0b">'+(Number(o.total)||0).toFixed(0)+' ر</div><span class="acc-badge '+o.status+'">'+o.status+'</span></div></div>'
+        return '<div class="acc-card" data-search="'+esc(o.customerName||'')+' '+esc(o.phone||'')+' '+esc(o.id)+'" onclick="showOrderDetails('+JSON.stringify(o.id)+')" style="cursor:pointer">'
+          + '<div class="acc-tx"><div class="acc-tx-l"><div class="acc-tx-t">#'+esc(String(o.id||'').slice(-6))+' — '+esc(o.customerName||'عميل')+'</div><div class="acc-tx-s">📞 '+esc(o.phone||'—')+' · '+esc(fmtDate(o.createdAt))+'</div></div><div class="acc-tx-r"><div class="acc-tx-amt" style="color:#f59e0b">'+(Number(o.total)||0).toFixed(0)+' ر</div><span class="acc-badge '+esc(o.status||'')+'">'+esc(o.status||'')+'</span></div></div>'
           + '</div>';
       }).join('')
     + (s.filtered.length === 0 ? '<div class="acc-empty"><div class="acc-empty-icon">📭</div><div class="acc-empty-txt">لا توجد طلبات</div></div>' : '')
@@ -349,13 +349,13 @@ function renderReceipts(){
     var actionsHtml = '';
     if(r.status === 'pending_review'){
       actionsHtml = '<div style="display:flex;gap:6px;margin-top:10px">' +
-        '<button class="acc-btn" style="flex:1;padding:9px;font-size:12px;background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="event.stopPropagation();confirmReceipt(\''+r.id+'\')">✅ تأكيد واستلام</button>' +
-        '<button class="acc-btn-sec" style="flex:0 0 auto;padding:9px 12px;font-size:12px;background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.3)" onclick="event.stopPropagation();disputeReceipt(\''+r.id+'\')">❌</button>' +
-        '<button class="acc-btn-sec" style="flex:0 0 auto;padding:9px 12px;font-size:12px" onclick="event.stopPropagation();downloadReceiptPDF(\''+r.id+'\')">📄</button>' +
+        '<button class="acc-btn" style="flex:1;padding:9px;font-size:12px;background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="event.stopPropagation();confirmReceipt('+JSON.stringify(r.id)+')">✅ تأكيد واستلام</button>' +
+        '<button class="acc-btn-sec" style="flex:0 0 auto;padding:9px 12px;font-size:12px;background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.3)" onclick="event.stopPropagation();disputeReceipt('+JSON.stringify(r.id)+')">❌</button>' +
+        '<button class="acc-btn-sec" style="flex:0 0 auto;padding:9px 12px;font-size:12px" onclick="event.stopPropagation();downloadReceiptPDF('+JSON.stringify(r.id)+')">📄</button>' +
         '</div>';
     } else {
       actionsHtml = '<div style="display:flex;gap:6px;margin-top:10px">' +
-        '<button class="acc-btn-sec" style="flex:1;padding:9px;font-size:12px" onclick="event.stopPropagation();downloadReceiptPDF(\''+r.id+'\')">📄 عرض السند PDF</button>' +
+        '<button class="acc-btn-sec" style="flex:1;padding:9px;font-size:12px" onclick="event.stopPropagation();downloadReceiptPDF('+JSON.stringify(r.id)+')">📄 عرض السند PDF</button>' +
         '</div>';
     }
 
@@ -527,7 +527,7 @@ window.downloadReceiptPDF = async function(id){
     '<div style="text-align:center;border-bottom:3px solid #f59e0b;padding-bottom:15px;margin-bottom:20px">' +
       '<h1 style="color:#f59e0b;margin:0;font-size:36px;letter-spacing:2px">CHIZEN</h1>' +
       '<h2 style="margin:10px 0;color:#333;font-size:20px">سند محاسبي</h2>' +
-      '<p style="color:#666;font-size:14px">رقم: #' + (r.orderNumber || '') + '</p>' +
+      '<p style="color:#666;font-size:14px">رقم: #' + esc(r.orderNumber || '') + '</p>' +
     '</div>' +
     (isCOD ? '<div style="background:#fef3c7;border:2px solid #f59e0b;border-radius:10px;padding:15px;text-align:center;margin-bottom:20px"><div style="color:#92400e;font-size:13px;font-weight:600">المبلغ المطلوب تحصيله</div><div style="color:#d97706;font-size:28px;font-weight:900;margin-top:5px">' + (Number(r.total)||0).toFixed(0) + ' ر.ي</div></div>' : '') +
     '<table style="width:100%;margin-bottom:20px;border-collapse:collapse;font-size:14px">' +
