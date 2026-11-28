@@ -7,7 +7,7 @@
 
   function init() {
     state.db = window.db || (window.firebase && firebase.firestore());
-    if (!state.db) return;
+    if (!state.db) { setTimeout(init, 500); return; }
     window.PaymentsV2 = { renderSection, verify, reject, refresh, _setFilter: (f) => { state.filter = f; renderSection(); } };
   }
 
@@ -184,4 +184,3 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
-"

@@ -374,7 +374,7 @@ function renderTab(tab){
   state.activeTab = tab;
   var c = document.getElementById('content');
   if (tab === 'home') c.innerHTML = renderHome();
-  else if (tab === 'payments'){ PaymentsV2.refresh(); }
+  else if (tab === 'payments'){ if (window.PaymentsV2 && typeof window.PaymentsV2.refresh === 'function') window.PaymentsV2.refresh(); else setTimeout(function(){ if (window.PaymentsV2 && typeof window.PaymentsV2.refresh === 'function') window.PaymentsV2.refresh(); }, 800); }
   else if (tab === 'orders'){ c.innerHTML = renderOrders(); bindOrderChips(); }
   else if (tab === 'team') c.innerHTML = renderTeam();
   else if (tab === 'review'){ c.innerHTML = renderReview(); bindReviewActions(); }
@@ -1089,6 +1089,19 @@ async function verifyPayment(orderId){
     }
     if (window.__chizenToast) window.__chizenToast("✅ تم تأكيد الدفع", "success");
     else alert("✅ تم تأكيد الدفع");
+
+    // ═══ إشعار WhatsApp للعميل (غير حظر) ═══
+    (function(){
+      try {
+        var _waPhone = order.phone || order.customerPhone || '';
+        if (_waPhone) {
+          var _waNum = String(_waPhone).replace(/[^0-9+]/g, '');
+          if (_waNum.length === 9 && _waNum.charAt(0) === '7') _waNum = '967' + _waNum;
+          var _waMsg = 'أهلاً ' + (order.customerName || order.name || 'عميل') + '، تم تأكيد دفعتك للطلب #' + String(orderId).slice(-6) + ' بنجاح. سيتم تجهيز طلبك قريباً. — CHIZEN';
+          setTimeout(function(){ try { window.open('https://wa.me/' + _waNum + '?text=' + encodeURIComponent(_waMsg), '_blank', 'noopener,noreferrer'); } catch(e){} }, 600);
+        }
+      } catch(e) { console.warn('[wa] open failed:', e && e.message); }
+    })();
     // (تم تعطيل reloadData — لأنها تمسح صفحة المدفوعات المؤكدة)
   } catch(e){ 
     if (window.__chizenToast) window.__chizenToast("❌ " + e.message, "error");
