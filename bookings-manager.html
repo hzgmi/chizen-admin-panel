@@ -45,6 +45,16 @@ main{padding:8px 16px}
 .bk-card.cancelled{border-color:rgba(239,68,68,.4);opacity:.7}
 .bk-card.price_quoted{border-color:rgba(245,158,11,.5);background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(245,158,11,.02))}
 .bk-card.price_approved{border-color:rgba(34,197,94,.5);background:linear-gradient(135deg,rgba(34,197,94,.04),rgba(34,197,94,.02))}
+
+/* Flight route ticket header */
+.bk-flight-route{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;margin-bottom:10px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(59,130,246,.04));border:1px solid rgba(59,130,246,.25);}
+.bk-route-city{text-align:center;flex:1;min-width:0}
+.bk-route-code{font-size:18px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk-route-lbl{font-size:10px;color:#93c5fd;font-weight:700;margin-top:2px}
+.bk-route-mid{display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:60px}
+.bk-route-plane{font-size:20px}
+.bk-route-line{width:40px;height:2px;background:linear-gradient(90deg,transparent,#3b82f6,transparent)}
+.bk-route-date{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap}
 .bk-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding-bottom:10px;border-bottom:1px dashed rgba(255,255,255,.08);margin-bottom:10px}
 .bk-cust{font-size:13px;font-weight:800;color:#fff}
 .bk-phone{font-size:11px;color:#93c5fd;margin-top:2px}
@@ -295,7 +305,7 @@ function renderTab(type){
       else if(act === 'upload-ticket') uploadTicket(id);
       else if(act === 'complete') changeStatus(id, 'completed');
       else if(act === 'cancel') changeStatus(id, 'cancelled');
-      else if(act === 'edit') openEditForm(id);
+      else if(act === 'edit') { var _eb = state.bookings.find(function(x){ return x.id === id; }); if (_eb) showFormModal(_eb.type, _eb); }
       else if(act === 'delete') deleteBooking(id);
     };
   });
@@ -377,7 +387,15 @@ function renderBookingCard(b){
   if(b.idNumber) details += row('🆔 وثيقة', b.idNumber);
   if(d.notes) details += row('ملاحظات', d.notes);
   
+  var isFlight = b.type === 'flight';
   var html = '<div class="bk-card '+b.status+'">';
+  if (isFlight) {
+    html += '<div class="bk-flight-route">';
+    html += '<div class="bk-route-city"><div class="bk-route-code">' + esc(d.from || '—') + '</div><div class="bk-route-lbl">من</div></div>';
+    html += '<div class="bk-route-mid"><div class="bk-route-plane">✈️</div><div class="bk-route-line"></div><div class="bk-route-date">' + esc(d.date || '—') + '</div></div>';
+    html += '<div class="bk-route-city"><div class="bk-route-code">' + esc(d.to || '—') + '</div><div class="bk-route-lbl">إلى</div></div>';
+    html += '</div>';
+  }
   html += '<div class="bk-head"><div style="min-width:0;flex:1">';
   html += '<div class="bk-cust">' + typeInfo.icon + ' ' + esc(b.userName || 'عميل') + '</div>';
   if(b.idFullName && b.idFullName !== b.userName) html += '<div style="font-size:11px;color:#fbbf24;margin-top:2px">📋 ' + esc(b.idFullName) + '</div>';
@@ -418,25 +436,24 @@ function renderBookingCard(b){
   html += '<div class="bk-actions">';
   // الصف الأول: التواصل والإجراءات الأساسية
   if(phone) html += '<a href="https://wa.me/' + phone.replace(/\D/g,'') + '" target="_blank" class="bk-btn btn-wa" style="flex:1">💬 عميل</a>';
-  html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff" data-act="wa-airline" data-id="' + b.id + '">✈️ شركة</button>';
-  html += '<button class="bk-btn btn-edit" data-act="edit" data-id="' + b.id + '" style="flex:1">✏️ تعديل</button>';
+  html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff" data-act="wa-airline" data-id="' + esc(b.id) + '">✈️ شركة</button>';
+  html += '<button class="bk-btn btn-edit" data-act="edit" data-id="' + esc(b.id) + '" style="flex:1">✏️ تعديل</button>';
   html += '</div>';
 
   // الصف الثاني: حالات الحجز
   html += '<div class="bk-actions" style="margin-top:6px">';
   if(b.status === 'pending'){
-    if(b.estimatedPrice > 0) html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff" data-act="quote" data-id="' + b.id + '">📤 عرض سعر</button>';
-    html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + b.id + '" style="flex:1">✅ تأكيد</button>';
+    html += '<button class="bk-btn btn-confirm" data-act="confirm" data-id="' + esc(b.id) + '" style="flex:1">✅ تأكيد</button>';
   }
     // إعادة هيكلة الأزرار حسب المراحل السبعة
   if(b.status === 'pending' || b.status === 'price_quoted') {
-    html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff" data-act="quote" data-id="' + b.id + '">📤 عرض/تعديل السعر</button>';
+    html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff" data-act="quote" data-id="' + esc(b.id) + '">📤 عرض/تعديل السعر</button>';
   }
   
   if(b.status === 'price_approved') {
     if (b.paymentProof) {
-      html += '<button class="bk-btn btn-confirm" data-act="verify-payment" data-id="' + b.id + '" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff">✅ تأكيد الدفع</button>';
-      html += '<button class="bk-btn btn-del" data-act="reject-payment" data-id="' + b.id + '" style="flex:1;background:#ef4444;color:#fff">❌ رفض الإيصال</button>';
+      html += '<button class="bk-btn btn-confirm" data-act="verify-payment" data-id="' + esc(b.id) + '" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff">✅ تأكيد الدفع</button>';
+      html += '<button class="bk-btn btn-del" data-act="reject-payment" data-id="' + esc(b.id) + '" style="flex:1;background:#ef4444;color:#fff">❌ رفض الإيصال</button>';
     } else {
       html += '<div style="flex:1;padding:9px 12px;background:rgba(245,158,11,.15);border-radius:9px;color:#fbbf24;font-size:11px;font-weight:800;text-align:center">⏳ بانتظار رفع الإيصال</div>';
     }
@@ -444,13 +461,13 @@ function renderBookingCard(b){
 
   if(b.status === 'confirmed') {
     if (!b.ticketUrl) {
-      html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff" data-act="upload-ticket" data-id="' + b.id + '">📎 رفع التذكرة</button>';
+      html += '<button class="bk-btn" style="flex:1;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff" data-act="upload-ticket" data-id="' + esc(b.id) + '">📎 رفع التذكرة</button>';
     } else {
-      html += '<button class="bk-btn btn-complete" data-act="complete" data-id="' + b.id + '" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff">🏁 إكمال الحجز</button>';
+      html += '<button class="bk-btn btn-complete" data-act="complete" data-id="' + esc(b.id) + '" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff">🏁 إكمال الحجز</button>';
     }
   }
 
-  html += '<button class="bk-btn btn-del" data-act="delete" data-id="' + b.id + '" style="flex:0 0 auto">🗑</button>';
+  html += '<button class="bk-btn btn-del" data-act="delete" data-id="' + esc(b.id) + '" style="flex:0 0 auto">🗑</button>';
   html += '</div></div>';
   return html;
 }
@@ -659,7 +676,7 @@ async function uploadTicket(id){
       preview.innerHTML = '<div style="text-align:center;color:#fff;">📄 ملف PDF جاهز للرفع<br><span style="font-size:12px;color:#9ca3af;">(' + Math.round(file.size/1024) + ' KB)</span></div>';
     } else {
       var url = URL.createObjectURL(file);
-      preview.innerHTML = '<img src="' + url + '" style="max-width:100%;max-height:300px;object-fit:contain;">';
+      preview.innerHTML = '<img src="' + esc(url) + '" style="max-width:100%;max-height:300px;object-fit:contain;">';
     }
     
     saveBtn.style.opacity = '1';
@@ -976,7 +993,7 @@ function showFormModal(type, existing){
     html += '</div>';
     html += '<div class="form-row">';
     html += '<div class="form-field"><label>التاريخ</label><input id="f-date" type="date" value="' + esc(d.date || '') + '"></div>';
-    html += '<div class="form-field"><label>عدد الركاب</label><input id="f-passengers" type="number" min="1" value="' + (d.passengers || 1) + '"></div>';
+    html += '<div class="form-field"><label>عدد الركاب</label><input id="f-passengers" type="number" min="1" value="' + esc(d.passengers || 1) + '"></div>';
     html += '</div>';
     if(type === 'flight'){
       html += '<div class="form-field"><label>شركة الطيران</label><input id="f-airline" value="' + esc(d.airline || '') + '"></div>';
@@ -987,7 +1004,7 @@ function showFormModal(type, existing){
     html += '<div class="form-field"><label>اسم الباقة</label><input id="f-package" value="' + esc(d.packageName || '') + '"></div>';
     html += '<div class="form-row">';
     html += '<div class="form-field"><label>التاريخ/السنة</label><input id="f-date" value="' + esc(d.date || d.year || '') + '"></div>';
-    html += '<div class="form-field"><label>عدد الأشخاص</label><input id="f-passengers" type="number" min="1" value="' + (d.passengers || 1) + '"></div>';
+    html += '<div class="form-field"><label>عدد الأشخاص</label><input id="f-passengers" type="number" min="1" value="' + esc(d.passengers || 1) + '"></div>';
     html += '</div>';
     html += '<div class="form-field"><label>نوع الغرفة</label><input id="f-room" value="' + esc(d.roomType || '') + '" placeholder="مشترك / مزدوج / فردي"></div>';
   }
@@ -1001,8 +1018,8 @@ function showFormModal(type, existing){
   
   // Prices
   html += '<div class="form-row">';
-  html += '<div class="form-field"><label>💰 السعر التقريبي</label><input id="f-estprice" type="number" min="0" value="' + (b.estimatedPrice || 0) + '"></div>';
-  html += '<div class="form-field"><label>✅ السعر النهائي</label><input id="f-finprice" type="number" min="0" value="' + (b.finalPrice || 0) + '"></div>';
+  html += '<div class="form-field"><label>💰 السعر التقريبي</label><input id="f-estprice" type="number" min="0" value="' + esc(b.estimatedPrice || 0) + '"></div>';
+  html += '<div class="form-field"><label>✅ السعر النهائي</label><input id="f-finprice" type="number" min="0" value="' + esc(b.finalPrice || 0) + '"></div>';
   html += '</div>';
   
   html += '<button class="btn-save" onclick="saveBooking(\'' + type + '\')">💾 حفظ</button>';
